@@ -3,7 +3,7 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** Fases 0–2 completadas ✅ · **Actualizado:** 2026-07-04
+> **Estado:** Fases 0–3 completadas ✅ · **Actualizado:** 2026-07-04
 
 ---
 
@@ -160,7 +160,7 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 | **0. Red de seguridad** ✅ | Fixtures golden-master (XML + clave de acceso) desde los `exampleBody*.json`; documentar la estructura real de cada tipo | `fixtures/golden/` + `tools/golden/generate.php` — ver `fixtures/golden/README.md` |
 | **1. Esqueleto** ✅ | Laravel 12 + PHP 8.4; Pest, Larastan, Pint, Rector; migraciones portadas | Laravel 12.62 en la raíz; `composer quality` en verde |
 | **2. Dominio** ✅ | Enums, Value Objects, DTOs con laravel-data | `app/Sri/` — clave golden reproducida desde el DTO |
-| **3. Lógica** | Actions + Pipeline + Strategy + Gateway/Signer con fakes | Controller delgado, todo testeado |
+| **3. Lógica** ✅ | Actions + Pipeline + Gateway/Signer con fakes | Endpoint síncrono funcionando; XML golden byte a byte |
 | **4. Endurecimiento** | Sacar `.p12` de `public/`, cerrar path traversal, aislar certificados por request, validación de entrada | Apto para exponer |
 | **5. Microservicio** | Jobs/colas, API síncrona **y** asíncrona, versionado, OpenAPI | Consumible por terceros |
 | **6. Dashboard** *(futuro)* | Sanctum (tokens), planes, cuotas, rate limiting | Panel de autoservicio |
@@ -182,12 +182,35 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 
 ## 9. Próximo paso
 
-**Fase 3 — Lógica**: Actions (`GenerarClaveAcceso`, `ConstruirXml`, `FirmarXml`,
-`EnviarRecepcion`, `SolicitarAutorizacion`, `GenerarRide`), el
-`EmitirComprobantePipeline`, los contracts `SriGateway`/`XmlSigner` con fakes
-para tests, y el controller delgado. El XML construido desde los DTOs debe
-reproducir el golden de factura byte a byte (para notaCredito/retención habrá
-desviación documentada: el codDoc ahora se deriva del tipo).
+**Fase 4 — Endurecimiento**: convertir `DatoInvalido` en respuestas 422
+(hay un test `->todo()` esperándolo), validar payloads malformados con
+mensajes útiles, revisar el manejo del certificado (nunca en disco fuera de
+la firma, logs sin secretos) y repasar la superficie de seguridad completa.
+
+### Registro de la Fase 3 (2026-07-04)
+
+- **Actions** (`app/Sri/Actions/`): `GenerarClaveAcceso` (código numérico
+  aleatorio por defecto), `ConstruirXml`, `FirmarXml`, `EnviarRecepcion`,
+  `SolicitarAutorizacion` (reintentos configurables vs. el sleep fijo del
+  legado). `GenerarRide` quedó **diferido**: exige decidir wkhtmltopdf vs.
+  dompdf y portar las plantillas Blade del legado.
+- **Pipeline** `EmitirComprobante` (Illuminate\Pipeline): núcleo compartido
+  que el endpoint síncrono ejecuta inline y el Job asíncrono reutilizará.
+- **Contracts + dobles**: `SriGateway` (SOAP real con parseo tolerante a
+  objeto-vs-lista + `FakeSriGateway`), `XmlSigner` (`JarXmlSigner` con
+  Process/timeout/temporales aislados por emisión + `FakeXmlSigner`).
+- **Seguridad ya corregida respecto al legado**: certificado por emisión en
+  memoria (`CertificadoFirma`), jar fuera de `public/` (storage), argumentos
+  de proceso escapados, sin archivos globales compartidos entre peticiones.
+- **HTTP**: `POST /api/v1/comprobantes` (síncrono), Form Request que
+  normaliza el contrato legado `{factura: …, info: …}`, controller delgado
+  (~40 líneas vs. ~150 del legado), errores 422 con etapa y mensajes del SRI.
+- **Java no está instalado en la máquina de desarrollo**: la firma real
+  queda cubierta por el contract + fake; añadir un test de integración
+  cuando haya JRE (pendiente).
+- Suite: 67 tests + 1 todo / 195 aserciones; PHPStan max sin errores.
+- Dependencias añadidas: `spatie/array-to-xml` ^3.4 (la misma lib del
+  legado) y `laravel/sanctum` (vía `install:api`, para los tokens de la fase 6).
 
 ### Registro de la Fase 2 (2026-07-04)
 

@@ -48,4 +48,30 @@ final class InfoFacturaData extends Data
 
         return $properties;
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function xmlArray(): array
+    {
+        return Payload::sinNulos([
+            'fechaEmision' => $this->fechaEmision->format('d/m/Y'),
+            'dirEstablecimiento' => $this->dirEstablecimiento,
+            'obligadoContabilidad' => $this->obligadoContabilidad,
+            'tipoIdentificacionComprador' => $this->tipoIdentificacionComprador->value,
+            'razonSocialComprador' => $this->razonSocialComprador,
+            'identificacionComprador' => $this->identificacionComprador,
+            'totalSinImpuestos' => $this->totalSinImpuestos,
+            'totalDescuento' => $this->totalDescuento,
+            'totalConImpuestos' => [
+                'totalImpuesto' => array_map(
+                    fn (TotalImpuestoData $impuesto): array => $impuesto->xmlArray(),
+                    $this->totalConImpuestos,
+                ),
+            ],
+            'propina' => $this->propina,
+            'importeTotal' => $this->importeTotal,
+            'moneda' => $this->moneda,
+        ]);
+    }
 }

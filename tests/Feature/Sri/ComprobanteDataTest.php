@@ -10,13 +10,6 @@ use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\ValueObjects\ClaveAcceso;
 use App\Sri\ValueObjects\CodigoNumerico;
 
-function golden_input(string $tipo): array
-{
-    $payload = json_decode(file_get_contents(golden_path("$tipo/input.json")), true);
-
-    return $payload[$tipo];
-}
-
 it('convierte el payload golden de factura en un DTO tipado', function () {
     $factura = FacturaData::from(golden_input('factura'));
 

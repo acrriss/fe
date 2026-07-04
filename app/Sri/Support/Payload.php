@@ -26,4 +26,18 @@ final class Payload
 
         return [$valor];
     }
+
+    /**
+     * Elimina las entradas null preservando el orden (los elementos
+     * opcionales del XML simplemente se omiten).
+     *
+     * @template TValor
+     *
+     * @param  array<string, TValor|null>  $valores
+     * @return array<string, TValor>
+     */
+    public static function sinNulos(array $valores): array
+    {
+        return array_filter($valores, fn (mixed $valor): bool => $valor !== null);
+    }
 }

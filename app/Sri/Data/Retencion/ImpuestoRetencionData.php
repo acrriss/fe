@@ -25,4 +25,21 @@ final class ImpuestoRetencionData extends Data
         #[WithCast(DateTimeInterfaceCast::class, format: 'd/m/Y')]
         public CarbonImmutable $fechaEmisionDocSustento,
     ) {}
+
+    /**
+     * @return array<string, string>
+     */
+    public function xmlArray(): array
+    {
+        return [
+            'codigo' => $this->codigo,
+            'codigoRetencion' => $this->codigoRetencion,
+            'baseImponible' => $this->baseImponible,
+            'porcentajeRetener' => $this->porcentajeRetener,
+            'valorRetenido' => $this->valorRetenido,
+            'codDocSustento' => $this->codDocSustento->value,
+            'numDocSustento' => $this->numDocSustento,
+            'fechaEmisionDocSustento' => $this->fechaEmisionDocSustento->format('d/m/Y'),
+        ];
+    }
 }

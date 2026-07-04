@@ -39,4 +39,26 @@ final class DetalleData extends Data
 
         return $properties;
     }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function xmlArray(): array
+    {
+        return Payload::sinNulos([
+            'codigoPrincipal' => $this->codigoPrincipal,
+            'codigoInterno' => $this->codigoInterno,
+            'descripcion' => $this->descripcion,
+            'cantidad' => $this->cantidad,
+            'precioUnitario' => $this->precioUnitario,
+            'descuento' => $this->descuento,
+            'precioTotalSinImpuesto' => $this->precioTotalSinImpuesto,
+            'impuestos' => [
+                'impuesto' => array_map(
+                    fn (ImpuestoData $impuesto): array => $impuesto->xmlArray(),
+                    $this->impuestos,
+                ),
+            ],
+        ]);
+    }
 }

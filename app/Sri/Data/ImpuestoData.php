@@ -19,4 +19,18 @@ final class ImpuestoData extends Data
         public string $baseImponible,
         public string $valor,
     ) {}
+
+    /**
+     * @return array<string, string>
+     */
+    public function xmlArray(): array
+    {
+        return [
+            'codigo' => $this->codigo,
+            'codigoPorcentaje' => $this->codigoPorcentaje,
+            'tarifa' => $this->tarifa,
+            'baseImponible' => $this->baseImponible,
+            'valor' => $this->valor,
+        ];
+    }
 }

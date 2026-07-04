@@ -3,6 +3,7 @@
 namespace App\Sri\Data;
 
 use App\Sri\Enums\TipoComprobante;
+use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
 
 /**
@@ -13,6 +14,19 @@ use Spatie\LaravelData\Data;
 abstract class ComprobanteData extends Data
 {
     abstract public static function tipo(): TipoComprobante;
+
+    /**
+     * Fecha de emisión del documento (vive en el bloque info* de cada tipo).
+     */
+    abstract public function fechaEmision(): CarbonImmutable;
+
+    /**
+     * Representación como array listo para ArrayToXml, en el orden que exige
+     * la ficha técnica del SRI. Requiere que la claveAcceso ya esté asignada.
+     *
+     * @return array<string, mixed>
+     */
+    abstract public function xmlArray(): array;
 
     public InfoTributariaData $infoTributaria;
 }

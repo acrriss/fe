@@ -6,6 +6,7 @@ use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\InfoTributariaData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Support\Payload;
+use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 
 final class ComprobanteRetencionData extends ComprobanteData
@@ -34,5 +35,27 @@ final class ComprobanteRetencionData extends ComprobanteData
         $properties['impuestos'] = Payload::lista(data_get($properties, 'impuestos.impuesto'));
 
         return $properties;
+    }
+
+    public function fechaEmision(): CarbonImmutable
+    {
+        return $this->infoCompRetencion->fechaEmision;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function xmlArray(): array
+    {
+        return [
+            'infoTributaria' => $this->infoTributaria->xmlArray(self::tipo()),
+            'infoCompRetencion' => $this->infoCompRetencion->xmlArray(),
+            'impuestos' => [
+                'impuesto' => array_map(
+                    fn (ImpuestoRetencionData $impuesto): array => $impuesto->xmlArray(),
+                    $this->impuestos,
+                ),
+            ],
+        ];
     }
 }

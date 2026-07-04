@@ -7,6 +7,7 @@ use App\Sri\Data\DetalleData;
 use App\Sri\Data\InfoTributariaData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Support\Payload;
+use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 
 final class NotaCreditoData extends ComprobanteData
@@ -35,5 +36,27 @@ final class NotaCreditoData extends ComprobanteData
         $properties['detalles'] = Payload::lista(data_get($properties, 'detalles.detalle'));
 
         return $properties;
+    }
+
+    public function fechaEmision(): CarbonImmutable
+    {
+        return $this->infoNotaCredito->fechaEmision;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function xmlArray(): array
+    {
+        return [
+            'infoTributaria' => $this->infoTributaria->xmlArray(self::tipo()),
+            'infoNotaCredito' => $this->infoNotaCredito->xmlArray(),
+            'detalles' => [
+                'detalle' => array_map(
+                    fn (DetalleData $detalle): array => $detalle->xmlArray(),
+                    $this->detalles,
+                ),
+            ],
+        ];
     }
 }
