@@ -3,7 +3,7 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** Fases 0 y 1 completadas ✅ · **Actualizado:** 2026-07-03
+> **Estado:** Fases 0–2 completadas ✅ · **Actualizado:** 2026-07-04
 
 ---
 
@@ -159,7 +159,7 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 |---|---|---|
 | **0. Red de seguridad** ✅ | Fixtures golden-master (XML + clave de acceso) desde los `exampleBody*.json`; documentar la estructura real de cada tipo | `fixtures/golden/` + `tools/golden/generate.php` — ver `fixtures/golden/README.md` |
 | **1. Esqueleto** ✅ | Laravel 12 + PHP 8.4; Pest, Larastan, Pint, Rector; migraciones portadas | Laravel 12.62 en la raíz; `composer quality` en verde |
-| **2. Dominio** | Enums, Value Objects, DTOs con laravel-data | Fin del acceso posicional |
+| **2. Dominio** ✅ | Enums, Value Objects, DTOs con laravel-data | `app/Sri/` — clave golden reproducida desde el DTO |
 | **3. Lógica** | Actions + Pipeline + Strategy + Gateway/Signer con fakes | Controller delgado, todo testeado |
 | **4. Endurecimiento** | Sacar `.p12` de `public/`, cerrar path traversal, aislar certificados por request, validación de entrada | Apto para exponer |
 | **5. Microservicio** | Jobs/colas, API síncrona **y** asíncrona, versionado, OpenAPI | Consumible por terceros |
@@ -182,11 +182,29 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 
 ## 9. Próximo paso
 
-**Fase 2 — Dominio**: crear el módulo `app/Sri/` con Enums (`Ambiente`,
-`TipoEmision`, `TipoComprobante`, `EstadoAutorizacion`), Value Objects
-(`ClaveAcceso`, `Ruc`, `Secuencial`) y DTOs con laravel-data. Cada pieza se
-valida contra los fixtures de `fixtures/golden/` (la clave y el XML generados
-por el nuevo código deben ser idénticos a los del legado).
+**Fase 3 — Lógica**: Actions (`GenerarClaveAcceso`, `ConstruirXml`, `FirmarXml`,
+`EnviarRecepcion`, `SolicitarAutorizacion`, `GenerarRide`), el
+`EmitirComprobantePipeline`, los contracts `SriGateway`/`XmlSigner` con fakes
+para tests, y el controller delgado. El XML construido desde los DTOs debe
+reproducir el golden de factura byte a byte (para notaCredito/retención habrá
+desviación documentada: el codDoc ahora se deriva del tipo).
+
+### Registro de la Fase 2 (2026-07-04)
+
+- Módulo `app/Sri/` creado: 5 enums (`Ambiente`, `TipoEmision`,
+  `TipoComprobante` con codDoc/rootElement/versionEsquema,
+  `TipoIdentificacion`, `EstadoComprobante`), 4 value objects (`ClaveAcceso`,
+  `Ruc`, `Secuencial`, `CodigoNumerico`), excepción de dominio `DatoInvalido`.
+- `ClaveAcceso::generar()` **reproduce la clave golden del legado** y todos los
+  vectores del módulo 11; `fromString()` valida el dígito verificador.
+- DTOs con laravel-data para factura, nota de crédito y retención:
+  normalización 1-vs-N (`Payload::lista`), fechas `dd/mm/aaaa` → CarbonImmutable,
+  cast genérico `ValueObjectCast`, importes como string (pass-through al XML).
+- Decisiones aplicadas: el `codDoc` del payload se ignora (lo define la clase
+  del comprobante); `CodigoNumerico::aleatorio()` disponible para reemplazar el
+  hardcodeado del legado; la nota de crédito golden tiene 2 detalles con
+  impuesto-objeto (normalización 1-vs-N cubierta por tests).
+- Suite: 43 tests / 128 aserciones; PHPStan nivel max sin errores.
 
 ### Registro de la Fase 1 (2026-07-03)
 

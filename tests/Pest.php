@@ -23,5 +23,5 @@ pest()->extend(TestCase::class)->in('Feature');
 
 function golden_path(string $path = ''): string
 {
-    return base_path('fixtures/golden'.($path !== '' ? '/'.ltrim($path, '/') : ''));
+    return dirname(__DIR__).'/fixtures/golden'.($path !== '' ? '/'.ltrim($path, '/') : '');
 }
