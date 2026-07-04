@@ -1,0 +1,23 @@
+[
+    {
+        "cadena": "071220220109225967880011001001000000000225684961",
+        "verificadorLegado": 5,
+        "verificadorIndependiente": 5,
+        "caso": "11-resto=5",
+        "coinciden": true
+    },
+    {
+        "cadena": "071220220109225967880011001001000000001225684961",
+        "verificadorLegado": 0,
+        "verificadorIndependiente": 0,
+        "caso": "11-resto=11",
+        "coinciden": true
+    },
+    {
+        "cadena": "071220220109225967880011001001000000010225684961",
+        "verificadorLegado": 1,
+        "verificadorIndependiente": 1,
+        "caso": "11-resto=10",
+        "coinciden": true
+    }
+]

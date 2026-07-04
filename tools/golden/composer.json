@@ -1,0 +1,8 @@
+{
+    "name": "fe/golden-generator",
+    "description": "Generador de fixtures golden-master (replica la lógica del legado)",
+    "require": {
+        "php": ">=8.2",
+        "spatie/array-to-xml": "^2.9"
+    }
+}

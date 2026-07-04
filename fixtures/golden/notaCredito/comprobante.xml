@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<notaCredito id="comprobante" version="1.1.0">
+  <infoTributaria>
+    <ambiente>1</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>Victor</razonSocial>
+    <nombreComercial>TODO AUTO S.A.</nombreComercial>
+    <ruc>0922596788001</ruc>
+    <claveAcceso>0712202201092259678800110010010000043032256849615</claveAcceso>
+    <codDoc>01</codDoc>
+    <estab>001</estab>
+    <ptoEmi>001</ptoEmi>
+    <secuencial>000004303</secuencial>
+    <dirMatriz>Paraisos del rio 1</dirMatriz>
+  </infoTributaria>
+  <infoNotaCredito>
+    <fechaEmision>07/12/2022</fechaEmision>
+    <dirEstablecimiento>AV JUAN TANCA MARENGO SOLAR 13 Y AV JOAQUIN ORRANTIA</dirEstablecimiento>
+    <tipoIdentificacionComprador>04</tipoIdentificacionComprador>
+    <razonSocialComprador>BLACK AND GOLD ECUADOR BLAGOL S.A.</razonSocialComprador>
+    <identificacionComprador>0992479248001</identificacionComprador>
+    <obligadoContabilidad>SI</obligadoContabilidad>
+    <codDocModificado>01</codDocModificado>
+    <numDocModificado>001-002-000000004</numDocModificado>
+    <fechaEmisionDocSustento>07/12/2022</fechaEmisionDocSustento>
+    <totalSinImpuestos>730.87</totalSinImpuestos>
+    <valorModificacion>783.11</valorModificacion>
+    <moneda>DOLAR</moneda>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>2</codigoPorcentaje>
+        <baseImponible>435.36</baseImponible>
+        <valor>52.24</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <motivo>Devolución de productos o servicios</motivo>
+  </infoNotaCredito>
+  <detalles>
+    <detalle>
+      <codigoInterno>PV-0002</codigoInterno>
+      <descripcion>[PV-0002] GASTO ADMINISTRATIVO OPERATIVO ADICIONAL</descripcion>
+      <cantidad>1.00</cantidad>
+      <precioUnitario>435.36</precioUnitario>
+      <descuento>0.00</descuento>
+      <precioTotalSinImpuesto>435.36</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>2</codigoPorcentaje>
+          <tarifa>12</tarifa>
+          <baseImponible>435.36</baseImponible>
+          <valor>52.24</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+    <detalle>
+      <codigoInterno>PV-0003</codigoInterno>
+      <descripcion>[PV-0003] DESCUENTO DE CARTERA</descripcion>
+      <cantidad>1.00</cantidad>
+      <precioUnitario>295.51</precioUnitario>
+      <descuento>0.00</descuento>
+      <precioTotalSinImpuesto>295.51</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>0</codigoPorcentaje>
+          <tarifa>0</tarifa>
+          <baseImponible>295.51</baseImponible>
+          <valor>0.00</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+</notaCredito>

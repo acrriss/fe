@@ -1,0 +1,68 @@
+{
+    "factura": {
+        "infoTributaria": {
+            "ambiente": "1",
+            "tipoEmision": "1",
+            "razonSocial": "Victor",
+            "nombreComercial": "TODO AUTO S.A.",
+            "ruc": "0922596788001",
+            "claveAcceso": "",
+            "codDoc": "01",
+            "estab": "001",
+            "ptoEmi": "001",
+            "secuencial": "000004303",
+            "dirMatriz": "Paraisos del rio 1"
+        },
+        "infoFactura": {
+            "fechaEmision": "07/12/2022",
+            "dirEstablecimiento": "N/A",
+            "obligadoContabilidad": "NO",
+            "tipoIdentificacionComprador": "07",
+            "razonSocialComprador": "CONSUMIDOR FINAL",
+            "identificacionComprador": "9999999999999",
+            "totalSinImpuestos": "10.00",
+            "totalDescuento": "0.00",
+            "totalConImpuestos": {
+                "totalImpuesto": [
+                    {
+                        "codigo": "2",
+                        "codigoPorcentaje": "2",
+                        "baseImponible": "10.00",
+                        "tarifa": "12.00",
+                        "valor": "1.20"
+                    }
+                ]
+            },
+            "propina": "0.00",
+            "importeTotal": "11.20",
+            "moneda": "DOLAR"
+        },
+        "detalles": {
+            "detalle": [
+                {
+                    "codigoPrincipal": "No. 1",
+                    "descripcion": "Servicio de Mantenimiento",
+                    "cantidad": "1",
+                    "precioUnitario": "10.00",
+                    "descuento": "0.00",
+                    "precioTotalSinImpuesto": "10.00",
+                    "impuestos": {
+                        "impuesto": {
+                            "codigo": "2",
+                            "codigoPorcentaje": "2",
+                            "tarifa": "12.00",
+                            "baseImponible": "10.00",
+                            "valor": "1.20"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "info": {
+        "p12": "<<BASE64_P12_PLACEHOLDER>>",
+        "logo": "<<BASE64_LOGO_PLACEHOLDER>>",
+        "clavep12": "<<SECRET_PLACEHOLDER>>"
+    },
+    "#omit-xml-declaration": "yes"
+}

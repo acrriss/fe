@@ -1,0 +1,86 @@
+{
+    "notaCredito": {
+        "infoTributaria": {
+            "ambiente": "1",
+            "tipoEmision": "1",
+            "razonSocial": "Victor",
+            "nombreComercial": "TODO AUTO S.A.",
+            "ruc": "0922596788001",
+            "claveAcceso": "",
+            "codDoc": "01",
+            "estab": "001",
+            "ptoEmi": "001",
+            "secuencial": "000004303",
+            "dirMatriz": "Paraisos del rio 1"
+        },
+        "infoNotaCredito": {
+            "fechaEmision": "07/12/2022",
+            "dirEstablecimiento": "AV JUAN TANCA MARENGO SOLAR 13 Y AV JOAQUIN ORRANTIA",
+            "tipoIdentificacionComprador": "04",
+            "razonSocialComprador": "BLACK AND GOLD ECUADOR BLAGOL S.A.",
+            "identificacionComprador": "0992479248001",
+            "obligadoContabilidad": "SI",
+            "codDocModificado": "01",
+            "numDocModificado": "001-002-000000004",
+            "fechaEmisionDocSustento": "07/12/2022",
+            "totalSinImpuestos": "730.87",
+            "valorModificacion": "783.11",
+            "moneda": "DOLAR",
+            "totalConImpuestos": {
+                "totalImpuesto": [
+                    {
+                        "codigo": "2",
+                        "codigoPorcentaje": "2",
+                        "baseImponible": "435.36",
+                        "valor": "52.24"
+                    }
+                ]
+            },
+            "motivo": "Devolución de productos o servicios"
+        },
+        "detalles": {
+            "detalle": [
+                {
+                    "codigoInterno": "PV-0002",
+                    "descripcion": "[PV-0002] GASTO ADMINISTRATIVO OPERATIVO ADICIONAL",
+                    "cantidad": "1.00",
+                    "precioUnitario": "435.36",
+                    "descuento": "0.00",
+                    "precioTotalSinImpuesto": "435.36",
+                    "impuestos": {
+                        "impuesto": {
+                            "codigo": "2",
+                            "codigoPorcentaje": "2",
+                            "tarifa": "12",
+                            "baseImponible": "435.36",
+                            "valor": "52.24"
+                        }
+                    }
+                },
+                {
+                    "codigoInterno": "PV-0003",
+                    "descripcion": "[PV-0003] DESCUENTO DE CARTERA",
+                    "cantidad": "1.00",
+                    "precioUnitario": "295.51",
+                    "descuento": "0.00",
+                    "precioTotalSinImpuesto": "295.51",
+                    "impuestos": {
+                        "impuesto": {
+                            "codigo": "2",
+                            "codigoPorcentaje": "0",
+                            "tarifa": "0",
+                            "baseImponible": "295.51",
+                            "valor": "0.00"
+                        }
+                    }
+                }
+            ]
+        }
+    },
+    "info": {
+        "p12": "<<BASE64_P12_PLACEHOLDER>>",
+        "logo": "<<BASE64_LOGO_PLACEHOLDER>>",
+        "clavep12": "<<SECRET_PLACEHOLDER>>"
+    },
+    "#omit-xml-declaration": "yes"
+}

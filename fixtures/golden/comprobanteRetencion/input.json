@@ -1,0 +1,46 @@
+{
+    "comprobanteRetencion": {
+        "infoTributaria": {
+            "ambiente": "1",
+            "tipoEmision": "1",
+            "razonSocial": "Victor",
+            "nombreComercial": "TODO AUTO S.A.",
+            "ruc": "0922596788001",
+            "claveAcceso": "",
+            "codDoc": "01",
+            "estab": "001",
+            "ptoEmi": "001",
+            "secuencial": "000004303",
+            "dirMatriz": "Paraisos del rio 1"
+        },
+        "infoCompRetencion": {
+            "fechaEmision": "07/12/2022",
+            "dirEstablecimiento": "AV JUAN TANCA MARENGO SOLAR 13 Y AV JOAQUIN ORRANTIA",
+            "obligadoContabilidad": "SI",
+            "tipoIdentificacionSujetoRetenido": "04",
+            "razonSocialSujetoRetenido": "AC BEBIDAS, S. DE R.L. DE C.V.",
+            "identificacionSujetoRetenido": "1791411099001",
+            "periodoFiscal": "12/2022"
+        },
+        "impuestos": {
+            "impuesto": [
+                {
+                    "codigo": "2",
+                    "codigoRetencion": "2",
+                    "baseImponible": "36.00",
+                    "porcentajeRetener": "70",
+                    "valorRetenido": "25.20",
+                    "codDocSustento": "01",
+                    "numDocSustento": "001001000000001",
+                    "fechaEmisionDocSustento": "07/12/2022"
+                }
+            ]
+        }
+    },
+    "info": {
+        "p12": "<<BASE64_P12_PLACEHOLDER>>",
+        "logo": "<<BASE64_LOGO_PLACEHOLDER>>",
+        "clavep12": "<<SECRET_PLACEHOLDER>>"
+    },
+    "#omit-xml-declaration": "yes"
+}

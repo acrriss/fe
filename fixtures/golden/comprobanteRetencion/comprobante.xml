@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<comprobanteRetencion id="comprobante" version="1.0.0">
+  <infoTributaria>
+    <ambiente>1</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>Victor</razonSocial>
+    <nombreComercial>TODO AUTO S.A.</nombreComercial>
+    <ruc>0922596788001</ruc>
+    <claveAcceso>0712202201092259678800110010010000043032256849615</claveAcceso>
+    <codDoc>01</codDoc>
+    <estab>001</estab>
+    <ptoEmi>001</ptoEmi>
+    <secuencial>000004303</secuencial>
+    <dirMatriz>Paraisos del rio 1</dirMatriz>
+  </infoTributaria>
+  <infoCompRetencion>
+    <fechaEmision>07/12/2022</fechaEmision>
+    <dirEstablecimiento>AV JUAN TANCA MARENGO SOLAR 13 Y AV JOAQUIN ORRANTIA</dirEstablecimiento>
+    <obligadoContabilidad>SI</obligadoContabilidad>
+    <tipoIdentificacionSujetoRetenido>04</tipoIdentificacionSujetoRetenido>
+    <razonSocialSujetoRetenido>AC BEBIDAS, S. DE R.L. DE C.V.</razonSocialSujetoRetenido>
+    <identificacionSujetoRetenido>1791411099001</identificacionSujetoRetenido>
+    <periodoFiscal>12/2022</periodoFiscal>
+  </infoCompRetencion>
+  <impuestos>
+    <impuesto>
+      <codigo>2</codigo>
+      <codigoRetencion>2</codigoRetencion>
+      <baseImponible>36.00</baseImponible>
+      <porcentajeRetener>70</porcentajeRetener>
+      <valorRetenido>25.20</valorRetenido>
+      <codDocSustento>01</codDocSustento>
+      <numDocSustento>001001000000001</numDocSustento>
+      <fechaEmisionDocSustento>07/12/2022</fechaEmisionDocSustento>
+    </impuesto>
+  </impuestos>
+</comprobanteRetencion>

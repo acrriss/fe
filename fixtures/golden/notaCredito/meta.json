@@ -1,0 +1,12 @@
+{
+    "source": "exampleBodyNotaCredito.json",
+    "tipo": "notaCredito",
+    "infoKey": "infoNotaCredito",
+    "cadenaSinVerificador": "071220220109225967880011001001000004303225684961",
+    "claveAcceso": "0712202201092259678800110010010000043032256849615",
+    "xmlVersionAttr": "1.1.0",
+    "xmlFileName": "0712202201092259678800110010010000043032256849615.xml",
+    "generator": "tools/golden/generate.php (r\u00e9plica del legado)",
+    "arrayToXmlVersion": "2.17.1.0",
+    "generatedAt": "2026-07-04T02:06:51+00:00"
+}
