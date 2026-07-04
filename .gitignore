@@ -22,6 +22,10 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+.mcp.json
+CLAUDE.md
+boost.json
+.claude
 
 # --- Legado (referencia, nunca desplegar) ---
 # secretos del proyecto legacy: certificados de firma y credenciales
