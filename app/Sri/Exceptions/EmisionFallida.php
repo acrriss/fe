@@ -47,7 +47,7 @@ final class EmisionFallida extends RuntimeException
     {
         return new self(
             "El SRI no resolvió la autorización tras {$intentos} intentos; consulte más tarde con la clave de acceso.",
-            'autorizacion',
+            'autorizacion_pendiente',
         );
     }
 }

@@ -5,16 +5,16 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Port modernizado de la tabla `comprobantes` del legado
- * (legacy/database/migrations/2019_05_16_163942_create_comprobantes_table.php).
+ * Registro de emisiones de comprobantes electrónicos.
  *
- * Cambios respecto al legado:
- *  - PK estándar `id` (antes `idcomprobantes`).
- *  - `user_id` con convención Laravel (antes `iduser_fk`).
- *  - `importe_total` decimal (antes string).
- *  - snake_case en columnas (antes camelCase).
- *  - columnas nuevas: `clave_acceso` (única) y `estado`, que el rediseño
- *    necesita para el flujo asíncrono (pendiente → recibido → autorizado…).
+ * Reemplaza a la tabla homónima del legado. Notas de diseño:
+ *  - `uuid` es el identificador público de la API (el id autoincremental
+ *    nunca se expone).
+ *  - `user_id` es nullable hasta que la fase 6 introduzca autenticación.
+ *  - `clave_acceso` es única: la ficha del SRI (§5.10) exige reutilizar la
+ *    misma clave al reintentar un comprobante rechazado, y además es el
+ *    número de autorización (§5.9).
+ *  - `mensajes` guarda las advertencias/errores que devuelve el SRI.
  */
 return new class extends Migration
 {
@@ -22,16 +22,22 @@ return new class extends Migration
     {
         Schema::create('comprobantes', function (Blueprint $table) {
             $table->id();
+            $table->uuid('uuid')->unique();
             $table->string('tipo');
+            $table->string('estado')->default('pendiente')->index();
+            $table->string('ambiente', 1);
             $table->string('clave_acceso', 49)->unique()->nullable();
-            $table->string('estado')->default('pendiente');
-            $table->string('ruc', 13);
+            $table->string('ruc', 13)->index();
             $table->string('razon_social');
+            $table->string('secuencial', 9);
             $table->decimal('importe_total', 12, 2)->nullable();
+            $table->string('numero_autorizacion', 49)->nullable();
+            $table->dateTime('autorizado_en')->nullable();
+            $table->json('mensajes')->nullable();
             $table->string('xml_path')->nullable();
             $table->string('ride_path')->nullable();
-            $table->dateTime('emitido_en')->nullable();
-            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->date('emitido_en')->nullable();
+            $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
             $table->timestamps();
         });
     }

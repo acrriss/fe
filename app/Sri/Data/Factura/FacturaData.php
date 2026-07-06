@@ -43,6 +43,11 @@ final class FacturaData extends ComprobanteData
         return $this->infoFactura->fechaEmision;
     }
 
+    public function importeTotal(): string
+    {
+        return $this->infoFactura->importeTotal;
+    }
+
     /**
      * @return array<string, mixed>
      */

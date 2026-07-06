@@ -3,7 +3,7 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** Fases 0–4 completadas ✅ · **Actualizado:** 2026-07-06
+> **Estado:** Fases 0–5 completadas ✅ (RIDE pendiente de decisión de motor) · **Actualizado:** 2026-07-06
 
 ---
 
@@ -162,7 +162,7 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 | **2. Dominio** ✅ | Enums, Value Objects, DTOs con laravel-data | `app/Sri/` — clave golden reproducida desde el DTO |
 | **3. Lógica** ✅ | Actions + Pipeline + Gateway/Signer con fakes | Endpoint síncrono funcionando; XML golden byte a byte |
 | **4. Endurecimiento** ✅ | Errores de dominio → 422, rate limiting, límites de payload, JSON forzado en API, jar versionado fuera de public | Apto para exponer |
-| **5. Microservicio** | Jobs/colas, API síncrona **y** asíncrona, versionado, OpenAPI | Consumible por terceros |
+| **5. Microservicio** ✅ | Persistencia con estados, Job cifrado, API síncrona **y** asíncrona, consulta por uuid, OpenAPI | Consumible por terceros (RIDE pendiente) |
 | **6. Dashboard** *(futuro)* | Sanctum (tokens), planes, cuotas, rate limiting | Panel de autoservicio |
 
 ---
@@ -182,10 +182,37 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 
 ## 9. Próximo paso
 
-**Fase 5 — Microservicio**: persistencia del comprobante (modelo + estados),
-emisión asíncrona (`ProcesarComprobanteJob` reutilizando el pipeline),
-`GET /api/v1/comprobantes/{id}` para consultar estado/resultado, y el RIDE
-(decidir motor PDF y portar plantillas). Documentación OpenAPI.
+Pendientes en orden sugerido:
+1. **RIDE** (fase 5b): decidir motor PDF y portar plantillas (ver registro).
+2. **Fase 6 — Dashboard**: Sanctum, planes, cuotas, rate limiting por plan.
+
+### Registro de la Fase 5 (2026-07-06)
+
+- **Fuente de verdad**: se incorporó `ficha-tecnica.pdf` (v2.2x, 143 pp.) al
+  repo. Validó lo implementado (tablas 1-6, WSDLs, módulo 11, estados
+  PPR/AUT/NAT) y aportó estas reglas de diseño:
+  - §5.10: tras un rechazo se debe reutilizar **la misma clave de acceso y
+    secuencial** → la clave se persiste también en emisiones fallidas.
+  - §5.9 / Anexo 2: la clave de acceso ES el número de autorización.
+  - Anexo 2: código de barras opcional en el RIDE; fecha de autorización no
+    obligatoria en el RIDE del emisor.
+- **Persistencia**: modelo `Comprobante` (uuid público, estados via
+  `EstadoComprobante` +caso `Fallido`, mensajes json, XML firmado en
+  storage privado) + factory con estado `autorizado()`. `user_id` nullable
+  hasta la fase 6.
+- **`RegistroDeEmision`**: servicio compartido crear/completar/fallar; mapea
+  etapa del fallo → estado (recepción→devuelto, autorización→no_autorizado,
+  autorización pendiente→recibido, firma→fallido).
+- **Async**: `ProcesarComprobanteJob` (**ShouldBeEncrypted**: transporta el
+  certificado; tries=3 con backoff, failed() → fallido) ejecuta el mismo
+  pipeline. `POST /api/v1/comprobantes?async=1` → 202 + uuid;
+  `GET /api/v1/comprobantes/{uuid}` para polling (`ComprobanteResource`,
+  XML solo cuando autorizado).
+- **OpenAPI**: `docs/openapi.yaml` (3.1) con ambas modalidades.
+- Suite: 86 tests / 262 aserciones; PHPStan max limpio.
+- **RIDE diferido a 5b**: decisión de motor PDF pendiente (dompdf
+  recomendado: puro PHP, sin binarios; el wkhtmltopdf del legado está
+  abandonado upstream). Portar plantillas de los 5 tipos.
 
 ### Registro de la Fase 4 (2026-07-06)
 

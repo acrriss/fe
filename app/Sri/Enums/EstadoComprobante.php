@@ -14,11 +14,12 @@ enum EstadoComprobante: string
     case Autorizado = 'autorizado';
     case Devuelto = 'devuelto';
     case NoAutorizado = 'no_autorizado';
+    case Fallido = 'fallido';
 
     public function esFinal(): bool
     {
         return match ($this) {
-            self::Autorizado, self::Devuelto, self::NoAutorizado => true,
+            self::Autorizado, self::Devuelto, self::NoAutorizado, self::Fallido => true,
             default => false,
         };
     }

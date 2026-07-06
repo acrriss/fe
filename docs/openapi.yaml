@@ -1,0 +1,156 @@
+openapi: 3.1.0
+info:
+  title: API de Facturación Electrónica SRI (Ecuador)
+  description: |
+    Microservicio de emisión de comprobantes electrónicos ante el SRI:
+    factura, nota de crédito y comprobante de retención (nota de débito,
+    guía de remisión y liquidación de compra: próximamente).
+
+    El servicio encapsula la generación de la clave de acceso, la firma
+    XAdES-BES, el ciclo recepción → autorización con el SRI y el registro
+    del resultado.
+
+    **Modalidades de emisión**
+    - *Síncrona* (por defecto): la respuesta llega cuando el SRI resuelve
+      (puede tardar varios segundos). Recomendada para pruebas y bajo volumen.
+    - *Asíncrona* (`?async=1`): responde `202` de inmediato con un `id`;
+      el estado se consulta con `GET /comprobantes/{id}`.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /comprobantes:
+    post:
+      summary: Emitir un comprobante electrónico
+      description: |
+        El cuerpo mantiene el contrato heredado: la primera clave identifica
+        el tipo de comprobante (`factura`, `notaCredito`,
+        `comprobanteRetencion`) y `info` transporta el certificado de firma.
+
+        El `codDoc` y la `claveAcceso` del payload se ignoran: el servicio
+        deriva el código del tipo y genera la clave (con código numérico
+        aleatorio por comprobante).
+      parameters:
+        - name: async
+          in: query
+          required: false
+          schema: { type: boolean, default: false }
+          description: Si es verdadero, encola la emisión y responde 202.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [info]
+              properties:
+                factura: { $ref: '#/components/schemas/ComprobantePayload' }
+                notaCredito: { $ref: '#/components/schemas/ComprobantePayload' }
+                comprobanteRetencion: { $ref: '#/components/schemas/ComprobantePayload' }
+                info:
+                  type: object
+                  required: [p12, clavep12]
+                  properties:
+                    p12:
+                      type: string
+                      description: Certificado .p12 codificado en base64 (máx. 120 000 caracteres).
+                    clavep12:
+                      type: string
+                      description: Contraseña del certificado.
+      responses:
+        '200':
+          description: Emisión síncrona autorizada.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmisionSincrona' }
+        '202':
+          description: Emisión asíncrona encolada.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Comprobante' }
+        '422':
+          description: >
+            Payload inválido, o el SRI devolvió/no autorizó el comprobante
+            (en la modalidad síncrona; el campo `etapa` indica dónde falló).
+        '429':
+          description: Límite de peticiones excedido.
+  /comprobantes/{id}:
+    get:
+      summary: Consultar el estado de una emisión
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Estado y resultado de la emisión.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Comprobante' }
+        '404':
+          description: No existe una emisión con ese id.
+components:
+  schemas:
+    ComprobantePayload:
+      type: object
+      description: >
+        Estructura del comprobante según la ficha técnica del SRI (bloques
+        infoTributaria + info del tipo + detalles/impuestos). Ver
+        fixtures/golden/*/input.json para ejemplos completos.
+      required: [infoTributaria]
+      properties:
+        infoTributaria:
+          type: object
+          required: [ambiente, tipoEmision, razonSocial, ruc, estab, ptoEmi, secuencial, dirMatriz]
+    Comprobante:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        tipo: { type: string, enum: [factura, notaCredito, comprobanteRetencion] }
+        estado:
+          type: string
+          enum: [pendiente, firmado, recibido, autorizado, devuelto, no_autorizado, fallido]
+        estadoFinal:
+          type: boolean
+          description: Si es falso, conviene volver a consultar más tarde.
+        ambiente: { type: string, enum: ['1', '2'] }
+        secuencial: { type: string }
+        claveAcceso:
+          type: [string, 'null']
+          description: 49 dígitos; es también el número de autorización.
+        importeTotal: { type: [string, 'null'] }
+        emitidoEn: { type: [string, 'null'], format: date }
+        autorizacion:
+          type: object
+          description: Presente solo cuando el estado es `autorizado`.
+          properties:
+            numero: { type: string }
+            fecha: { type: string, format: date-time }
+        mensajes:
+          type: array
+          items: { type: string }
+        xmlFirmado:
+          type: string
+          description: XML firmado en base64; presente solo cuando está autorizado.
+    EmisionSincrona:
+      type: object
+      properties:
+        emitido: { type: boolean }
+        id: { type: string, format: uuid }
+        tipo: { type: string }
+        claveAcceso: { type: string }
+        autorizacion:
+          type: object
+          properties:
+            estado: { type: string }
+            numero: { type: string }
+            fecha: { type: string, format: date-time }
+            mensajes: { type: array, items: { type: string } }
+        xmlFirmado: { type: string, description: XML firmado en base64 }

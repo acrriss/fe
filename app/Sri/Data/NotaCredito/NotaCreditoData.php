@@ -43,6 +43,11 @@ final class NotaCreditoData extends ComprobanteData
         return $this->infoNotaCredito->fechaEmision;
     }
 
+    public function importeTotal(): string
+    {
+        return $this->infoNotaCredito->valorModificacion;
+    }
+
     /**
      * @return array<string, mixed>
      */

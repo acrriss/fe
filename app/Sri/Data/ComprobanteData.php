@@ -21,6 +21,14 @@ abstract class ComprobanteData extends Data
     abstract public function fechaEmision(): CarbonImmutable;
 
     /**
+     * Importe del documento, si el tipo lo declara (la retención no tiene).
+     */
+    public function importeTotal(): ?string
+    {
+        return null;
+    }
+
+    /**
      * Representación como array listo para ArrayToXml, en el orden que exige
      * la ficha técnica del SRI. Requiere que la claveAcceso ya esté asignada.
      *
