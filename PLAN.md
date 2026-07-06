@@ -3,7 +3,7 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** Fases 0–3 completadas ✅ · **Actualizado:** 2026-07-04
+> **Estado:** Fases 0–4 completadas ✅ · **Actualizado:** 2026-07-06
 
 ---
 
@@ -161,7 +161,7 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 | **1. Esqueleto** ✅ | Laravel 12 + PHP 8.4; Pest, Larastan, Pint, Rector; migraciones portadas | Laravel 12.62 en la raíz; `composer quality` en verde |
 | **2. Dominio** ✅ | Enums, Value Objects, DTOs con laravel-data | `app/Sri/` — clave golden reproducida desde el DTO |
 | **3. Lógica** ✅ | Actions + Pipeline + Gateway/Signer con fakes | Endpoint síncrono funcionando; XML golden byte a byte |
-| **4. Endurecimiento** | Sacar `.p12` de `public/`, cerrar path traversal, aislar certificados por request, validación de entrada | Apto para exponer |
+| **4. Endurecimiento** ✅ | Errores de dominio → 422, rate limiting, límites de payload, JSON forzado en API, jar versionado fuera de public | Apto para exponer |
 | **5. Microservicio** | Jobs/colas, API síncrona **y** asíncrona, versionado, OpenAPI | Consumible por terceros |
 | **6. Dashboard** *(futuro)* | Sanctum (tokens), planes, cuotas, rate limiting | Panel de autoservicio |
 
@@ -182,10 +182,31 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 
 ## 9. Próximo paso
 
-**Fase 4 — Endurecimiento**: convertir `DatoInvalido` en respuestas 422
-(hay un test `->todo()` esperándolo), validar payloads malformados con
-mensajes útiles, revisar el manejo del certificado (nunca en disco fuera de
-la firma, logs sin secretos) y repasar la superficie de seguridad completa.
+**Fase 5 — Microservicio**: persistencia del comprobante (modelo + estados),
+emisión asíncrona (`ProcesarComprobanteJob` reutilizando el pipeline),
+`GET /api/v1/comprobantes/{id}` para consultar estado/resultado, y el RIDE
+(decidir motor PDF y portar plantillas). Documentación OpenAPI.
+
+### Registro de la Fase 4 (2026-07-06)
+
+- **Errores de dominio → 422**: la construcción del DTO en el Form Request
+  captura `DatoInvalido` y las excepciones de laravel-data/Carbon (campo
+  faltante, enum desconocido, fecha malformada, RUC inválido…) y las
+  convierte en errores de validación con mensaje útil; render global de
+  `DatoInvalido` en `bootstrap/app.php` como red de seguridad.
+- **API siempre JSON** (`shouldRenderJsonWhen` para `api/*`).
+- **Rate limiting**: `throttleApi()` + limiter `api` explícito (60/min por
+  usuario o IP); en la fase 6 el límite dependerá del plan.
+- **Límites de payload**: `info.p12` ≤ 120 000 chars base64, clave ≤ 255.
+- **`sri.jar` versionado** en `resources/firmador/` (estaba en
+  `storage/app/`, que está git-ignored — no habría llegado a producción).
+- 9 tests nuevos de payloads hostiles. Suite: 76 tests / 222 aserciones;
+  PHPStan max limpio.
+- **Pendiente señalado**: los certificados reales del legado siguen en disco
+  (`legacy/public/sv.p12`, `legacy/public/p12/active.p12`, git-ignored);
+  conviene borrarlos o moverlos fuera del repo. La clave del certificado
+  viaja como argv al jar (visible en `ps` local): mitigable a futuro con un
+  firmador XAdES nativo en PHP.
 
 ### Registro de la Fase 3 (2026-07-04)
 

@@ -7,9 +7,15 @@ use App\Sri\Data\Factura\FacturaData;
 use App\Sri\Data\NotaCredito\NotaCreditoData;
 use App\Sri\Data\Retencion\ComprobanteRetencionData;
 use App\Sri\Enums\TipoComprobante;
+use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\ValueObjects\CertificadoFirma;
+use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Spatie\LaravelData\Exceptions\CannotCastDate;
+use Spatie\LaravelData\Exceptions\CannotCastEnum;
+use Spatie\LaravelData\Exceptions\CannotCreateData;
 
 /**
  * Emisión de un comprobante. Mantiene el contrato del payload heredado:
@@ -29,8 +35,10 @@ class EmitirComprobanteRequest extends FormRequest
             // valida el DTO tipado (ComprobanteData::from) con sus casts
             'comprobante' => ['required', 'array'],
             'info' => ['required', 'array'],
-            'info.p12' => ['required', 'string'],
-            'info.clavep12' => ['required', 'string'],
+            // un .p12 real pesa unos pocos KB; 120 000 caracteres base64
+            // (~90 KB) es un techo holgado que corta payloads abusivos
+            'info.p12' => ['required', 'string', 'max:120000'],
+            'info.clavep12' => ['required', 'string', 'max:255'],
         ];
     }
 
@@ -67,18 +75,35 @@ class EmitirComprobanteRequest extends FormRequest
         return TipoComprobante::fromRootElement($this->string('tipo')->toString());
     }
 
+    /**
+     * Construye el DTO tipado. Cualquier violación del contrato (campo
+     * faltante, enum desconocido, fecha malformada, RUC inválido…) se
+     * reporta como error de validación 422, nunca como error 500.
+     */
     public function comprobante(): ComprobanteData
     {
         $dataClass = self::DATA_POR_TIPO[$this->string('tipo')->toString()];
 
-        return $dataClass::from($this->validated('comprobante'));
+        try {
+            return $dataClass::from($this->validated('comprobante'));
+        } catch (DatoInvalido|CannotCreateData|CannotCastEnum|CannotCastDate|InvalidFormatException $excepcion) {
+            throw ValidationException::withMessages([
+                'comprobante' => $excepcion->getMessage(),
+            ]);
+        }
     }
 
     public function certificado(): CertificadoFirma
     {
-        return CertificadoFirma::desdeBase64(
-            $this->string('info.p12')->toString(),
-            $this->string('info.clavep12')->toString(),
-        );
+        try {
+            return CertificadoFirma::desdeBase64(
+                $this->string('info.p12')->toString(),
+                $this->string('info.clavep12')->toString(),
+            );
+        } catch (DatoInvalido $excepcion) {
+            throw ValidationException::withMessages([
+                'info.p12' => $excepcion->getMessage(),
+            ]);
+        }
     }
 }

@@ -26,7 +26,7 @@ return [
     */
 
     'firmador' => [
-        'jar' => env('SRI_FIRMADOR_JAR', storage_path('app/firmador/sri.jar')),
+        'jar' => env('SRI_FIRMADOR_JAR', resource_path('firmador/sri.jar')),
         'java' => env('SRI_JAVA_BIN', 'java'),
         'timeout' => env('SRI_FIRMADOR_TIMEOUT', 60),
     ],
