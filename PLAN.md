@@ -3,7 +3,7 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** Fases 0–5 + 6a (multi-tenant/API) completadas ✅ · Falta 6b (dashboard UI) · **Actualizado:** 2026-07-07
+> **Estado:** TODAS las fases (0–6) completadas ✅ · **Actualizado:** 2026-07-07
 
 ---
 
@@ -164,7 +164,7 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 | **4. Endurecimiento** ✅ | Errores de dominio → 422, rate limiting, límites de payload, JSON forzado en API, jar versionado fuera de public | Apto para exponer |
 | **5. Microservicio** ✅ | Persistencia con estados, Job cifrado, API síncrona **y** asíncrona, consulta por uuid, RIDE (dompdf), OpenAPI | Consumible por terceros |
 | **6a. Multi-tenant + API autenticada** ✅ | Contribuyente/Plan/User, Sanctum, certificado cifrado, cuotas, rate limit por plan | API lista para terceros con tenancy |
-| **6b. Dashboard UI** *(pendiente)* | Panel de autoservicio: tokens, consumo, comprobantes, certificado, logo | Decidir stack (Livewire/Inertia/Filament) |
+| **6b. Dashboard UI** ✅ | Panel Inertia + Vue 3: registro/login, resumen con consumo vs. cuota, comprobantes con descargas, tokens, configuración (certificado/logo) | Autoservicio completo |
 
 ---
 
@@ -181,12 +181,38 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 
 ---
 
-## 9. Próximo paso
+## 9. Trabajo futuro (backlog)
 
-**Fase 6b — Dashboard UI**: decidir stack (Livewire / Inertia / Filament) y
-construir el panel: gestión de tokens, consumo vs. cuota, historial de
-comprobantes (con RIDE/XML), carga de certificado y logo. Opcional después:
-firmador XAdES nativo en PHP (eliminar la dependencia de Java).
+- **Firmador XAdES-BES nativo en PHP**: eliminar la dependencia de Java y el
+  paso de la clave por argv.
+- **Test de integración de la firma** cuando haya JRE disponible.
+- **Reintento de comprobantes devueltos** reutilizando clave/secuencial (§5.10).
+- **Webhooks** de notificación al autorizar (alternativa al polling).
+- **Código de barras Code 128** en el RIDE (opcional según ficha §9.20).
+- **Tipos faltantes**: notaDebito, guiaRemision, liquidacionCompra.
+- **Gestión de planes/facturación del servicio** (upgrade/downgrade, pagos).
+- **Emisión de prueba desde el panel** (formulario manual de factura).
+
+### Registro de la Fase 6b (2026-07-07)
+
+- **Stack elegido por el usuario: Inertia v3 + Vue 3** (+ Tailwind 4 del
+  esqueleto, plugin Vue en Vite). Sin librería de componentes.
+- **Auth de panel por sesión**: login (throttle 6/min), registro que crea
+  Contribuyente + primer usuario en transacción, logout.
+- **Páginas** (`resources/js/Pages/`): `Auth/Login`, `Auth/Registro`,
+  `Panel/Inicio` (stat tiles de consumo vs. cuota con medidor accesible,
+  totales y últimas emisiones), `Panel/Comprobantes` (paginado + descargas
+  RIDE/XML), `Panel/Tokens` (crear/revocar; token visible una sola vez vía
+  flash), `Panel/Configuracion` (datos, certificado .p12 por upload, logo).
+- `HandleInertiaRequests` comparte `auth.user`, `auth.contribuyente`
+  (con flags de certificado/logo) y mensajes flash; aviso persistente si
+  falta el certificado. Estados siempre con etiqueta + icono (nunca solo
+  color) vía `EstadoBadge`.
+- Descargas del panel reutilizan `DescargarRideController` (la comprobación
+  de tenancy funciona igual con sesión) + endpoint XML propio.
+- Seeder de planes base (gratis/emprendedor/empresa).
+- Suite: 120 tests / 384 aserciones (16 nuevas de panel con
+  `assertInertia`); PHPStan max limpio; assets compilando en Vite.
 
 ### Registro de la Fase 6a (2026-07-07)
 

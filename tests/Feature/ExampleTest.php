@@ -1,5 +1,5 @@
 <?php
 
-it('responde en la raíz', function () {
-    $this->get('/')->assertStatus(200);
+it('la raíz redirige al login para visitantes', function () {
+    $this->get('/')->assertRedirect(route('login'));
 });
