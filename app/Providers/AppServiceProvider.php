@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Sri\Contracts\RideGenerator;
 use App\Sri\Contracts\SriGateway;
 use App\Sri\Contracts\XmlSigner;
 use App\Sri\Firma\JarXmlSigner;
 use App\Sri\Gateways\SoapSriGateway;
+use App\Sri\Ride\DompdfRideGenerator;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -20,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(SriGateway::class, SoapSriGateway::class);
         $this->app->bind(XmlSigner::class, JarXmlSigner::class);
+        $this->app->bind(RideGenerator::class, DompdfRideGenerator::class);
     }
 
     /**

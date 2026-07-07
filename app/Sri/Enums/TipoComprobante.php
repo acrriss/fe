@@ -52,4 +52,19 @@ enum TipoComprobante: string
     {
         return $this === self::ComprobanteRetencion ? '1.0.0' : '1.1.0';
     }
+
+    /**
+     * Nombre del documento tal como se muestra en el RIDE.
+     */
+    public function etiqueta(): string
+    {
+        return match ($this) {
+            self::Factura => 'FACTURA',
+            self::LiquidacionCompra => 'LIQUIDACIÓN DE COMPRA',
+            self::NotaCredito => 'NOTA DE CRÉDITO',
+            self::NotaDebito => 'NOTA DE DÉBITO',
+            self::GuiaRemision => 'GUÍA DE REMISIÓN',
+            self::ComprobanteRetencion => 'COMPROBANTE DE RETENCIÓN',
+        };
+    }
 }

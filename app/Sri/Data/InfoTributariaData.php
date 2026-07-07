@@ -39,6 +39,14 @@ final class InfoTributariaData extends Data
     ) {}
 
     /**
+     * Número completo del comprobante: estab-ptoEmi-secuencial.
+     */
+    public function numeroCompleto(): string
+    {
+        return "{$this->estab}-{$this->ptoEmi}-{$this->secuencial}";
+    }
+
+    /**
      * Bloque <infoTributaria> en el orden de la ficha del SRI. El codDoc
      * viene del tipo del comprobante y la claveAcceso debe existir ya.
      *

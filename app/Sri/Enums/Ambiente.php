@@ -14,4 +14,9 @@ enum Ambiente: string
     {
         return $this === self::Produccion;
     }
+
+    public function etiqueta(): string
+    {
+        return $this === self::Produccion ? 'PRODUCCIÓN' : 'PRUEBAS';
+    }
 }

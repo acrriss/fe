@@ -3,7 +3,7 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** Fases 0–5 completadas ✅ (RIDE pendiente de decisión de motor) · **Actualizado:** 2026-07-06
+> **Estado:** Fases 0–5 completadas ✅ (incluido RIDE con dompdf) · **Actualizado:** 2026-07-07
 
 ---
 
@@ -162,7 +162,7 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 | **2. Dominio** ✅ | Enums, Value Objects, DTOs con laravel-data | `app/Sri/` — clave golden reproducida desde el DTO |
 | **3. Lógica** ✅ | Actions + Pipeline + Gateway/Signer con fakes | Endpoint síncrono funcionando; XML golden byte a byte |
 | **4. Endurecimiento** ✅ | Errores de dominio → 422, rate limiting, límites de payload, JSON forzado en API, jar versionado fuera de public | Apto para exponer |
-| **5. Microservicio** ✅ | Persistencia con estados, Job cifrado, API síncrona **y** asíncrona, consulta por uuid, OpenAPI | Consumible por terceros (RIDE pendiente) |
+| **5. Microservicio** ✅ | Persistencia con estados, Job cifrado, API síncrona **y** asíncrona, consulta por uuid, RIDE (dompdf), OpenAPI | Consumible por terceros |
 | **6. Dashboard** *(futuro)* | Sanctum (tokens), planes, cuotas, rate limiting | Panel de autoservicio |
 
 ---
@@ -182,9 +182,24 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 
 ## 9. Próximo paso
 
-Pendientes en orden sugerido:
-1. **RIDE** (fase 5b): decidir motor PDF y portar plantillas (ver registro).
-2. **Fase 6 — Dashboard**: Sanctum, planes, cuotas, rate limiting por plan.
+**Fase 6 — Dashboard**: Sanctum (tokens por usuario), planes con cuotas,
+rate limiting por plan, y el panel de autoservicio. También pendiente:
+firmador XAdES nativo en PHP (eliminar dependencia de Java) — opcional.
+
+### Registro de la Fase 5b — RIDE (2026-07-07)
+
+- **Motor elegido: dompdf** (`barryvdh/laravel-dompdf`) — puro PHP, sin
+  binarios; el usuario lo aprobó frente a Browsershot y wkhtmltopdf.
+- **`ComprobanteXmlParser`** (XML → DTO): el RIDE se genera desde el XML
+  firmado almacenado (la fuente de verdad legal). Verificado por
+  **roundtrip byte a byte** contra los golden (parse → render == original);
+  la firma en namespace `ds:` queda naturalmente fuera.
+- Plantillas Blade (`resources/views/ride/`): base común + factura, nota de
+  crédito y retención, conforme al Anexo 2 (código de barras opcional:
+  omitido por ahora; logo del emisor llegará con la fase 6).
+- `GET /api/v1/comprobantes/{uuid}/ride` → PDF; 409 si no autorizado, 404
+  sin XML; se cachea en `rides/` tras la primera generación.
+- Suite: 97 tests / 283 aserciones; PHPStan max limpio.
 
 ### Registro de la Fase 5 (2026-07-06)
 

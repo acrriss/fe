@@ -96,6 +96,28 @@ paths:
                   data: { $ref: '#/components/schemas/Comprobante' }
         '404':
           description: No existe una emisión con ese id.
+  /comprobantes/{id}/ride:
+    get:
+      summary: Descargar el RIDE (PDF) de un comprobante autorizado
+      description: >
+        Representación impresa del documento electrónico (Anexo 2 de la
+        ficha del SRI), generada desde el XML firmado. Se cachea tras la
+        primera descarga.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: El RIDE en PDF.
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
+        '404':
+          description: No existe la emisión o su XML ya no está disponible.
+        '409':
+          description: El comprobante aún no está autorizado.
 components:
   schemas:
     ComprobantePayload:
