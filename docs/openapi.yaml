@@ -18,7 +18,52 @@ info:
   version: 1.0.0
 servers:
   - url: /api/v1
+security:
+  - bearerAuth: []
 paths:
+  /tokens:
+    post:
+      summary: Obtener un token de API
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, device_name]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+                device_name: { type: string, description: Nombre descriptivo del integrador/dispositivo. }
+      responses:
+        '201':
+          description: Token emitido (usarlo como Bearer).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+        '422':
+          description: Credenciales incorrectas.
+  /contribuyente/certificado:
+    put:
+      summary: Cargar o reemplazar el certificado de firma del contribuyente
+      description: El certificado se almacena cifrado en reposo y se usa en todas las emisiones.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [p12, clave]
+              properties:
+                p12: { type: string, description: Certificado .p12 en base64. }
+                clave: { type: string }
+      responses:
+        '204': { description: Certificado guardado. }
+        '422': { description: Certificado inválido. }
   /comprobantes:
     post:
       summary: Emitir un comprobante electrónico
@@ -42,21 +87,14 @@ paths:
           application/json:
             schema:
               type: object
-              required: [info]
+              description: >
+                El RUC de infoTributaria debe ser el del contribuyente
+                autenticado. La firma usa el certificado almacenado del
+                contribuyente (PUT /contribuyente/certificado).
               properties:
                 factura: { $ref: '#/components/schemas/ComprobantePayload' }
                 notaCredito: { $ref: '#/components/schemas/ComprobantePayload' }
                 comprobanteRetencion: { $ref: '#/components/schemas/ComprobantePayload' }
-                info:
-                  type: object
-                  required: [p12, clavep12]
-                  properties:
-                    p12:
-                      type: string
-                      description: Certificado .p12 codificado en base64 (máx. 120 000 caracteres).
-                    clavep12:
-                      type: string
-                      description: Contraseña del certificado.
       responses:
         '200':
           description: Emisión síncrona autorizada.
@@ -75,8 +113,12 @@ paths:
           description: >
             Payload inválido, o el SRI devolvió/no autorizó el comprobante
             (en la modalidad síncrona; el campo `etapa` indica dónde falló).
+        '401':
+          description: Sin token o token inválido.
+        '409':
+          description: El contribuyente no tiene certificado de firma configurado.
         '429':
-          description: Límite de peticiones excedido.
+          description: Límite de peticiones excedido o cuota mensual del plan agotada.
   /comprobantes/{id}:
     get:
       summary: Consultar el estado de una emisión
@@ -119,6 +161,11 @@ paths:
         '409':
           description: El comprobante aún no está autorizado.
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token personal emitido en POST /tokens (Laravel Sanctum).
   schemas:
     ComprobantePayload:
       type: object

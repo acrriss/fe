@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ComprobanteResource;
 use App\Models\Comprobante;
+use Illuminate\Http\Request;
 
 /**
  * Consulta del estado y resultado de una emisión (polling del flujo
@@ -12,8 +13,14 @@ use App\Models\Comprobante;
  */
 class ConsultarComprobanteController extends Controller
 {
-    public function __invoke(Comprobante $comprobante): ComprobanteResource
+    public function __invoke(Request $request, Comprobante $comprobante): ComprobanteResource
     {
+        // aislamiento entre contribuyentes: un id ajeno "no existe"
+        abort_unless(
+            $comprobante->contribuyente_id === $request->user()?->contribuyente_id,
+            404,
+        );
+
         return new ComprobanteResource($comprobante);
     }
 }

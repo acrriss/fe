@@ -10,15 +10,18 @@ use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     Storage::fake();
+    $this->contribuyente = actuar_como_contribuyente();
 });
 
 /**
- * Crea un registro autorizado cuyo XML firmado es el golden del tipo dado.
+ * Crea un registro autorizado del contribuyente autenticado cuyo XML
+ * firmado es el golden del tipo dado.
  */
 function comprobante_autorizado_con_xml(string $tipo, ?string $dataClass = null): Comprobante
 {
     $registro = Comprobante::factory()->autorizado()->create([
         'tipo' => TipoComprobante::fromRootElement($tipo),
+        'contribuyente_id' => test()->contribuyente->id,
     ]);
 
     $xml = file_get_contents(golden_path("$tipo/comprobante.xml"));
@@ -75,14 +78,18 @@ it('sirve el RIDE cacheado sin regenerarlo', function () {
 });
 
 it('responde 409 si el comprobante no está autorizado', function () {
-    $registro = Comprobante::factory()->create(); // pendiente
+    $registro = Comprobante::factory()->create([
+        'contribuyente_id' => $this->contribuyente->id,
+    ]); // pendiente
 
     $this->getJson(route('api.v1.comprobantes.ride', $registro))
         ->assertStatus(409);
 });
 
 it('responde 404 si el XML ya no está disponible', function () {
-    $registro = Comprobante::factory()->autorizado()->create();
+    $registro = Comprobante::factory()->autorizado()->create([
+        'contribuyente_id' => $this->contribuyente->id,
+    ]);
 
     $this->getJson(route('api.v1.comprobantes.ride', $registro))
         ->assertNotFound();

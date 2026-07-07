@@ -27,28 +27,39 @@ class EmitirComprobanteController extends Controller
         EmitirComprobante $pipeline,
         RegistroDeEmision $registroDeEmision,
     ): JsonResponse {
+        $contribuyente = $request->contribuyente()
+            ?? abort(403, 'El usuario no pertenece a ningún contribuyente.');
+
+        abort_unless(
+            $contribuyente->tieneCertificado(),
+            409,
+            'El contribuyente no tiene un certificado de firma configurado.',
+        );
+
+        abort_if(
+            $contribuyente->agotoCuotaMensual(),
+            429,
+            'La cuota mensual del plan está agotada.',
+        );
+
         $comprobante = $request->comprobante();
-        $certificado = $request->certificado(); // valida el base64 antes de encolar
-        $registro = $registroDeEmision->crear($comprobante);
+        $registro = $registroDeEmision->crear($comprobante, $contribuyente);
 
         if ($request->boolean('async')) {
             /** @var array<string, mixed> $payloadComprobante */
             $payloadComprobante = (array) $request->validated('comprobante');
 
-            ProcesarComprobanteJob::dispatch(
-                $registro,
-                $comprobante::class,
-                $payloadComprobante,
-                $request->string('info.p12')->toString(),
-                $request->string('info.clavep12')->toString(),
-            );
+            ProcesarComprobanteJob::dispatch($registro, $comprobante::class, $payloadComprobante);
 
             return (new ComprobanteResource($registro))
                 ->response()
                 ->setStatusCode(202);
         }
 
-        $emision = new EmisionComprobante(comprobante: $comprobante, certificado: $certificado);
+        $emision = new EmisionComprobante(
+            comprobante: $comprobante,
+            certificado: $contribuyente->certificadoFirma(),
+        );
 
         try {
             $registroDeEmision->completar($registro, $pipeline->emitir($emision));

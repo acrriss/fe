@@ -9,7 +9,6 @@ use App\Sri\Exceptions\EmisionFallida;
 use App\Sri\Pipeline\EmisionComprobante;
 use App\Sri\Pipeline\EmitirComprobante;
 use App\Sri\Registro\RegistroDeEmision;
-use App\Sri\ValueObjects\CertificadoFirma;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -19,10 +18,9 @@ use Throwable;
  * Emisión asíncrona: ejecuta el MISMO pipeline que el endpoint síncrono y
  * persiste el resultado en el registro.
  *
- * ShouldBeEncrypted es obligatorio: el payload transporta el certificado
- * .p12 y su clave, que nunca deben quedar legibles en la tabla de colas.
- * (En la fase 6, con certificados almacenados por usuario, dejarán de
- * viajar en el job.)
+ * El certificado de firma NO viaja en el job: se lee del contribuyente
+ * dueño del registro al momento de procesar. El payload va cifrado de
+ * todos modos (ShouldBeEncrypted) por contener datos del comprobante.
  */
 class ProcesarComprobanteJob implements ShouldBeEncrypted, ShouldQueue
 {
@@ -43,15 +41,16 @@ class ProcesarComprobanteJob implements ShouldBeEncrypted, ShouldQueue
         public Comprobante $registro,
         public string $dataClass,
         public array $payloadComprobante,
-        public string $p12Base64,
-        public string $claveP12,
     ) {}
 
     public function handle(EmitirComprobante $pipeline, RegistroDeEmision $registro): void
     {
+        $contribuyente = $this->registro->contribuyente
+            ?? throw new \RuntimeException('El registro no tiene contribuyente asociado.');
+
         $emision = new EmisionComprobante(
             comprobante: $this->dataClass::from($this->payloadComprobante),
-            certificado: CertificadoFirma::desdeBase64($this->p12Base64, $this->claveP12),
+            certificado: $contribuyente->certificadoFirma(),
         );
 
         try {

@@ -3,7 +3,7 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** Fases 0–5 completadas ✅ (incluido RIDE con dompdf) · **Actualizado:** 2026-07-07
+> **Estado:** Fases 0–5 + 6a (multi-tenant/API) completadas ✅ · Falta 6b (dashboard UI) · **Actualizado:** 2026-07-07
 
 ---
 
@@ -163,7 +163,8 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 | **3. Lógica** ✅ | Actions + Pipeline + Gateway/Signer con fakes | Endpoint síncrono funcionando; XML golden byte a byte |
 | **4. Endurecimiento** ✅ | Errores de dominio → 422, rate limiting, límites de payload, JSON forzado en API, jar versionado fuera de public | Apto para exponer |
 | **5. Microservicio** ✅ | Persistencia con estados, Job cifrado, API síncrona **y** asíncrona, consulta por uuid, RIDE (dompdf), OpenAPI | Consumible por terceros |
-| **6. Dashboard** *(futuro)* | Sanctum (tokens), planes, cuotas, rate limiting | Panel de autoservicio |
+| **6a. Multi-tenant + API autenticada** ✅ | Contribuyente/Plan/User, Sanctum, certificado cifrado, cuotas, rate limit por plan | API lista para terceros con tenancy |
+| **6b. Dashboard UI** *(pendiente)* | Panel de autoservicio: tokens, consumo, comprobantes, certificado, logo | Decidir stack (Livewire/Inertia/Filament) |
 
 ---
 
@@ -182,9 +183,30 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 
 ## 9. Próximo paso
 
-**Fase 6 — Dashboard**: Sanctum (tokens por usuario), planes con cuotas,
-rate limiting por plan, y el panel de autoservicio. También pendiente:
-firmador XAdES nativo en PHP (eliminar dependencia de Java) — opcional.
+**Fase 6b — Dashboard UI**: decidir stack (Livewire / Inertia / Filament) y
+construir el panel: gestión de tokens, consumo vs. cuota, historial de
+comprobantes (con RIDE/XML), carga de certificado y logo. Opcional después:
+firmador XAdES nativo en PHP (eliminar la dependencia de Java).
+
+### Registro de la Fase 6a (2026-07-07)
+
+- **Modelo multi-tenant** (decisiones del usuario: usuario∈1 contribuyente;
+  certificado almacenado): `Contribuyente` (RUC único, razón social, logo,
+  **certificado .p12 + clave cifrados** con casts `encrypted`, plan) ·
+  `Plan` (cuota mensual, límite/minuto) · `User.contribuyente_id` ·
+  `Comprobante.contribuyente_id` (reemplazó a `user_id`).
+- **Auth Sanctum**: endpoints de comprobantes bajo `auth:sanctum`;
+  `POST /api/v1/tokens` intercambia credenciales por token.
+- **Certificado**: `PUT /api/v1/contribuyente/certificado` (cifrado en
+  reposo, verificado por test). El payload de emisión ya no transporta
+  `info.p12` (se ignora si viene) y **el Job ya no acarrea secretos** —
+  resuelto el pendiente de la fase 4.
+- **Tenancy estricta**: el RUC del payload debe ser el del contribuyente
+  autenticado (422); consultas/RIDE de comprobantes ajenos responden 404.
+- **Cuota y rate limit por plan**: 429 al agotar la cuota mensual; el
+  limiter `api` usa `plan.limite_por_minuto` por contribuyente.
+- **RIDE con logo del contribuyente** (data-uri embebido si existe).
+- Suite: 104 tests / 292 aserciones; PHPStan max limpio.
 
 ### Registro de la Fase 5b — RIDE (2026-07-07)
 

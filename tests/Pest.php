@@ -1,6 +1,9 @@
 <?php
 
+use App\Models\Contribuyente;
+use App\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /*
@@ -40,8 +43,9 @@ function golden_input(string $tipo): array
 }
 
 /**
- * Payload golden completo listo para POSTear (con certificado dummy en
- * lugar de los placeholders de sanitización).
+ * Payload golden completo listo para POSTear. El bloque `info` del payload
+ * legado se conserva (la API lo ignora: el certificado vive en el
+ * contribuyente autenticado).
  */
 function golden_payload(string $tipo): array
 {
@@ -50,4 +54,27 @@ function golden_payload(string $tipo): array
     $payload['info']['clavep12'] = 'secreto';
 
     return $payload;
+}
+
+/**
+ * Crea un contribuyente (con certificado por defecto) con un usuario
+ * autenticado vía Sanctum, y lo devuelve.
+ */
+function actuar_como_contribuyente(bool $conCertificado = true, array $atributos = []): Contribuyente
+{
+    $factory = Contribuyente::factory();
+
+    if ($conCertificado) {
+        $factory = $factory->conCertificado();
+    }
+
+    // por defecto, el RUC de los fixtures golden: así los payloads de los
+    // tests coinciden con el contribuyente autenticado
+    $contribuyente = $factory->create($atributos + ['ruc' => '0922596788001']);
+
+    Sanctum::actingAs(
+        User::factory()->create(['contribuyente_id' => $contribuyente->id]),
+    );
+
+    return $contribuyente;
 }

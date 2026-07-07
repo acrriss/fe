@@ -2,6 +2,7 @@
 
 use App\Jobs\ProcesarComprobanteJob;
 use App\Models\Comprobante;
+use App\Models\Contribuyente;
 use App\Sri\Contracts\SriGateway;
 use App\Sri\Contracts\XmlSigner;
 use App\Sri\Data\Factura\FacturaData;
@@ -22,8 +23,19 @@ beforeEach(function () {
     Storage::fake();
 });
 
+/**
+ * Registro pendiente perteneciente a un contribuyente con certificado.
+ */
+function registro_pendiente(): Comprobante
+{
+    return Comprobante::factory()
+        ->for(Contribuyente::factory()->conCertificado(), 'contribuyente')
+        ->create();
+}
+
 describe('emisión asíncrona', function () {
     it('encola el job y responde 202 con el id para consultar', function () {
+        actuar_como_contribuyente();
         Queue::fake();
 
         $respuesta = $this->postJson(
@@ -43,15 +55,13 @@ describe('emisión asíncrona', function () {
             ->and($registro->estado)->toBe(EstadoComprobante::Pendiente);
     });
 
-    it('el job emite y completa el registro con el XML almacenado', function () {
-        $registro = Comprobante::factory()->create();
+    it('el job lee el certificado del contribuyente y completa el registro', function () {
+        $registro = registro_pendiente();
 
         new ProcesarComprobanteJob(
             registro: $registro,
             dataClass: FacturaData::class,
             payloadComprobante: golden_input('factura'),
-            p12Base64: base64_encode('certificado-dummy'),
-            claveP12: 'secreto',
         )->handle(app(EmitirComprobante::class), app(RegistroDeEmision::class));
 
         $registro->refresh();
@@ -67,14 +77,12 @@ describe('emisión asíncrona', function () {
 
     it('el job registra la devolución como fallo de negocio (sin reintentos)', function () {
         $this->gateway->devolverComprobantes();
-        $registro = Comprobante::factory()->create();
+        $registro = registro_pendiente();
 
         new ProcesarComprobanteJob(
             registro: $registro,
             dataClass: FacturaData::class,
             payloadComprobante: golden_input('factura'),
-            p12Base64: base64_encode('certificado-dummy'),
-            claveP12: 'secreto',
         )->handle(app(EmitirComprobante::class), app(RegistroDeEmision::class));
 
         $registro->refresh();
@@ -85,27 +93,26 @@ describe('emisión asíncrona', function () {
     });
 
     it('failed() marca el registro como fallido ante errores técnicos', function () {
-        $registro = Comprobante::factory()->create();
+        $registro = registro_pendiente();
 
         new ProcesarComprobanteJob(
             registro: $registro,
             dataClass: FacturaData::class,
             payloadComprobante: golden_input('factura'),
-            p12Base64: base64_encode('certificado-dummy'),
-            claveP12: 'secreto',
         )->failed(new RuntimeException('SRI caído'));
 
         expect($registro->refresh()->estado)->toBe(EstadoComprobante::Fallido);
     });
 
-    it('el job viaja cifrado en la cola (transporta el certificado)', function () {
+    it('el job viaja cifrado en la cola', function () {
         expect(ProcesarComprobanteJob::class)->toImplement(ShouldBeEncrypted::class);
     });
 });
 
 describe('consulta de estado', function () {
     it('devuelve el estado de una emisión pendiente', function () {
-        $registro = Comprobante::factory()->create();
+        $contribuyente = actuar_como_contribuyente();
+        $registro = Comprobante::factory()->create(['contribuyente_id' => $contribuyente->id]);
 
         $this->getJson(route('api.v1.comprobantes.mostrar', $registro))
             ->assertSuccessful()
@@ -116,7 +123,8 @@ describe('consulta de estado', function () {
     });
 
     it('devuelve autorización y XML cuando está autorizado', function () {
-        $registro = Comprobante::factory()->autorizado()->create();
+        $contribuyente = actuar_como_contribuyente();
+        $registro = Comprobante::factory()->autorizado()->create(['contribuyente_id' => $contribuyente->id]);
         Storage::put($path = "comprobantes/{$registro->clave_acceso}.xml", '<factura>firmada</factura>');
         $registro->update(['xml_path' => $path]);
 
@@ -131,20 +139,25 @@ describe('consulta de estado', function () {
     });
 
     it('responde 404 para un id desconocido', function () {
+        actuar_como_contribuyente();
+
         $this->getJson(route('api.v1.comprobantes.mostrar', 'no-existe'))
             ->assertNotFound();
     });
 });
 
 describe('persistencia del flujo síncrono', function () {
-    it('registra la emisión autorizada', function () {
+    it('registra la emisión autorizada a nombre del contribuyente', function () {
+        $contribuyente = actuar_como_contribuyente();
+
         $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'));
 
         $respuesta->assertSuccessful();
 
         $registro = Comprobante::where('uuid', $respuesta->json('id'))->first();
 
-        expect($registro->estado)->toBe(EstadoComprobante::Autorizado)
+        expect($registro->contribuyente_id)->toBe($contribuyente->id)
+            ->and($registro->estado)->toBe(EstadoComprobante::Autorizado)
             ->and($registro->clave_acceso)->toBe($respuesta->json('claveAcceso'))
             ->and($registro->importe_total)->toBe('11.20');
 
@@ -152,6 +165,7 @@ describe('persistencia del flujo síncrono', function () {
     });
 
     it('registra la emisión devuelta con sus mensajes', function () {
+        actuar_como_contribuyente();
         $this->gateway->devolverComprobantes();
 
         $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'));

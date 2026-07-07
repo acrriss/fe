@@ -2,25 +2,27 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Contribuyente;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\Factura\FacturaData;
 use App\Sri\Data\NotaCredito\NotaCreditoData;
 use App\Sri\Data\Retencion\ComprobanteRetencionData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Exceptions\DatoInvalido;
-use App\Sri\ValueObjects\CertificadoFirma;
 use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Validation\Validator;
 use Spatie\LaravelData\Exceptions\CannotCastDate;
 use Spatie\LaravelData\Exceptions\CannotCastEnum;
 use Spatie\LaravelData\Exceptions\CannotCreateData;
 
 /**
  * Emisión de un comprobante. Mantiene el contrato del payload heredado:
- * la primera clave identifica el tipo (factura, notaCredito…) y `info`
- * transporta el certificado (p12 base64 + clave) del emisor.
+ * la primera clave identifica el tipo (factura, notaCredito…). El
+ * certificado de firma ya no viaja en el payload: vive cifrado en el
+ * contribuyente autenticado.
  */
 class EmitirComprobanteRequest extends FormRequest
 {
@@ -34,11 +36,6 @@ class EmitirComprobanteRequest extends FormRequest
             // sin reglas anidadas a propósito: la estructura interna la
             // valida el DTO tipado (ComprobanteData::from) con sus casts
             'comprobante' => ['required', 'array'],
-            'info' => ['required', 'array'],
-            // un .p12 real pesa unos pocos KB; 120 000 caracteres base64
-            // (~90 KB) es un techo holgado que corta payloads abusivos
-            'info.p12' => ['required', 'string', 'max:120000'],
-            'info.clavep12' => ['required', 'string', 'max:255'],
         ];
     }
 
@@ -54,8 +51,8 @@ class EmitirComprobanteRequest extends FormRequest
     ];
 
     /**
-     * Normaliza el payload heredado ({factura: {...}, info: {...}}) a la
-     * forma interna {tipo, comprobante, info} antes de validar.
+     * Normaliza el payload heredado ({factura: {...}}) a la forma interna
+     * {tipo, comprobante} antes de validar.
      */
     protected function prepareForValidation(): void
     {
@@ -68,6 +65,34 @@ class EmitirComprobanteRequest extends FormRequest
                 'comprobante' => $this->input($tipo),
             ]);
         }
+    }
+
+    /**
+     * El RUC del comprobante debe ser el del contribuyente autenticado:
+     * nadie emite a nombre de otro.
+     *
+     * @return array<int, callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                $contribuyente = $this->contribuyente();
+                $ruc = $this->input('comprobante.infoTributaria.ruc');
+
+                if ($contribuyente !== null && $ruc !== $contribuyente->ruc) {
+                    $validator->errors()->add(
+                        'comprobante.infoTributaria.ruc',
+                        'El RUC del comprobante no corresponde al contribuyente autenticado.',
+                    );
+                }
+            },
+        ];
+    }
+
+    public function contribuyente(): ?Contribuyente
+    {
+        return $this->user()?->contribuyente;
     }
 
     public function tipoComprobante(): TipoComprobante
@@ -89,20 +114,6 @@ class EmitirComprobanteRequest extends FormRequest
         } catch (DatoInvalido|CannotCreateData|CannotCastEnum|CannotCastDate|InvalidFormatException $excepcion) {
             throw ValidationException::withMessages([
                 'comprobante' => $excepcion->getMessage(),
-            ]);
-        }
-    }
-
-    public function certificado(): CertificadoFirma
-    {
-        try {
-            return CertificadoFirma::desdeBase64(
-                $this->string('info.p12')->toString(),
-                $this->string('info.clavep12')->toString(),
-            );
-        } catch (DatoInvalido $excepcion) {
-            throw ValidationException::withMessages([
-                'info.p12' => $excepcion->getMessage(),
             ]);
         }
     }

@@ -30,11 +30,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // La emisión llama a servicios externos lentos (SOAP del SRI):
-        // el límite por minuto protege tanto al servicio como al SRI.
-        // En la fase 6 el límite dependerá del plan del usuario.
+        // La emisión llama a servicios externos lentos (SOAP del SRI): el
+        // límite por minuto viene del plan del contribuyente (60 por
+        // defecto) y se aplica por contribuyente, no por usuario.
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()->id ?? $request->ip());
+            $contribuyente = $request->user()?->contribuyente;
+
+            return Limit::perMinute($contribuyente->plan->limite_por_minuto ?? 60)
+                ->by((string) ($contribuyente->id ?? $request->ip()));
         });
     }
 }

@@ -7,6 +7,7 @@ use App\Models\Comprobante;
 use App\Sri\Contracts\RideGenerator;
 use App\Sri\Enums\EstadoComprobante;
 use App\Sri\Support\ComprobanteXmlParser;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Storage;
 
@@ -19,10 +20,17 @@ use Illuminate\Support\Facades\Storage;
 class DescargarRideController extends Controller
 {
     public function __invoke(
+        Request $request,
         Comprobante $comprobante,
         RideGenerator $generator,
         ComprobanteXmlParser $parser,
     ): Response {
+        // aislamiento entre contribuyentes: un id ajeno "no existe"
+        abort_unless(
+            $comprobante->contribuyente_id === $request->user()?->contribuyente_id,
+            404,
+        );
+
         abort_unless(
             $comprobante->estado === EstadoComprobante::Autorizado,
             409,

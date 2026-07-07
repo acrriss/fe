@@ -3,6 +3,7 @@
 namespace App\Sri\Registro;
 
 use App\Models\Comprobante;
+use App\Models\Contribuyente;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Enums\EstadoComprobante;
 use App\Sri\Exceptions\EmisionFallida;
@@ -16,9 +17,10 @@ use Illuminate\Support\Facades\Storage;
  */
 class RegistroDeEmision
 {
-    public function crear(ComprobanteData $comprobante): Comprobante
+    public function crear(ComprobanteData $comprobante, Contribuyente $contribuyente): Comprobante
     {
         return Comprobante::create([
+            'contribuyente_id' => $contribuyente->id,
             'tipo' => $comprobante::tipo(),
             'estado' => EstadoComprobante::Pendiente,
             'ambiente' => $comprobante->infoTributaria->ambiente,

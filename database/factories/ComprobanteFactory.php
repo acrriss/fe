@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Comprobante;
+use App\Models\Contribuyente;
 use App\Sri\Enums\Ambiente;
 use App\Sri\Enums\EstadoComprobante;
 use App\Sri\Enums\TipoComprobante;
@@ -24,6 +25,7 @@ class ComprobanteFactory extends Factory
     public function definition(): array
     {
         return [
+            'contribuyente_id' => Contribuyente::factory(),
             'tipo' => TipoComprobante::Factura,
             'estado' => EstadoComprobante::Pendiente,
             'ambiente' => Ambiente::Pruebas,

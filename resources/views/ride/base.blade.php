@@ -28,6 +28,9 @@
         <tr>
             <td class="col">
                 <div class="marco">
+                    @isset($logo)
+                        <img src="{{ $logo }}" style="max-height: 60px; margin-bottom: 6px;" alt="">
+                    @endisset
                     <div class="doc-titulo">{{ $comprobante->infoTributaria->razonSocial }}</div>
                     @if ($comprobante->infoTributaria->nombreComercial)
                         <div>{{ $comprobante->infoTributaria->nombreComercial }}</div>

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
  * Reemplaza a la tabla homónima del legado. Notas de diseño:
  *  - `uuid` es el identificador público de la API (el id autoincremental
  *    nunca se expone).
- *  - `user_id` es nullable hasta que la fase 6 introduzca autenticación.
+ *  - los comprobantes pertenecen al contribuyente emisor (dueño del RUC).
  *  - `clave_acceso` es única: la ficha del SRI (§5.10) exige reutilizar la
  *    misma clave al reintentar un comprobante rechazado, y además es el
  *    número de autorización (§5.9).
@@ -37,7 +37,7 @@ return new class extends Migration
             $table->string('xml_path')->nullable();
             $table->string('ride_path')->nullable();
             $table->date('emitido_en')->nullable();
-            $table->foreignId('user_id')->nullable()->constrained()->cascadeOnDelete();
+            $table->foreignId('contribuyente_id')->nullable()->constrained('contribuyentes')->cascadeOnDelete();
             $table->timestamps();
         });
     }

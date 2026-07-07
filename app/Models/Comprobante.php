@@ -31,7 +31,8 @@ use Illuminate\Support\Carbon;
  * @property string|null $xml_path
  * @property string|null $ride_path
  * @property Carbon|null $emitido_en
- * @property int|null $user_id
+ * @property int|null $contribuyente_id
+ * @property-read Contribuyente|null $contribuyente
  */
 class Comprobante extends Model
 {
@@ -60,11 +61,11 @@ class Comprobante extends Model
     }
 
     /**
-     * @return BelongsTo<User, $this>
+     * @return BelongsTo<Contribuyente, $this>
      */
-    public function user(): BelongsTo
+    public function contribuyente(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(Contribuyente::class);
     }
 
     /**

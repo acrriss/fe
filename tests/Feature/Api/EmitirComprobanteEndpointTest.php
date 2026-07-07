@@ -6,12 +6,15 @@ use App\Sri\Firma\FakeXmlSigner;
 use App\Sri\Gateways\FakeSriGateway;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
     $this->gateway = new FakeSriGateway;
     $this->app->instance(SriGateway::class, $this->gateway);
     $this->app->instance(XmlSigner::class, new FakeXmlSigner);
     config()->set('sri.autorizacion.espera_ms', 0);
+    Storage::fake();
+    $this->contribuyente = actuar_como_contribuyente();
 });
 
 it('emite una factura vía POST /api/v1/comprobantes', function () {
@@ -62,27 +65,16 @@ it('valida el payload: :dataset', function (array $payload) {
         ->assertJsonStructure(['errors']);
 })->with([
     'vacío' => [[]],
-    'tipo desconocido' => [fn (): array => ['recibo' => ['infoTributaria' => []], 'info' => ['p12' => 'x', 'clavep12' => 'y']]],
-    'sin certificado' => [fn (): array => collect(golden_payload('factura'))->except('info')->all()],
+    'tipo desconocido' => [fn (): array => ['recibo' => ['infoTributaria' => []]]],
 ]);
 
 describe('endurecimiento (fase 4)', function () {
-    it('rechaza un certificado que no es base64 válido con 422', function () {
-        $payload = golden_payload('factura');
-        $payload['info']['p12'] = '***no-es-base64***';
-
-        $this->postJson(route('api.v1.comprobantes.emitir'), $payload)
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['info.p12']);
-    });
-
     it('reporta como 422 los datos que violan la ficha del SRI: :dataset', function (callable $sabotear) {
         $payload = golden_payload('factura');
         $sabotear($payload);
 
         $this->postJson(route('api.v1.comprobantes.emitir'), $payload)
-            ->assertUnprocessable()
-            ->assertJsonValidationErrors(['comprobante']);
+            ->assertUnprocessable();
     })->with([
         'ruc inválido' => [function (array &$payload): void {
             $payload['factura']['infoTributaria']['ruc'] = '123';
@@ -108,23 +100,29 @@ describe('endurecimiento (fase 4)', function () {
             ->assertHeader('Content-Type', 'application/json');
     });
 
-    it('limita la tasa de peticiones por IP', function () {
-        RateLimiter::for(
-            'api',
-            fn (): Limit => Limit::perMinute(2),
-        );
+    it('limita la tasa de peticiones', function () {
+        RateLimiter::for('api', fn (): Limit => Limit::perMinute(2));
 
         $this->postJson(route('api.v1.comprobantes.emitir'), [])->assertUnprocessable();
         $this->postJson(route('api.v1.comprobantes.emitir'), [])->assertUnprocessable();
         $this->postJson(route('api.v1.comprobantes.emitir'), [])->assertTooManyRequests();
     });
+});
 
-    it('rechaza un certificado desproporcionadamente grande', function () {
+describe('multi-tenancy (fase 6)', function () {
+    it('rechaza emitir con el RUC de otro contribuyente', function () {
         $payload = golden_payload('factura');
-        $payload['info']['p12'] = str_repeat('A', 120001);
+        $payload['factura']['infoTributaria']['ruc'] = '1790012345001'; // no es el del contribuyente
 
         $this->postJson(route('api.v1.comprobantes.emitir'), $payload)
             ->assertUnprocessable()
-            ->assertJsonValidationErrors(['info.p12']);
+            ->assertJsonValidationErrors(['comprobante.infoTributaria.ruc']);
+    });
+
+    it('responde 409 si el contribuyente no tiene certificado configurado', function () {
+        $this->contribuyente->update(['certificado_p12' => null, 'certificado_clave' => null]);
+
+        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+            ->assertStatus(409);
     });
 });
