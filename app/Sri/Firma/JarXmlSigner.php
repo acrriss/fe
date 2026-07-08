@@ -47,13 +47,21 @@ class JarXmlSigner implements XmlSigner
             ]);
 
             if ($resultado->failed()) {
-                throw EmisionFallida::enFirma(trim($resultado->errorOutput()) ?: 'el firmador terminó con error.');
+                throw EmisionFallida::enFirma(
+                    $this->errorDelJar($resultado->output(), $resultado->errorOutput())
+                        ?? 'el firmador terminó con error.',
+                );
             }
 
             $firmado = @file_get_contents("{$directorio}/{$nombreFirmado}");
 
             if ($firmado === false || $firmado === '') {
-                throw EmisionFallida::enFirma('el firmador no produjo el XML firmado.');
+                // el jar reporta fallos (clave incorrecta, p12 corrupto…)
+                // por stdout y termina con exit 0 igualmente
+                throw EmisionFallida::enFirma(
+                    $this->errorDelJar($resultado->output(), $resultado->errorOutput())
+                        ?? 'el firmador no produjo el XML firmado.',
+                );
             }
 
             return $firmado;
@@ -63,5 +71,30 @@ class JarXmlSigner implements XmlSigner
             @unlink("{$directorio}/{$nombreFirmado}");
             @rmdir($directorio);
         }
+    }
+
+    /**
+     * Extrae SOLO las líneas "Error: …" de la salida del jar. Nunca se
+     * devuelve la salida completa: el jar imprime la clave del certificado
+     * en stdout y no debe filtrarse a mensajes de error ni logs.
+     */
+    private function errorDelJar(string $stdout, string $stderr): ?string
+    {
+        $errores = collect(explode("\n", $stdout."\n".$stderr))
+            ->map(fn (string $linea): string => trim($linea))
+            ->filter(fn (string $linea): bool => str_starts_with($linea, 'Error:'))
+            ->map(fn (string $linea): string => trim(substr($linea, strlen('Error:'))));
+
+        if ($errores->isEmpty()) {
+            return null;
+        }
+
+        $detalle = $errores->implode(' · ');
+
+        if (str_contains($detalle, 'keystore password was incorrect')) {
+            return 'la clave del certificado no es correcta.';
+        }
+
+        return "el firmador reportó: {$detalle}";
     }
 }
