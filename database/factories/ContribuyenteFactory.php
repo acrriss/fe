@@ -26,8 +26,12 @@ class ContribuyenteFactory extends Factory
     public function conCertificado(): static
     {
         return $this->state([
-            'certificado_p12' => base64_encode('certificado-dummy'),
-            'certificado_clave' => 'secreto',
+            // el .p12 real de prueba del repo (clave: clave-prueba)
+            'certificado_p12' => base64_encode((string) file_get_contents(base_path('tests/Fixtures/certificado-prueba.p12'))),
+            'certificado_clave' => 'clave-prueba',
+            'certificado_titular' => 'CERTIFICADO DE PRUEBA',
+            'certificado_emisor' => 'CERTIFICADO DE PRUEBA',
+            'certificado_valido_hasta' => now()->addYears(5),
         ]);
     }
 }

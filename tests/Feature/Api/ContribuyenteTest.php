@@ -64,34 +64,62 @@ describe('autenticación', function () {
 });
 
 describe('certificado del contribuyente', function () {
-    it('guarda el certificado cifrado y habilita la emisión', function () {
+    it('valida, guarda cifrado con sus metadatos y habilita la emisión', function () {
         $contribuyente = actuar_como_contribuyente(conCertificado: false);
 
         $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
             ->assertStatus(409); // sin certificado aún
 
         $this->putJson(route('api.v1.contribuyente.certificado'), [
-            'p12' => base64_encode('certificado-dummy'),
-            'clave' => 'secreto',
+            'p12' => base64_encode(p12_de_prueba()),
+            'clave' => 'clave-prueba',
         ])->assertNoContent();
 
-        expect($contribuyente->refresh()->tieneCertificado())->toBeTrue()
+        $contribuyente->refresh();
+        expect($contribuyente->tieneCertificado())->toBeTrue()
+            // metadatos extraídos al validar
+            ->and($contribuyente->certificado_titular)->toBe('CERTIFICADO DE PRUEBA')
+            ->and($contribuyente->certificado_valido_hasta->isFuture())->toBeTrue()
             // cifrado en reposo: el valor crudo en BD no es el base64
             ->and($contribuyente->getRawOriginal('certificado_p12'))
-            ->not->toContain(base64_encode('certificado-dummy'));
+            ->not->toContain(base64_encode(p12_de_prueba()));
 
         $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
             ->assertSuccessful();
     });
 
-    it('rechaza un certificado que no es base64 válido', function () {
+    it('rechaza la clave incorrecta al cargar el certificado', function () {
         actuar_como_contribuyente(conCertificado: false);
 
         $this->putJson(route('api.v1.contribuyente.certificado'), [
-            'p12' => '***no-es-base64***',
+            'p12' => base64_encode(p12_de_prueba()),
+            'clave' => 'clave-equivocada',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['p12' => 'La clave del certificado no es correcta.']);
+    });
+
+    it('acepta un .p12 legacy (RC2/3DES) vía el fallback', function () {
+        $contribuyente = actuar_como_contribuyente(conCertificado: false);
+
+        $this->putJson(route('api.v1.contribuyente.certificado'), [
+            'p12' => base64_encode(p12_de_prueba(legacy: true)),
+            'clave' => 'clave-prueba',
+        ])->assertNoContent();
+
+        expect($contribuyente->refresh()->certificado_titular)->toBe('CERTIFICADO DE PRUEBA');
+    });
+
+    it('rechaza archivos que no son un p12: :dataset', function (string $p12) {
+        actuar_como_contribuyente(conCertificado: false);
+
+        $this->putJson(route('api.v1.contribuyente.certificado'), [
+            'p12' => $p12,
             'clave' => 'x',
         ])->assertUnprocessable()->assertJsonValidationErrors(['p12']);
-    });
+    })->with([
+        'no es base64' => '***no-es-base64***',
+        'base64 de basura' => fn (): string => base64_encode('no soy un pkcs12'),
+    ]);
 });
 
 describe('aislamiento entre contribuyentes', function () {

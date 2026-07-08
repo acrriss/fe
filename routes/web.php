@@ -40,5 +40,7 @@ Route::middleware('auth')->group(function () {
             ->name('configuracion.certificado');
         Route::post('configuracion/logo', [Panel\ConfiguracionController::class, 'guardarLogo'])
             ->name('configuracion.logo');
+        Route::get('configuracion/logo', [Panel\ConfiguracionController::class, 'mostrarLogo'])
+            ->name('configuracion.logo.mostrar');
     });
 });

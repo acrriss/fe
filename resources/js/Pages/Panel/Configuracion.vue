@@ -4,6 +4,8 @@ import PanelLayout from '../../Layouts/PanelLayout.vue';
 
 const props = defineProps({
     contribuyente: { type: Object, required: true },
+    certificado: { type: Object, default: null },
+    logo_url: { type: String, default: null },
 });
 
 const datos = useForm({
@@ -12,7 +14,7 @@ const datos = useForm({
     dir_matriz: props.contribuyente.dir_matriz,
 });
 
-const certificado = useForm({
+const formCertificado = useForm({
     certificado: null,
     clave: '',
 });
@@ -22,8 +24,8 @@ const logo = useForm({ logo: null });
 const guardarDatos = () => datos.put('/panel/configuracion');
 
 const guardarCertificado = () =>
-    certificado.put('/panel/configuracion/certificado', {
-        onSuccess: () => certificado.reset(),
+    formCertificado.put('/panel/configuracion/certificado', {
+        onSuccess: () => formCertificado.reset(),
     });
 
 const guardarLogo = () => logo.post('/panel/configuracion/logo', { onSuccess: () => logo.reset() });
@@ -69,27 +71,39 @@ const guardarLogo = () => logo.post('/panel/configuracion/logo', { onSuccess: ()
             <div class="space-y-6">
                 <section class="rounded-xl border border-gray-200 bg-white p-6">
                     <h2 class="mb-1 text-sm font-semibold text-gray-900">Certificado de firma (.p12)</h2>
-                    <p class="mb-4 text-xs" :class="contribuyente.tiene_certificado ? 'text-emerald-600' : 'text-amber-600'">
+                    <p class="mb-2 text-xs" :class="contribuyente.tiene_certificado ? 'text-emerald-600' : 'text-amber-600'">
                         {{ contribuyente.tiene_certificado
                             ? '✓ Certificado configurado (se almacena cifrado)'
                             : '⚠ Sin certificado: no puede emitir todavía' }}
                     </p>
+                    <dl v-if="certificado" class="mb-4 space-y-1 rounded-md bg-gray-50 p-3 text-xs text-gray-600">
+                        <div><dt class="inline font-medium">Titular:</dt> <dd class="inline">{{ certificado.titular }}</dd></div>
+                        <div><dt class="inline font-medium">Emitido por:</dt> <dd class="inline">{{ certificado.emisor }}</dd></div>
+                        <div>
+                            <dt class="inline font-medium">Válido hasta:</dt>
+                            <dd class="inline" :class="{ 'font-semibold text-red-600': certificado.vencido, 'font-semibold text-amber-600': certificado.por_vencer }">
+                                {{ certificado.valido_hasta }}
+                                <template v-if="certificado.vencido"> — ✕ VENCIDO: cargue uno nuevo</template>
+                                <template v-else-if="certificado.por_vencer"> — ⚠ vence pronto</template>
+                            </dd>
+                        </div>
+                    </dl>
 
                     <form class="space-y-4" @submit.prevent="guardarCertificado">
                         <div>
                             <label for="certificado" class="mb-1 block text-sm font-medium text-gray-700">Archivo .p12</label>
                             <input id="certificado" type="file" accept=".p12,.pfx" required
                                 class="w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-indigo-700"
-                                @input="certificado.certificado = $event.target.files[0]" />
-                            <p v-if="certificado.errors.certificado" class="mt-1 text-xs text-red-600">{{ certificado.errors.certificado }}</p>
+                                @input="formCertificado.certificado = $event.target.files[0]" />
+                            <p v-if="formCertificado.errors.certificado" class="mt-1 text-xs text-red-600">{{ formCertificado.errors.certificado }}</p>
                         </div>
                         <div>
                             <label for="clave" class="mb-1 block text-sm font-medium text-gray-700">Clave del certificado</label>
-                            <input id="clave" v-model="certificado.clave" type="password" required
+                            <input id="clave" v-model="formCertificado.clave" type="password" required
                                 class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
-                            <p v-if="certificado.errors.clave" class="mt-1 text-xs text-red-600">{{ certificado.errors.clave }}</p>
+                            <p v-if="formCertificado.errors.clave" class="mt-1 text-xs text-red-600">{{ formCertificado.errors.clave }}</p>
                         </div>
-                        <button type="submit" :disabled="certificado.processing"
+                        <button type="submit" :disabled="formCertificado.processing"
                             class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
                             {{ contribuyente.tiene_certificado ? 'Reemplazar certificado' : 'Cargar certificado' }}
                         </button>
@@ -99,8 +113,11 @@ const guardarLogo = () => logo.post('/panel/configuracion/logo', { onSuccess: ()
                 <section class="rounded-xl border border-gray-200 bg-white p-6">
                     <h2 class="mb-1 text-sm font-semibold text-gray-900">Logo para el RIDE</h2>
                     <p class="mb-4 text-xs text-gray-500">
-                        {{ contribuyente.tiene_logo ? 'Logo cargado.' : 'PNG o JPG, máx. 1 MB.' }}
+                        {{ contribuyente.tiene_logo ? 'Logo actual:' : 'PNG o JPG, máx. 1 MB.' }}
                     </p>
+                    <div v-if="logo_url" class="mb-4 inline-block rounded-md border border-gray-200 bg-gray-50 p-3">
+                        <img :src="logo_url" alt="Logo del contribuyente" class="max-h-16 max-w-60 object-contain" />
+                    </div>
 
                     <form class="flex items-end gap-3" @submit.prevent="guardarLogo">
                         <div class="flex-1">

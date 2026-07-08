@@ -121,21 +121,37 @@ describe('configuración', function () {
         expect($contribuyente->refresh()->razon_social)->toBe('Razón Nueva S.A.');
     });
 
-    it('sube el certificado .p12 desde el panel', function () {
+    it('sube el certificado .p12 desde el panel y muestra sus metadatos', function () {
         $contribuyente = entrar_al_panel(); // factory ya trae certificado; lo reemplazamos
-        $archivo = UploadedFile::fake()->createWithContent('firma.p12', 'contenido-p12-nuevo');
+        $archivo = UploadedFile::fake()->createWithContent('firma.p12', p12_de_prueba());
 
         $this->put(route('panel.configuracion.certificado'), [
             'certificado' => $archivo,
-            'clave' => 'clave-del-p12',
+            'clave' => 'clave-prueba',
         ])->assertRedirect(route('panel.configuracion'));
 
         $contribuyente->refresh();
-        expect($contribuyente->certificado_p12)->toBe(base64_encode('contenido-p12-nuevo'))
-            ->and($contribuyente->certificado_clave)->toBe('clave-del-p12');
+        expect($contribuyente->certificado_p12)->toBe(base64_encode(p12_de_prueba()))
+            ->and($contribuyente->certificado_titular)->toBe('CERTIFICADO DE PRUEBA');
+
+        $this->get(route('panel.configuracion'))->assertInertia(
+            fn (Assert $page) => $page
+                ->where('certificado.titular', 'CERTIFICADO DE PRUEBA')
+                ->where('certificado.vencido', false),
+        );
     });
 
-    it('sube el logo del RIDE', function () {
+    it('rechaza desde el panel un certificado con clave incorrecta', function () {
+        entrar_al_panel();
+        $archivo = UploadedFile::fake()->createWithContent('firma.p12', p12_de_prueba());
+
+        $this->put(route('panel.configuracion.certificado'), [
+            'certificado' => $archivo,
+            'clave' => 'clave-equivocada',
+        ])->assertInvalid(['certificado' => 'La clave del certificado no es correcta.']);
+    });
+
+    it('sube el logo del RIDE y lo sirve como vista previa', function () {
         $contribuyente = entrar_al_panel();
 
         $this->post(route('panel.configuracion.logo'), [
@@ -145,6 +161,20 @@ describe('configuración', function () {
         $contribuyente->refresh();
         expect($contribuyente->logo_path)->not->toBeNull();
         Storage::assertExists($contribuyente->logo_path);
+
+        // la página expone la URL y la ruta sirve la imagen
+        $this->get(route('panel.configuracion'))->assertInertia(
+            fn (Assert $page) => $page->whereNot('logo_url', null),
+        );
+        $this->get(route('panel.configuracion.logo.mostrar'))
+            ->assertSuccessful()
+            ->assertHeader('Content-Type', 'image/png');
+    });
+
+    it('la vista previa del logo responde 404 si no hay logo', function () {
+        entrar_al_panel();
+
+        $this->get(route('panel.configuracion.logo.mostrar'))->assertNotFound();
     });
 
     it('el estado del comprobante queda etiquetado en la página', function () {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Sri\Exceptions\CertificadoInvalido;
 use App\Sri\Exceptions\DatoInvalido;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -32,7 +33,7 @@ class GuardarCertificadoController extends Controller
                 $request->string('p12')->toString(),
                 $request->string('clave')->toString(),
             );
-        } catch (DatoInvalido $excepcion) {
+        } catch (DatoInvalido|CertificadoInvalido $excepcion) {
             throw ValidationException::withMessages(['p12' => $excepcion->getMessage()]);
         }
 

@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Sri\Certificados\CertificadoAbierto;
+use App\Sri\Certificados\LectorPkcs12;
+use App\Sri\Exceptions\CertificadoInvalido;
+use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\ValueObjects\CertificadoFirma;
 use Database\Factories\ContribuyenteFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -9,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use SensitiveParameter;
 
 /**
@@ -24,6 +29,9 @@ use SensitiveParameter;
  * @property string|null $logo_path
  * @property string|null $certificado_p12 base64 del .p12 (cifrado en reposo)
  * @property string|null $certificado_clave (cifrada en reposo)
+ * @property string|null $certificado_titular
+ * @property string|null $certificado_emisor
+ * @property Carbon|null $certificado_valido_hasta
  * @property int|null $plan_id
  * @property-read Plan|null $plan
  */
@@ -77,15 +85,34 @@ class Contribuyente extends Model
         return $this->certificado_p12 !== null && $this->certificado_clave !== null;
     }
 
-    public function guardarCertificado(string $p12Base64, #[SensitiveParameter] string $clave): void
+    /**
+     * Valida y guarda el certificado: la clave debe abrir el .p12 y el
+     * certificado debe estar vigente. Persiste también los metadatos
+     * (titular, emisor, vencimiento) para el panel.
+     *
+     * @throws DatoInvalido si el base64 es inválido
+     * @throws CertificadoInvalido si la clave es incorrecta, el archivo no
+     *                             es un .p12 o el certificado está vencido
+     */
+    public function guardarCertificado(string $p12Base64, #[SensitiveParameter] string $clave): CertificadoAbierto
     {
-        // valida el base64 antes de persistir
-        CertificadoFirma::desdeBase64($p12Base64, $clave);
+        $certificado = CertificadoFirma::desdeBase64($p12Base64, $clave);
+
+        $abierto = app(LectorPkcs12::class)->abrir($certificado);
+
+        if ($abierto->vencido()) {
+            throw CertificadoInvalido::vencido($abierto->validoHasta);
+        }
 
         $this->update([
             'certificado_p12' => $p12Base64,
             'certificado_clave' => $clave,
+            'certificado_titular' => $abierto->titular,
+            'certificado_emisor' => $abierto->emisor,
+            'certificado_valido_hasta' => $abierto->validoHasta,
         ]);
+
+        return $abierto;
     }
 
     public function certificadoFirma(): CertificadoFirma
@@ -128,6 +155,7 @@ class Contribuyente extends Model
         return [
             'certificado_p12' => 'encrypted',
             'certificado_clave' => 'encrypted',
+            'certificado_valido_hasta' => 'datetime',
         ];
     }
 }

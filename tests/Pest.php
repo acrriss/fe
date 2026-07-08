@@ -57,6 +57,16 @@ function golden_payload(string $tipo): array
 }
 
 /**
+ * Contenido binario del certificado .p12 de prueba (clave: clave-prueba).
+ */
+function p12_de_prueba(bool $legacy = false): string
+{
+    $archivo = $legacy ? 'certificado-prueba-legacy.p12' : 'certificado-prueba.p12';
+
+    return file_get_contents(dirname(__DIR__)."/tests/Fixtures/{$archivo}");
+}
+
+/**
  * Crea un contribuyente (con certificado por defecto) con un usuario
  * autenticado vía Sanctum, y lo devuelve.
  */

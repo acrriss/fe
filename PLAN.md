@@ -184,7 +184,11 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 ## 9. Trabajo futuro (backlog)
 
 - **Firmador XAdES-BES nativo en PHP**: eliminar la dependencia de Java y el
-  paso de la clave por argv.
+  paso de la clave por argv. Su capa de entrada ya existe:
+  `app/Sri/Certificados/LectorPkcs12` (✅ 2026-07-08, construida con la
+  validación de certificados en la carga: clave verificada, metadatos
+  titular/emisor/vigencia persistidos, rechazo de vencidos, fallback
+  `openssl -legacy` para .p12 antiguos con la clave vía env, nunca argv).
 - **Test de integración de la firma** cuando haya JRE disponible.
 - ~~Reintento de comprobantes devueltos reutilizando clave/secuencial (§5.10)~~
   ✅ 2026-07-08: `POST /api/v1/comprobantes/{id}/reintentar` (sync y async);
