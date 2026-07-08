@@ -4,7 +4,7 @@ namespace App\Sri\Actions;
 
 use App\Sri\Contracts\SriGateway;
 use App\Sri\Exceptions\EmisionFallida;
-use App\Sri\Pipeline\EmisionComprobante;
+use App\Sri\Pipeline\EmisionEnCurso;
 use Closure;
 
 /**
@@ -15,7 +15,7 @@ final class EnviarRecepcion
 {
     public function __construct(private readonly SriGateway $gateway) {}
 
-    public function __invoke(EmisionComprobante $emision, Closure $next): mixed
+    public function __invoke(EmisionEnCurso $emision, Closure $next): mixed
     {
         $emision->recepcion = $this->gateway->recibir(
             $emision->xmlFirmado(),

@@ -3,7 +3,7 @@
 namespace App\Sri\Actions;
 
 use App\Sri\Data\ComprobanteData;
-use App\Sri\Pipeline\EmisionComprobante;
+use App\Sri\Pipeline\EmisionEnCurso;
 use Closure;
 use Spatie\ArrayToXml\ArrayToXml;
 
@@ -16,7 +16,7 @@ use Spatie\ArrayToXml\ArrayToXml;
  */
 final class ConstruirXml
 {
-    public function __invoke(EmisionComprobante $emision, Closure $next): mixed
+    public function __invoke(EmisionEnCurso $emision, Closure $next): mixed
     {
         $emision->xml = self::render($emision->comprobante);
 

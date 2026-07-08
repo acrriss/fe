@@ -14,7 +14,7 @@ use App\Sri\ValueObjects\CodigoNumerico;
  * el certificado; cada Action añade su resultado (clave, XML, firma,
  * respuestas del SRI).
  */
-final class EmisionComprobante
+final class EmisionEnCurso
 {
     public ?ClaveAcceso $claveAcceso = null;
 

@@ -4,7 +4,7 @@ namespace App\Sri\Actions;
 
 use App\Sri\Contracts\SriGateway;
 use App\Sri\Exceptions\EmisionFallida;
-use App\Sri\Pipeline\EmisionComprobante;
+use App\Sri\Pipeline\EmisionEnCurso;
 use Closure;
 
 /**
@@ -16,7 +16,7 @@ final class SolicitarAutorizacion
 {
     public function __construct(private readonly SriGateway $gateway) {}
 
-    public function __invoke(EmisionComprobante $emision, Closure $next): mixed
+    public function __invoke(EmisionEnCurso $emision, Closure $next): mixed
     {
         $intentos = max(1, config()->integer('sri.autorizacion.intentos'));
         $esperaMs = max(0, config()->integer('sri.autorizacion.espera_ms'));

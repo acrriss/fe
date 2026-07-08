@@ -7,7 +7,7 @@ use App\Models\Contribuyente;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Enums\EstadoComprobante;
 use App\Sri\Exceptions\EmisionFallida;
-use App\Sri\Pipeline\EmisionComprobante;
+use App\Sri\Pipeline\EmisionEnCurso;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -51,7 +51,7 @@ class RegistroDeEmision
         return $registro;
     }
 
-    public function completar(Comprobante $registro, EmisionComprobante $emision): Comprobante
+    public function completar(Comprobante $registro, EmisionEnCurso $emision): Comprobante
     {
         $claveAcceso = (string) $emision->claveAcceso();
 
@@ -70,7 +70,7 @@ class RegistroDeEmision
         return $registro;
     }
 
-    public function fallar(Comprobante $registro, EmisionFallida $fallo, EmisionComprobante $emision): Comprobante
+    public function fallar(Comprobante $registro, EmisionFallida $fallo, EmisionEnCurso $emision): Comprobante
     {
         $registro->update([
             'estado' => $this->estadoSegunEtapa($fallo->etapa),

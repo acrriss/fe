@@ -3,7 +3,7 @@
 namespace App\Sri\Actions;
 
 use App\Sri\Contracts\XmlSigner;
-use App\Sri\Pipeline\EmisionComprobante;
+use App\Sri\Pipeline\EmisionEnCurso;
 use Closure;
 
 /**
@@ -13,7 +13,7 @@ final class FirmarXml
 {
     public function __construct(private readonly XmlSigner $signer) {}
 
-    public function __invoke(EmisionComprobante $emision, Closure $next): mixed
+    public function __invoke(EmisionEnCurso $emision, Closure $next): mixed
     {
         $xml = $emision->xml
             ?? throw new \LogicException('El XML debe construirse antes de firmarse.');

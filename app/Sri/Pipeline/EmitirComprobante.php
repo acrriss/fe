@@ -28,13 +28,13 @@ final class EmitirComprobante
         SolicitarAutorizacion::class,
     ];
 
-    public function emitir(EmisionComprobante $emision): EmisionComprobante
+    public function emitir(EmisionEnCurso $emision): EmisionEnCurso
     {
         $resultado = Pipeline::send($emision)
             ->through(self::ETAPAS)
             ->thenReturn();
 
-        assert($resultado instanceof EmisionComprobante);
+        assert($resultado instanceof EmisionEnCurso);
 
         return $resultado;
     }

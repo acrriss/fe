@@ -9,7 +9,7 @@ use App\Models\Comprobante;
 use App\Models\Contribuyente;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Exceptions\EmisionFallida;
-use App\Sri\Pipeline\EmisionComprobante;
+use App\Sri\Pipeline\EmisionEnCurso;
 use App\Sri\Pipeline\EmitirComprobante;
 use App\Sri\Registro\RegistroDeEmision;
 use App\Sri\ValueObjects\ClaveAcceso;
@@ -47,7 +47,7 @@ trait ProcesaEmisiones
                 ->setStatusCode(202);
         }
 
-        $emision = new EmisionComprobante(
+        $emision = new EmisionEnCurso(
             comprobante: $comprobante,
             certificado: $contribuyente->certificadoFirma(),
         );

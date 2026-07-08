@@ -6,7 +6,7 @@ use App\Sri\Data\Factura\FacturaData;
 use App\Sri\Exceptions\EmisionFallida;
 use App\Sri\Firma\FakeXmlSigner;
 use App\Sri\Gateways\FakeSriGateway;
-use App\Sri\Pipeline\EmisionComprobante;
+use App\Sri\Pipeline\EmisionEnCurso;
 use App\Sri\Pipeline\EmitirComprobante;
 use App\Sri\ValueObjects\CertificadoFirma;
 use App\Sri\ValueObjects\CodigoNumerico;
@@ -19,9 +19,9 @@ beforeEach(function () {
     config()->set('sri.autorizacion.espera_ms', 0);
 });
 
-function emision_de_factura_golden(): EmisionComprobante
+function emision_de_factura_golden(): EmisionEnCurso
 {
-    return new EmisionComprobante(
+    return new EmisionEnCurso(
         comprobante: FacturaData::from(golden_input('factura')),
         certificado: CertificadoFirma::desdeBase64(base64_encode('certificado-dummy'), 'secreto'),
         codigoNumerico: CodigoNumerico::fromString('22568496'), // fija la clave = golden
@@ -71,7 +71,7 @@ it('aborta en autorización cuando el SRI rechaza el comprobante', function () {
 });
 
 it('genera un código numérico aleatorio cuando la emisión no fija uno', function () {
-    $emision = new EmisionComprobante(
+    $emision = new EmisionEnCurso(
         comprobante: FacturaData::from(golden_input('factura')),
         certificado: CertificadoFirma::desdeBase64(base64_encode('certificado-dummy'), 'secreto'),
     );

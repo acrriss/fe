@@ -6,7 +6,7 @@ use App\Models\Comprobante;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Enums\EstadoComprobante;
 use App\Sri\Exceptions\EmisionFallida;
-use App\Sri\Pipeline\EmisionComprobante;
+use App\Sri\Pipeline\EmisionEnCurso;
 use App\Sri\Pipeline\EmitirComprobante;
 use App\Sri\Registro\RegistroDeEmision;
 use App\Sri\ValueObjects\ClaveAcceso;
@@ -51,7 +51,7 @@ class ProcesarComprobanteJob implements ShouldBeEncrypted, ShouldQueue
         $contribuyente = $this->registro->contribuyente
             ?? throw new \RuntimeException('El registro no tiene contribuyente asociado.');
 
-        $emision = new EmisionComprobante(
+        $emision = new EmisionEnCurso(
             comprobante: $this->dataClass::from($this->payloadComprobante),
             certificado: $contribuyente->certificadoFirma(),
         );

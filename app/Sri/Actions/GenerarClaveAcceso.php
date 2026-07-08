@@ -3,7 +3,7 @@
 namespace App\Sri\Actions;
 
 use App\Sri\Exceptions\DatoInvalido;
-use App\Sri\Pipeline\EmisionComprobante;
+use App\Sri\Pipeline\EmisionEnCurso;
 use App\Sri\ValueObjects\ClaveAcceso;
 use App\Sri\ValueObjects\CodigoNumerico;
 use Closure;
@@ -20,7 +20,7 @@ use Closure;
  */
 final class GenerarClaveAcceso
 {
-    public function __invoke(EmisionComprobante $emision, Closure $next): mixed
+    public function __invoke(EmisionEnCurso $emision, Closure $next): mixed
     {
         $comprobante = $emision->comprobante;
 
