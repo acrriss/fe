@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\DescargarRideController;
 use App\Http\Controllers\Api\V1\EmitirComprobanteController;
 use App\Http\Controllers\Api\V1\EmitirTokenController;
 use App\Http\Controllers\Api\V1\GuardarCertificadoController;
+use App\Http\Controllers\Api\V1\ReintentarComprobanteController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
@@ -17,6 +18,9 @@ Route::prefix('v1')->group(function () {
 
         Route::get('comprobantes/{comprobante}', ConsultarComprobanteController::class)
             ->name('api.v1.comprobantes.mostrar');
+
+        Route::post('comprobantes/{comprobante}/reintentar', ReintentarComprobanteController::class)
+            ->name('api.v1.comprobantes.reintentar');
 
         Route::get('comprobantes/{comprobante}/ride', DescargarRideController::class)
             ->name('api.v1.comprobantes.ride');

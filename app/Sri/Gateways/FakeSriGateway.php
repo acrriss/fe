@@ -38,6 +38,18 @@ final class FakeSriGateway implements SriGateway
         return $this;
     }
 
+    /**
+     * Vuelve a autorizar (p. ej. tras simular un rechazo, para probar el
+     * reintento del comprobante corregido).
+     */
+    public function autorizarDeNuevo(): self
+    {
+        $this->rechazar = false;
+        $this->devolver = false;
+
+        return $this;
+    }
+
     public function recibir(string $xmlFirmado, Ambiente $ambiente): RespuestaRecepcion
     {
         $this->xmlRecibido = $xmlFirmado;

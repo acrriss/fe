@@ -32,6 +32,25 @@ class RegistroDeEmision
         ]);
     }
 
+    /**
+     * Prepara un registro fallido para reintentarlo (§5.10): vuelve a
+     * pendiente, limpia los mensajes del intento anterior y refresca los
+     * datos denormalizados con el payload corregido. La clave de acceso
+     * se conserva: el SRI exige reutilizarla.
+     */
+    public function reintentar(Comprobante $registro, ComprobanteData $comprobante): Comprobante
+    {
+        $registro->update([
+            'estado' => EstadoComprobante::Pendiente,
+            'mensajes' => null,
+            'razon_social' => $comprobante->infoTributaria->razonSocial,
+            'importe_total' => $comprobante->importeTotal(),
+            'emitido_en' => $comprobante->fechaEmision()->toDateString(),
+        ]);
+
+        return $registro;
+    }
+
     public function completar(Comprobante $registro, EmisionComprobante $emision): Comprobante
     {
         $claveAcceso = (string) $emision->claveAcceso();

@@ -186,7 +186,10 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 - **Firmador XAdES-BES nativo en PHP**: eliminar la dependencia de Java y el
   paso de la clave por argv.
 - **Test de integración de la firma** cuando haya JRE disponible.
-- **Reintento de comprobantes devueltos** reutilizando clave/secuencial (§5.10).
+- ~~Reintento de comprobantes devueltos reutilizando clave/secuencial (§5.10)~~
+  ✅ 2026-07-08: `POST /api/v1/comprobantes/{id}/reintentar` (sync y async);
+  reutiliza registro y clave, valida que los componentes de la clave no
+  cambien, no consume cuota adicional.
 - **Webhooks** de notificación al autorizar (alternativa al polling).
 - **Código de barras Code 128** en el RIDE (opcional según ficha §9.20).
 - **Tipos faltantes**: notaDebito, guiaRemision, liquidacionCompra.

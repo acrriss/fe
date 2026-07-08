@@ -9,6 +9,7 @@ use App\Sri\Exceptions\EmisionFallida;
 use App\Sri\Pipeline\EmisionComprobante;
 use App\Sri\Pipeline\EmitirComprobante;
 use App\Sri\Registro\RegistroDeEmision;
+use App\Sri\ValueObjects\ClaveAcceso;
 use Illuminate\Contracts\Queue\ShouldBeEncrypted;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -36,11 +37,13 @@ class ProcesarComprobanteJob implements ShouldBeEncrypted, ShouldQueue
     /**
      * @param  class-string<ComprobanteData>  $dataClass
      * @param  array<string, mixed>  $payloadComprobante
+     * @param  string|null  $claveAcceso  clave a reutilizar (reintentos, §5.10)
      */
     public function __construct(
         public Comprobante $registro,
         public string $dataClass,
         public array $payloadComprobante,
+        public ?string $claveAcceso = null,
     ) {}
 
     public function handle(EmitirComprobante $pipeline, RegistroDeEmision $registro): void
@@ -52,6 +55,10 @@ class ProcesarComprobanteJob implements ShouldBeEncrypted, ShouldQueue
             comprobante: $this->dataClass::from($this->payloadComprobante),
             certificado: $contribuyente->certificadoFirma(),
         );
+
+        if ($this->claveAcceso !== null) {
+            $emision->claveAcceso = ClaveAcceso::fromString($this->claveAcceso);
+        }
 
         try {
             $registro->completar($this->registro, $pipeline->emitir($emision));

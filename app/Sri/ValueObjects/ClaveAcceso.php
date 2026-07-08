@@ -54,20 +54,43 @@ final readonly class ClaveAcceso implements ValueObject
         CodigoNumerico $codigoNumerico,
         TipoEmision $tipoEmision = TipoEmision::Normal,
     ): self {
+        $cadena = self::prefijo(
+            $fechaEmision,
+            $tipoComprobante,
+            $ruc,
+            $ambiente,
+            $establecimiento,
+            $puntoEmision,
+            $secuencial,
+        ).$codigoNumerico.$tipoEmision->value;
+
+        return new self($cadena.self::digitoVerificador($cadena));
+    }
+
+    /**
+     * Los primeros 39 dígitos de la clave: los componentes deterministas
+     * del comprobante (fecha + codDoc + ruc + ambiente + serie + secuencial).
+     * Una clave reutilizada (§5.10 de la ficha) debe conservar este prefijo.
+     */
+    public static function prefijo(
+        DateTimeInterface $fechaEmision,
+        TipoComprobante $tipoComprobante,
+        Ruc $ruc,
+        Ambiente $ambiente,
+        string $establecimiento,
+        string $puntoEmision,
+        Secuencial $secuencial,
+    ): string {
         self::assertSerie($establecimiento, 'establecimiento');
         self::assertSerie($puntoEmision, 'puntoEmision');
 
-        $cadena = $fechaEmision->format('dmY')
+        return $fechaEmision->format('dmY')
             .$tipoComprobante->value
             .$ruc
             .$ambiente->value
             .$establecimiento
             .$puntoEmision
-            .$secuencial
-            .$codigoNumerico
-            .$tipoEmision->value;
-
-        return new self($cadena.self::digitoVerificador($cadena));
+            .$secuencial;
     }
 
     /**
