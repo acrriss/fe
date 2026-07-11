@@ -4,7 +4,10 @@ namespace App\Sri\Support;
 
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\Factura\FacturaData;
+use App\Sri\Data\GuiaRemision\GuiaRemisionData;
+use App\Sri\Data\Liquidacion\LiquidacionCompraData;
 use App\Sri\Data\NotaCredito\NotaCreditoData;
+use App\Sri\Data\NotaDebito\NotaDebitoData;
 use App\Sri\Data\Retencion\ComprobanteRetencionData;
 use App\Sri\Enums\TipoComprobante;
 
@@ -21,7 +24,10 @@ class ComprobanteXmlParser
     private const array DATA_POR_ROOT = [
         'factura' => FacturaData::class,
         'notaCredito' => NotaCreditoData::class,
+        'notaDebito' => NotaDebitoData::class,
         'comprobanteRetencion' => ComprobanteRetencionData::class,
+        'guiaRemision' => GuiaRemisionData::class,
+        'liquidacionCompra' => LiquidacionCompraData::class,
     ];
 
     public function parse(string $xml): ComprobanteData

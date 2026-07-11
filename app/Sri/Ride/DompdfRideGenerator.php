@@ -22,10 +22,10 @@ class DompdfRideGenerator implements RideGenerator
         $vista = match ($comprobante::tipo()) {
             TipoComprobante::Factura => 'ride.factura',
             TipoComprobante::NotaCredito => 'ride.nota-credito',
+            TipoComprobante::NotaDebito => 'ride.nota-debito',
             TipoComprobante::ComprobanteRetencion => 'ride.retencion',
-            default => throw new \InvalidArgumentException(
-                "No hay plantilla RIDE para {$comprobante::tipo()->rootElement()}.",
-            ),
+            TipoComprobante::GuiaRemision => 'ride.guia-remision',
+            TipoComprobante::LiquidacionCompra => 'ride.liquidacion',
         };
 
         return Pdf::loadView($vista, [

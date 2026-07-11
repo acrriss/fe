@@ -45,12 +45,16 @@ enum TipoComprobante: string
     }
 
     /**
-     * Versión del esquema XML que espera el SRI (comportamiento del legado:
-     * la retención usa 1.0.0 y el resto 1.1.0).
+     * Versión del esquema XML que espera el SRI para cada tipo (según la
+     * ficha técnica: factura/notaCredito/liquidación en 1.1.0; el resto
+     * en 1.0.0).
      */
     public function versionEsquema(): string
     {
-        return $this === self::ComprobanteRetencion ? '1.0.0' : '1.1.0';
+        return match ($this) {
+            self::Factura, self::NotaCredito, self::LiquidacionCompra => '1.1.0',
+            self::NotaDebito, self::GuiaRemision, self::ComprobanteRetencion => '1.0.0',
+        };
     }
 
     /**

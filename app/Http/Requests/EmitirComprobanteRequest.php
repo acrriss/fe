@@ -5,7 +5,10 @@ namespace App\Http\Requests;
 use App\Models\Contribuyente;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\Factura\FacturaData;
+use App\Sri\Data\GuiaRemision\GuiaRemisionData;
+use App\Sri\Data\Liquidacion\LiquidacionCompraData;
 use App\Sri\Data\NotaCredito\NotaCreditoData;
+use App\Sri\Data\NotaDebito\NotaDebitoData;
 use App\Sri\Data\Retencion\ComprobanteRetencionData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Exceptions\DatoInvalido;
@@ -47,7 +50,10 @@ class EmitirComprobanteRequest extends FormRequest
     private const array DATA_POR_TIPO = [
         'factura' => FacturaData::class,
         'notaCredito' => NotaCreditoData::class,
+        'notaDebito' => NotaDebitoData::class,
         'comprobanteRetencion' => ComprobanteRetencionData::class,
+        'guiaRemision' => GuiaRemisionData::class,
+        'liquidacionCompra' => LiquidacionCompraData::class,
     ];
 
     /**
