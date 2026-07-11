@@ -222,6 +222,92 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 - **Browser tests de Pest** para el panel (cazan bugs de UI como el
   shadowing de props ya sufrido).
 - **Gestión de planes/facturación del servicio** (upgrade/downgrade, pagos).
+- **Verificación de propiedad del RUC (anti-suplantación)** — ver §10.
+
+## 10. Diseño: verificación de propiedad del RUC (anti-suplantación)
+
+Análisis de un hueco de seguridad del registro (2026-07-11). Pendiente de
+implementar; se ancla desde el diseño de la tabla `contribuyentes`.
+
+### El problema
+
+Hoy el registro pide un RUC **autodeclarado, sin verificación y con unicidad
+global inmediata** (`unique:contribuyentes,ruc`). Dos riesgos, muy distintos:
+
+- **Emisión fraudulenta con firma ajena → en la práctica NO es posible.** La
+  ficha (§11, error **39 "Firma electrónica del emisor no es válida"**)
+  confirma que el SRI valida la firma contra el emisor: no se obtiene
+  `AUTORIZADO` para un RUC que no se controla. Daño bajo.
+- **Secuestro del RUC (squatting) → problema real.** Cualquiera reserva un RUC
+  ajeno y, por la unicidad dura, el dueño real ya no puede registrarse. Es una
+  denegación de registro trivial de ejecutar.
+
+### Principio rector
+
+La propiedad del RUC **no debe nacer del registro autodeclarado**, sino de una
+verificación respaldada por el certificado/SRI. El certificado + el SRI son la
+única prueba de control: nadie salvo el titular puede cargar un `.p12` que el
+SRI vincule al RUC, ni obtener un `AUTORIZADO`.
+
+### Modelo de dos ejes ortogonales
+
+No mezclar propiedad del RUC con estado comercial:
+
+| Eje | Responde | Estados |
+|---|---|---|
+| **A. Propiedad del RUC** | ¿controla este RUC? | `no_verificado` → `verificado` |
+| **B. Estado comercial** | ¿cliente legítimo/activo? | `prueba` · `pagado_activo` · `moroso`… |
+
+Un cliente que paga y aún no emite es `no_verificado` + `pagado_activo`: estado
+**válido**, no un limbo. El pago es señal de legitimidad en un eje distinto.
+
+### Mecanismos
+
+1. **Unicidad diferida (defensa primaria del squatting).** El RUC solo se
+   vuelve exclusivo cuando el contribuyente está `verificado`. Cuentas no
+   verificadas no bloquean el RUC. **Nota MySQL** (no soporta índices únicos
+   parciales): guardar `ruc` (no único) + `ruc_verificado` *nullable* con
+   índice único, que se rellena solo al verificar (MySQL admite múltiples
+   `NULL` en un índice único).
+2. **Verificación por el SRI (universal, sin parsing).** El primer `AUTORIZADO`
+   marca `verificado_en`. Delega en el SRI la relación cédula↔RUC↔representante
+   legal; funciona para **todas** las CAs sin conocerlas.
+   - **La verificación es el RESULTADO de emitir, no una puerta previa**: la
+     emisión siempre se puede intentar (con certificado válido); el primer
+     `AUTORIZADO` verifica. Así no hay círculo vicioso ni bloqueo.
+3. **Verificación por identidad del certificado (acelerador incremental).**
+   Al cargar el `.p12`, extraer la identificación del *subject* y exigir que
+   coincida con el RUC (RUC = cédula+`001`, o RUC embebido). Verifica **sin
+   emitir** — resuelve el caso del cliente pagado que aún no emite.
+   - **No depende de tener certificados de todas las CAs**: se construye como
+     registro extensible `CA → regla`, empezando por Security Data (el único
+     que tenemos), con heurística CA-agnóstica como señal provisional y
+     recolección de *subjects* (dato público) de uploads reales para sumar
+     reglas con datos, no suposiciones. Si no reconocemos la CA, la cuenta se
+     verifica igual por la vía del SRI (mecanismo 2).
+4. **Expiración de cuentas no verificadas (higiene, NO defensa).** Comando
+   programado `contribuyentes:prune-unverified` (patrón `sanctum:prune-expired`).
+   - **Triple candado:** `no_verificado` **Y** sin comprobantes **Y** **sin plan
+     pagado activo** **Y** más viejo que el TTL (configurable, ~14 días).
+   - **Regla de oro:** ⚠️ nunca borrar una cuenta con algún comprobante
+     autorizado (retención fiscal legal de 7 años en Ecuador).
+   - Aviso previo por correo a mitad del TTL; nunca es castigo.
+   - **No sustituye la unicidad diferida**: por sí sola no frena el squatting
+     (hay ventana + re-registro keep-alive). Es limpieza sobre esa base.
+
+### Manejo del cliente pagado que aún no emite
+
+- **No se borra** (candado de plan pagado en el pruning).
+- **No se bloquea** (la verificación es resultado de emitir, no requisito previo).
+- **Puede verificarse ya** subiendo su certificado (mecanismo 3), o al primer
+  `AUTORIZADO`. Como mucho, un *nudge* suave; nunca penalización.
+
+### Orden de implementación sugerido
+
+1. `verificado_en` + unicidad diferida + pruning con exclusión de pagados.
+2. Verificación por primer `AUTORIZADO` **y** por match de certificado
+   (Security Data primero), en paralelo.
+3. Comando de expiración de no-verificadas (con el candado de plan pagado).
 
 ### Registro de la Fase 6b (2026-07-07)
 
