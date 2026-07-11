@@ -1,10 +1,15 @@
 <?php
 
 use App\Http\Controllers\Api\V1\DescargarRideController;
+use App\Http\Controllers\DocsController;
 use App\Http\Controllers\Panel;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route(auth()->check() ? 'panel.inicio' : 'login'));
+
+// Documentación pública de la API (Scalar).
+Route::get('docs', [DocsController::class, 'page'])->name('docs');
+Route::get('docs/openapi.yaml', [DocsController::class, 'spec'])->name('docs.spec');
 
 Route::middleware('guest')->group(function () {
     Route::get('login', [Panel\Auth\LoginController::class, 'create'])->name('login');

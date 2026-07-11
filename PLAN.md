@@ -217,7 +217,10 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 - **Validar los 3 tipos nuevos** emitiendo uno de cada uno en el ambiente de
   pruebas del SRI.
 - **Webhooks** de notificación al autorizar (alternativa al polling).
-- **Documentación navegable de la API** (Scalar en `/docs`).
+- ~~Documentación navegable de la API (Scalar en `/docs`)~~ ✅ 2026-07-11:
+  Scalar bundled con Vite (`resources/js/docs.js`), público en `/docs`,
+  sirve `docs/openapi.yaml` (actualizado con los 6 tipos); enlazado desde
+  la página de Tokens del panel.
 - **Emisión de prueba desde el panel** (formulario manual de factura).
 - **Browser tests de Pest** para el panel (cazan bugs de UI como el
   shadowing de props ya sufrido).

@@ -30,6 +30,7 @@ const copiar = () => navigator.clipboard?.writeText(tokenRecienCreado.value);
         <p class="mb-6 text-sm text-gray-500">
             Sus integraciones usan estos tokens como <code class="rounded bg-gray-100 px-1">Bearer</code>
             contra <code class="rounded bg-gray-100 px-1">/api/v1</code>.
+            <a href="/docs" target="_blank" class="font-medium text-indigo-600 hover:underline">Ver documentación de la API →</a>
         </p>
 
         <div

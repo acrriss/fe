@@ -2,13 +2,21 @@ openapi: 3.1.0
 info:
   title: API de Facturación Electrónica SRI (Ecuador)
   description: |
-    Microservicio de emisión de comprobantes electrónicos ante el SRI:
-    factura, nota de crédito y comprobante de retención (nota de débito,
-    guía de remisión y liquidación de compra: próximamente).
+    Microservicio de emisión de comprobantes electrónicos ante el SRI.
+    Soporta los **seis tipos**: factura, nota de crédito, nota de débito,
+    comprobante de retención, guía de remisión y liquidación de compra.
 
     El servicio encapsula la generación de la clave de acceso, la firma
-    XAdES-BES, el ciclo recepción → autorización con el SRI y el registro
+    XAdES-BES (con el certificado del contribuyente, almacenado en el
+    servicio), el ciclo recepción → autorización con el SRI y el registro
     del resultado.
+
+    **Flujo de integración**
+    1. `POST /tokens` — obtener un token de API (usarlo como `Bearer`).
+    2. `PUT /contribuyente/certificado` — cargar el certificado de firma
+       una sola vez (se guarda cifrado).
+    3. `POST /comprobantes` — emitir. El certificado **no** viaja en la
+       petición.
 
     **Modalidades de emisión**
     - *Síncrona* (por defecto): la respuesta llega cuando el SRI resuelve
@@ -50,7 +58,10 @@ paths:
   /contribuyente/certificado:
     put:
       summary: Cargar o reemplazar el certificado de firma del contribuyente
-      description: El certificado se almacena cifrado en reposo y se usa en todas las emisiones.
+      description: >
+        El certificado se valida al cargarlo (la clave debe abrirlo y no debe
+        estar vencido), se almacena cifrado en reposo y se usa en todas las
+        emisiones. Soporta certificados `.p12` modernos y legacy (RC2/3DES).
       requestBody:
         required: true
         content:
@@ -59,22 +70,30 @@ paths:
               type: object
               required: [p12, clave]
               properties:
-                p12: { type: string, description: Certificado .p12 en base64. }
-                clave: { type: string }
+                p12: { type: string, description: 'Certificado .p12 en base64 (máx. ~90 KB).' }
+                clave: { type: string, description: Contraseña del certificado. }
       responses:
-        '204': { description: Certificado guardado. }
-        '422': { description: Certificado inválido. }
+        '204': { description: Certificado válido y guardado. }
+        '403': { description: El usuario no pertenece a ningún contribuyente. }
+        '422':
+          description: >
+            Certificado inválido: la clave es incorrecta, el archivo no es un
+            `.p12` válido, o el certificado está vencido.
   /comprobantes:
     post:
       summary: Emitir un comprobante electrónico
       description: |
-        El cuerpo mantiene el contrato heredado: la primera clave identifica
-        el tipo de comprobante (`factura`, `notaCredito`,
-        `comprobanteRetencion`) y `info` transporta el certificado de firma.
+        La primera clave del cuerpo identifica el tipo de comprobante:
+        `factura`, `notaCredito`, `notaDebito`, `comprobanteRetencion`,
+        `guiaRemision` o `liquidacionCompra`.
 
-        El `codDoc` y la `claveAcceso` del payload se ignoran: el servicio
-        deriva el código del tipo y genera la clave (con código numérico
-        aleatorio por comprobante).
+        El certificado de firma **no** se envía en la petición: se usa el que
+        el contribuyente cargó con `PUT /contribuyente/certificado`.
+
+        El RUC de `infoTributaria` debe coincidir con el del contribuyente
+        autenticado. El `codDoc` y la `claveAcceso` del payload se ignoran: el
+        servicio deriva el código del tipo y genera la clave de acceso (con
+        código numérico aleatorio por comprobante).
       parameters:
         - name: async
           in: query
@@ -87,14 +106,47 @@ paths:
           application/json:
             schema:
               type: object
-              description: >
-                El RUC de infoTributaria debe ser el del contribuyente
-                autenticado. La firma usa el certificado almacenado del
-                contribuyente (PUT /contribuyente/certificado).
               properties:
                 factura: { $ref: '#/components/schemas/ComprobantePayload' }
                 notaCredito: { $ref: '#/components/schemas/ComprobantePayload' }
+                notaDebito: { $ref: '#/components/schemas/ComprobantePayload' }
                 comprobanteRetencion: { $ref: '#/components/schemas/ComprobantePayload' }
+                guiaRemision: { $ref: '#/components/schemas/ComprobantePayload' }
+                liquidacionCompra: { $ref: '#/components/schemas/ComprobantePayload' }
+            example:
+              factura:
+                infoTributaria:
+                  ambiente: '1'
+                  tipoEmision: '1'
+                  razonSocial: MI EMPRESA S.A.
+                  ruc: '0922596788001'
+                  estab: '001'
+                  ptoEmi: '001'
+                  secuencial: '000000001'
+                  dirMatriz: Av. Principal 100
+                infoFactura:
+                  fechaEmision: 10/07/2026
+                  obligadoContabilidad: 'SI'
+                  tipoIdentificacionComprador: '05'
+                  razonSocialComprador: Juan Pérez
+                  identificacionComprador: '0912345678'
+                  totalSinImpuestos: '100.00'
+                  totalDescuento: '0.00'
+                  totalConImpuestos:
+                    totalImpuesto:
+                      - { codigo: '2', codigoPorcentaje: '4', baseImponible: '100.00', tarifa: '15.00', valor: '15.00' }
+                  importeTotal: '115.00'
+                  moneda: DOLAR
+                detalles:
+                  detalle:
+                    - codigoPrincipal: SERV-01
+                      descripcion: Servicio de consultoría
+                      cantidad: '1.00'
+                      precioUnitario: '100.00'
+                      descuento: '0.00'
+                      precioTotalSinImpuesto: '100.00'
+                      impuestos:
+                        impuesto: { codigo: '2', codigoPorcentaje: '4', tarifa: '15.00', baseImponible: '100.00', valor: '15.00' }
       responses:
         '200':
           description: Emisión síncrona autorizada.
@@ -109,14 +161,17 @@ paths:
                 type: object
                 properties:
                   data: { $ref: '#/components/schemas/Comprobante' }
-        '422':
-          description: >
-            Payload inválido, o el SRI devolvió/no autorizó el comprobante
-            (en la modalidad síncrona; el campo `etapa` indica dónde falló).
         '401':
           description: Sin token o token inválido.
         '409':
           description: El contribuyente no tiene certificado de firma configurado.
+        '422':
+          description: >
+            Payload inválido, o (en modalidad síncrona) el SRI devolvió o no
+            autorizó el comprobante.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmisionFallida' }
         '429':
           description: Límite de peticiones excedido o cuota mensual del plan agotada.
   /comprobantes/{id}:
@@ -181,6 +236,9 @@ paths:
           description: >
             Payload inválido, componentes de la clave modificados, tipo
             distinto al original, o el SRI volvió a rechazar.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmisionFallida' }
   /comprobantes/{id}/ride:
     get:
       summary: Descargar el RIDE (PDF) de un comprobante autorizado
@@ -212,20 +270,39 @@ components:
   schemas:
     ComprobantePayload:
       type: object
-      description: >
-        Estructura del comprobante según la ficha técnica del SRI (bloques
-        infoTributaria + info del tipo + detalles/impuestos). Ver
-        fixtures/golden/*/input.json para ejemplos completos.
+      description: |
+        Estructura del comprobante según la ficha técnica del SRI. Todos los
+        tipos comparten el bloque `infoTributaria`; el resto de bloques
+        depende del tipo:
+
+        - **factura** · `infoFactura` + `detalles`
+        - **notaCredito** · `infoNotaCredito` + `detalles`
+        - **notaDebito** · `infoNotaDebito` + `motivos`
+        - **comprobanteRetencion** · `infoCompRetencion` + `impuestos`
+        - **guiaRemision** · `infoGuiaRemision` + `destinatarios`
+        - **liquidacionCompra** · `infoLiquidacionCompra` + `detalles`
+
+        Importes como texto (`"100.00"`), fechas en `dd/mm/aaaa`. Ver el
+        ejemplo del endpoint de emisión para una factura completa.
       required: [infoTributaria]
       properties:
         infoTributaria:
           type: object
           required: [ambiente, tipoEmision, razonSocial, ruc, estab, ptoEmi, secuencial, dirMatriz]
+          properties:
+            ambiente: { type: string, enum: ['1', '2'], description: '1 = pruebas, 2 = producción.' }
+            tipoEmision: { type: string, enum: ['1'], description: 'Normal.' }
+            razonSocial: { type: string }
+            ruc: { type: string, description: 'Debe coincidir con el contribuyente autenticado.' }
+            estab: { type: string, description: '3 dígitos.' }
+            ptoEmi: { type: string, description: '3 dígitos.' }
+            secuencial: { type: string, description: '9 dígitos, único por serie.' }
+            dirMatriz: { type: string }
     Comprobante:
       type: object
       properties:
         id: { type: string, format: uuid }
-        tipo: { type: string, enum: [factura, notaCredito, comprobanteRetencion] }
+        tipo: { type: string, enum: [factura, notaCredito, notaDebito, comprobanteRetencion, guiaRemision, liquidacionCompra] }
         estado:
           type: string
           enum: [pendiente, firmado, recibido, autorizado, devuelto, no_autorizado, fallido]
@@ -266,3 +343,21 @@ components:
             fecha: { type: string, format: date-time }
             mensajes: { type: array, items: { type: string } }
         xmlFirmado: { type: string, description: XML firmado en base64 }
+    EmisionFallida:
+      type: object
+      description: Respuesta de error de la emisión/reintento síncrono.
+      properties:
+        emitido: { type: boolean, enum: [false] }
+        id: { type: string, format: uuid, description: Id del registro (existe aunque la emisión falle). }
+        etapa:
+          type: string
+          enum: [firma, recepcion, autorizacion, autorizacion_pendiente]
+          description: Etapa del pipeline donde falló.
+        error: { type: string, description: Mensaje legible del fallo. }
+        mensajes:
+          type: array
+          items: { type: string }
+          description: Mensajes crudos del SRI, si los hubo.
+        claveAcceso:
+          type: [string, 'null']
+          description: Presente si la clave llegó a generarse (útil para consultar luego).

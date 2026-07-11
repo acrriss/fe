@@ -17,6 +17,7 @@
     },
     "dependencies": {
         "@inertiajs/vue3": "^3.6.1",
+        "@scalar/api-reference": "^1.62.5",
         "vue": "^3.5.39"
     }
 }

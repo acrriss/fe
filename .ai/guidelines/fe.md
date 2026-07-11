@@ -81,6 +81,7 @@ No hagas commits automáticamente, siempre debes consultarme primero.
   PUT se reserva para reemplazos idempotentes de representación.
 - La API responde JSON siempre; errores con mensajes accionables y, cuando
   aplique, la etapa del fallo y los mensajes del SRI.
+- Cuando haya algún cambio que afecte el uso de los clientes de la API, asegúrate de actualizar la documentación.
 
 # Frontend (Inertia + Vue)
 
