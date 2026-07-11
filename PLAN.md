@@ -3,7 +3,8 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** TODAS las fases (0–6) completadas ✅ · **Actualizado:** 2026-07-07
+> **Estado:** TODAS las fases (0–6) completadas ✅ · firmador XAdES nativo,
+> código de barras y los 6 tipos de comprobante · **Actualizado:** 2026-07-11
 
 ---
 
@@ -193,16 +194,34 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
   certificados, fallback `openssl -legacy`, clave vía env nunca argv).
   Limpieza pendiente: eliminar Java/`sri.jar` cuando el nativo acumule
   rodaje en producción.
-- **Test de integración de la firma** cuando haya JRE disponible.
+- ~~Test de integración de la firma con JRE~~ ✅ cubierto por
+  `JarXmlSignerTest` (jar real) y `XadesXmlSignerTest`/`VerificadorXadesTest`
+  (nativo); ambos se saltan si falta el binario.
 - ~~Reintento de comprobantes devueltos reutilizando clave/secuencial (§5.10)~~
   ✅ 2026-07-08: `POST /api/v1/comprobantes/{id}/reintentar` (sync y async);
   reutiliza registro y clave, valida que los componentes de la clave no
   cambien, no consume cuota adicional.
+- ~~Código de barras Code 128 en el RIDE (§9.20)~~ ✅ 2026-07-10:
+  `GeneradorCodigoBarras` (picqer/php-barcode-generator) como data-uri SVG
+  bajo la clave de acceso, en los RIDE de todos los tipos.
+- ~~Tipos faltantes: notaDebito, guiaRemision, liquidacionCompra~~ ✅
+  2026-07-11: DTOs + `xmlArray` + plantilla RIDE + registro en Form Request
+  y parser; `versionEsquema()` por tipo (05/06 en 1.0.0, 03 en 1.1.0).
+  **Pendiente**: validarlos contra el SRI real (se construyeron desde la
+  ficha, sin fixtures golden ni prueba de autorización real).
+
+### Backlog abierto
+
+- **Limpieza de Java/`sri.jar`**: retirar `JarXmlSigner`, el jar y su config
+  ahora que el nativo es default y está validado (tras algo de rodaje).
+- **Validar los 3 tipos nuevos** emitiendo uno de cada uno en el ambiente de
+  pruebas del SRI.
 - **Webhooks** de notificación al autorizar (alternativa al polling).
-- **Código de barras Code 128** en el RIDE (opcional según ficha §9.20).
-- **Tipos faltantes**: notaDebito, guiaRemision, liquidacionCompra.
-- **Gestión de planes/facturación del servicio** (upgrade/downgrade, pagos).
+- **Documentación navegable de la API** (Scalar en `/docs`).
 - **Emisión de prueba desde el panel** (formulario manual de factura).
+- **Browser tests de Pest** para el panel (cazan bugs de UI como el
+  shadowing de props ya sufrido).
+- **Gestión de planes/facturación del servicio** (upgrade/downgrade, pagos).
 
 ### Registro de la Fase 6b (2026-07-07)
 
