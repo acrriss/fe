@@ -19,14 +19,6 @@ function java_disponible(): bool
         : new ExecutableFinder()->find($java) !== null;
 }
 
-function certificado_de_prueba(string $clave = 'clave-prueba'): CertificadoFirma
-{
-    return CertificadoFirma::desdeBase64(
-        base64_encode((string) file_get_contents(base_path('tests/Fixtures/certificado-prueba.p12'))),
-        $clave,
-    );
-}
-
 describe('firma XAdES real con sri.jar', function () {
     beforeEach(function () {
         if (! java_disponible()) {

@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><factura id="comprobante" version="1.1.0">
+  <infoTributaria>
+    <ambiente>1</ambiente>
+    <tipoEmision>1</tipoEmision>
+    <razonSocial>Victor</razonSocial>
+    <nombreComercial>TODO AUTO S.A.</nombreComercial>
+    <ruc>0922596788001</ruc>
+    <claveAcceso>0712202201092259678800110010010000043032256849615</claveAcceso>
+    <codDoc>01</codDoc>
+    <estab>001</estab>
+    <ptoEmi>001</ptoEmi>
+    <secuencial>000004303</secuencial>
+    <dirMatriz>Paraisos del rio 1</dirMatriz>
+  </infoTributaria>
+  <infoFactura>
+    <fechaEmision>07/12/2022</fechaEmision>
+    <dirEstablecimiento>N/A</dirEstablecimiento>
+    <obligadoContabilidad>NO</obligadoContabilidad>
+    <tipoIdentificacionComprador>07</tipoIdentificacionComprador>
+    <razonSocialComprador>CONSUMIDOR FINAL</razonSocialComprador>
+    <identificacionComprador>9999999999999</identificacionComprador>
+    <totalSinImpuestos>10.00</totalSinImpuestos>
+    <totalDescuento>0.00</totalDescuento>
+    <totalConImpuestos>
+      <totalImpuesto>
+        <codigo>2</codigo>
+        <codigoPorcentaje>2</codigoPorcentaje>
+        <baseImponible>10.00</baseImponible>
+        <tarifa>12.00</tarifa>
+        <valor>1.20</valor>
+      </totalImpuesto>
+    </totalConImpuestos>
+    <propina>0.00</propina>
+    <importeTotal>11.20</importeTotal>
+    <moneda>DOLAR</moneda>
+  </infoFactura>
+  <detalles>
+    <detalle>
+      <codigoPrincipal>No. 1</codigoPrincipal>
+      <descripcion>Servicio de Mantenimiento</descripcion>
+      <cantidad>1</cantidad>
+      <precioUnitario>10.00</precioUnitario>
+      <descuento>0.00</descuento>
+      <precioTotalSinImpuesto>10.00</precioTotalSinImpuesto>
+      <impuestos>
+        <impuesto>
+          <codigo>2</codigo>
+          <codigoPorcentaje>2</codigoPorcentaje>
+          <tarifa>12.00</tarifa>
+          <baseImponible>10.00</baseImponible>
+          <valor>1.20</valor>
+        </impuesto>
+      </impuestos>
+    </detalle>
+  </detalles>
+<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#" xmlns:etsi="http://uri.etsi.org/01903/v1.3.2#" Id="Signature267018">
+<ds:SignedInfo Id="Signature-SignedInfo366400">
+<ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+<ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+<ds:Reference Id="SignedPropertiesID958886" Type="http://uri.etsi.org/01903#SignedProperties" URI="#Signature267018-SignedProperties921044">
+<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+<ds:DigestValue>XU1hRXRhWPjPp3IQ7LUmhuu1CLQ=</ds:DigestValue>
+</ds:Reference>
+<ds:Reference URI="#Certificate19409">
+<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+<ds:DigestValue>cH/u957e9sz6ht44nM66XlakylI=</ds:DigestValue>
+</ds:Reference>
+<ds:Reference Id="Reference-ID-467830" URI="#comprobante">
+<ds:Transforms>
+<ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+</ds:Transforms>
+<ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+<ds:DigestValue>EIq5cgznmcgrlw7ynE3Uh5sZ9zM=</ds:DigestValue>
+</ds:Reference>
+</ds:SignedInfo>
+<ds:SignatureValue Id="SignatureValue651542">
+Q92nJ6rAQTxaHE9MS1QGm10Fi43AIUavWiDDOJ7RCeuBip6oiFxI2jDXzONLJRzyAp6myTTnwMxz
+lGndAg+47MKuK62RfDuIvObpdzOpbc55gNkhSpuO+adRKINnZXPZTr1OcctWMCBxhb8mgpH66VCI
+5tbhip9HoK3bO0vO7eMemmJdaBqBwwvdTWVKY0mrQf+OfBfYlhILaVSpvO8SB6gkVFFG3SGRj+YC
+l81YtAhdxhUhLoGyLNYt8iWUf0ITyVyQFXLlvh7t2mKW1TU1ewgBgk3B72+7hqAOHWMSCn6Zbbuh
+ocYXDXz4g+5wd9QF3A4vvSl2Xo4lQAf/0Nvxsg==
+</ds:SignatureValue>
+<ds:KeyInfo Id="Certificate19409">
+<ds:X509Data>
+<ds:X509Certificate>
+MIIDRzCCAi+gAwIBAgIUIjKzdxQHGY0x0VI9OqEd2ziLAtcwDQYJKoZIhvcNAQELBQAwMzEeMBwG
+A1UEAwwVQ0VSVElGSUNBRE8gREUgUFJVRUJBMREwDwYDVQQKDAhUZXN0cyBGRTAeFw0yNjA3MDgx
+NzAxMjdaFw0zNjA3MDUxNzAxMjdaMDMxHjAcBgNVBAMMFUNFUlRJRklDQURPIERFIFBSVUVCQTER
+MA8GA1UECgwIVGVzdHMgRkUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQDJWuyx41fN
+n7YVRz99Y9ytt0TuC9IGlRaHm1sXdCxVIO86RjC4jRSHaIq1xBf7vd3jZfoI4DF2tvx8yDX92DgK
+kiYWnbsg/fA6JmImuV03MCI5ad898R0lMUy5T4YijqiJSvtGzVwF50wCziAk5V7Ndy8u1bxGffC3
+p6XztHRo0Gm7cBkyy/hdXDJCeg32NC0TlfgJUKviXHp7lbO5/3WfoXyhNhyqRn0cXYqzS9LkvtFw
+oo/xpLctj/AaOUV+q2ygJU6HzzL4epjOqtQwzK0/t+2g4eRr1lG9tb3RUMsU2sdJF1w4IOb8Cjtr
+FfxeNK4LtGb3JijvDUHjhXG6GNsdAgMBAAGjUzBRMB0GA1UdDgQWBBTP9ABNWgfUKtJQ8UWl7llz
+ud88kzAfBgNVHSMEGDAWgBTP9ABNWgfUKtJQ8UWl7llzud88kzAPBgNVHRMBAf8EBTADAQH/MA0G
+CSqGSIb3DQEBCwUAA4IBAQDErZ2XqFssuRO31so+1yB1d3HYgDa4LjpKrxzs3ycjDFxAhEpDtr66
+BRoGMxcHRBmjne34nPug/Bnt+xNFqFUawbGC4Bre0YubkzmKPgMo7kscUleRJ23lcyGysXv+d8Yj
+b+Z68yOMFI0E1sjwicrtJpcGg9SeWG8m61NjJLm8m+MsVNyfdC+TgJSl01/ZvifKtAPYy/pL7JsN
+smvFerqNVh/Yn9BUBQZ3IzW7rLy9WvJSO+4MmQOscPYuwQR7xa4Jx1nAn6o3soDol4ELoLHKzltC
+RXZrOq4GfSyrz213z26GLYB5iBak0bMWacNRXlUe9Ex57Nf4HjQByGZPwqCo
+</ds:X509Certificate>
+</ds:X509Data>
+<ds:KeyValue>
+<ds:RSAKeyValue>
+<ds:Modulus>
+yVrsseNXzZ+2FUc/fWPcrbdE7gvSBpUWh5tbF3QsVSDvOkYwuI0Uh2iKtcQX+73d42X6COAxdrb8
+fMg1/dg4CpImFp27IP3wOiZiJrldNzAiOWnfPfEdJTFMuU+GIo6oiUr7Rs1cBedMAs4gJOVezXcv
+LtW8Rn3wt6el87R0aNBpu3AZMsv4XVwyQnoN9jQtE5X4CVCr4lx6e5Wzuf91n6F8oTYcqkZ9HF2K
+s0vS5L7RcKKP8aS3LY/wGjlFfqtsoCVOh88y+HqYzqrUMMytP7ftoOHka9ZRvbW90VDLFNrHSRdc
+OCDm/Ao7axX8XjSuC7Rm9yYo7w1B44VxuhjbHQ==
+</ds:Modulus>
+<ds:Exponent>AQAB</ds:Exponent>
+</ds:RSAKeyValue>
+</ds:KeyValue>
+</ds:KeyInfo>
+<ds:Object Id="Signature267018-Object451539"><etsi:QualifyingProperties Target="#Signature267018"><etsi:SignedProperties Id="Signature267018-SignedProperties921044"><etsi:SignedSignatureProperties><etsi:SigningTime>2026-07-10T15:47:41-05:00</etsi:SigningTime><etsi:SigningCertificate><etsi:Cert><etsi:CertDigest><ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><ds:DigestValue>VvsEwI5/UqpDEAgZe18ZBAsWSMw=</ds:DigestValue></etsi:CertDigest><etsi:IssuerSerial><ds:X509IssuerName>O=Tests FE,CN=CERTIFICADO DE PRUEBA</ds:X509IssuerName><ds:X509SerialNumber>195236357087341947897367461973934088826234012375</ds:X509SerialNumber></etsi:IssuerSerial></etsi:Cert></etsi:SigningCertificate></etsi:SignedSignatureProperties><etsi:SignedDataObjectProperties><etsi:DataObjectFormat ObjectReference="#Reference-ID-467830"><etsi:Description>contenido comprobante</etsi:Description><etsi:MimeType>text/xml</etsi:MimeType></etsi:DataObjectFormat></etsi:SignedDataObjectProperties></etsi:SignedProperties></etsi:QualifyingProperties></ds:Object></ds:Signature></factura>

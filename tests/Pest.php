@@ -2,6 +2,7 @@
 
 use App\Models\Contribuyente;
 use App\Models\User;
+use App\Sri\ValueObjects\CertificadoFirma;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -64,6 +65,14 @@ function p12_de_prueba(bool $legacy = false): string
     $archivo = $legacy ? 'certificado-prueba-legacy.p12' : 'certificado-prueba.p12';
 
     return file_get_contents(dirname(__DIR__)."/tests/Fixtures/{$archivo}");
+}
+
+/**
+ * El certificado de prueba como value object listo para firmar.
+ */
+function certificado_de_prueba(string $clave = 'clave-prueba'): CertificadoFirma
+{
+    return CertificadoFirma::desdeBase64(base64_encode(p12_de_prueba()), $clave);
 }
 
 /**

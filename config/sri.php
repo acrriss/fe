@@ -26,6 +26,8 @@ return [
     */
 
     'firmador' => [
+        // 'nativo' (XAdES-BES en PHP puro) o 'jar' (firmador Java heredado)
+        'driver' => env('SRI_FIRMADOR_DRIVER', 'jar'),
         'jar' => env('SRI_FIRMADOR_JAR', resource_path('firmador/sri.jar')),
         'java' => env('SRI_JAVA_BIN', 'java'),
         'timeout' => env('SRI_FIRMADOR_TIMEOUT', 60),
