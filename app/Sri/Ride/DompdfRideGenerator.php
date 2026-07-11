@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\Storage;
  */
 class DompdfRideGenerator implements RideGenerator
 {
+    public function __construct(private readonly GeneradorCodigoBarras $codigoBarras) {}
+
     public function generar(Comprobante $registro, ComprobanteData $comprobante): string
     {
         $vista = match ($comprobante::tipo()) {
@@ -30,6 +32,9 @@ class DompdfRideGenerator implements RideGenerator
             'registro' => $registro,
             'comprobante' => $comprobante,
             'logo' => $this->logoComoDataUri($registro),
+            'codigoBarras' => $registro->clave_acceso !== null
+                ? $this->codigoBarras->svgDataUri($registro->clave_acceso)
+                : null,
         ])->output();
     }
 

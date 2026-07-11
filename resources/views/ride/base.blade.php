@@ -61,6 +61,9 @@
                     <div><span class="etiqueta">Emisión:</span> NORMAL</div>
                     <div class="mt">
                         <div class="etiqueta">CLAVE DE ACCESO</div>
+                        @isset($codigoBarras)
+                            <img src="{{ $codigoBarras }}" alt="" style="width: 100%; height: 38px; display: block;">
+                        @endisset
                         <div class="clave">{{ $registro->clave_acceso }}</div>
                     </div>
                 </div>
