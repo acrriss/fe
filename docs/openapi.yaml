@@ -62,6 +62,17 @@ info:
     (1 min, 5 min, 30 min, 2 h; máx. 5 intentos) y el resultado de cada
     intento queda consultable en el registro de entregas. El XML firmado
     no viaja en el evento: descárgalo por la API con el `id` recibido.
+
+    **Idempotencia**
+
+    Ante un timeout o corte de red, reintenta la emisión con la misma
+    cabecera `Idempotency-Key` (p. ej. el id de tu venta): si la petición
+    original llegó a procesarse, recibirás **su misma respuesta** (con la
+    cabecera `Idempotency-Replayed: true`) en vez de emitirse un duplicado.
+    Reutilizar una clave con otro payload responde `409`; si la petición
+    original sigue en curso, también `409` (reintenta en unos segundos).
+    Las claves expiran a las 24 h. Solo se guardan desenlaces de negocio:
+    ante un `5xx` o un `429` la clave queda libre para reintentar.
   version: 1.0.0
 servers:
   - url: /api/v1
@@ -142,6 +153,7 @@ paths:
           schema: { type: boolean, default: false }
           description: Si es verdadero, encola la emisión y responde 202.
         - $ref: '#/components/parameters/XContribuyente'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -291,6 +303,7 @@ paths:
           required: false
           schema: { type: boolean, default: false }
         - $ref: '#/components/parameters/XContribuyente'
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
@@ -542,6 +555,17 @@ components:
         Token personal emitido en POST /tokens (usuarios directos) o token
         de partner (emitido al abrir la relación comercial). Laravel Sanctum.
   parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      schema: { type: string, maxLength: 255 }
+      description: >
+        Clave de idempotencia (única por contribuyente, p. ej. el id de la
+        venta en tu sistema). Reintentar con la misma clave y el mismo
+        payload devuelve la respuesta original (`Idempotency-Replayed:
+        true`) sin duplicar la emisión; con otro payload responde 409.
+        Expira a las 24 h.
     XContribuyente:
       name: X-Contribuyente
       in: header

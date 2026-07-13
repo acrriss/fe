@@ -3,8 +3,8 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** fases 0–6, 7a (núcleo partner) y 7b (webhooks) completadas ✅ ·
-> firmador XAdES nativo y los 6 tipos de comprobante · **Actualizado:** 2026-07-12
+> **Estado:** fases 0–6 y 7a–7c (partner, webhooks, idempotencia) completadas ✅ ·
+> firmador XAdES nativo y los 6 tipos de comprobante · **Actualizado:** 2026-07-13
 
 ---
 
@@ -608,7 +608,7 @@ permite aprovisionar sin fricción sin abrir la puerta al squatting.
 |---|---|---|
 | **7a. Núcleo partner** ✅ | Modelo `Partner` (tokenable Sanctum), plano de gestión (aprovisionar/listar contribuyentes, certificado on-behalf), middleware on-behalf sobre API v1, `external_id`, rate limit por partner | El POS aprovisiona un cliente y emite en su nombre con una sola credencial |
 | **7b. Webhooks** ✅ | Endpoints por partner y por contribuyente, firma HMAC, reintentos, registro de entregas | Fin del polling; sirve también a cuentas directas |
-| **7c. Idempotencia** | `Idempotency-Key` en emisión (partner y directos) | Reintentos de POS seguros |
+| **7c. Idempotencia** ✅ | `Idempotency-Key` en emisión (partner y directos) | Reintentos de POS seguros |
 | **7d. Onboarding fino** | Enlace hospedado de certificado, vinculación de RUC existente con consentimiento, panel de partner, cuotas pool con sublímites | Fricción y responsabilidad mínimas para el partner |
 
 7a es autosuficiente para la primera integración real (el POS puede hacer
@@ -680,3 +680,25 @@ comercial.
 - Suite: 224 tests / 727 aserciones (24 nuevas de 7b); PHPStan max limpio.
 - **Pendiente (fases siguientes)**: `Idempotency-Key` (7c), onboarding
   hospedado del certificado + vinculación de RUC + panel de partner (7d).
+
+### Registro de la Fase 7c (2026-07-13)
+
+- **Middleware `ManejarIdempotencia`** en `POST /comprobantes` y
+  `POST /comprobantes/{id}/reintentar` (opt-in por cabecera
+  `Idempotency-Key`, sin cabecera no interviene). Modelo
+  `ClaveIdempotencia` (`claves_idempotencia`): clave única por
+  contribuyente + huella sha256 de `método|URI|cuerpo` (la URI ata
+  `?async=1`) + respuesta y código HTTP guardados.
+- **Semántica**: misma clave+huella → respuesta original byte a byte con
+  `Idempotency-Replayed: true` (también los 422 de negocio: un devuelto
+  reintentado no crea otro registro); misma clave+otra huella → 409;
+  original en curso (respuesta null, ventana 90 s) → 409; en-curso
+  huérfana pasada la ventana → se libera y reprocesa; solo se guardan
+  desenlaces deterministas (ante 5xx/401/403/429 la clave queda libre).
+  Carrera cubierta por el constraint único (create atómico → 409).
+- **Expiración**: TTL 24 h (`sri.idempotencia`, configurable) vía
+  `MassPrunable` + `model:prune` diario programado.
+- OpenAPI: parámetro `Idempotency-Key` en emisión/reintento + sección de
+  uso. Suite: 238 tests / 773 aserciones (14 nuevas); PHPStan max limpio.
+- **Pendiente (7d)**: onboarding hospedado del certificado, vinculación
+  de RUC verificado, panel de partner, cuotas pool con sublímites.

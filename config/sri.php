@@ -73,4 +73,18 @@ return [
         // certificado.por_vencer (una vez por umbral, con el comando diario)
         'certificado_umbrales_dias' => [30, 7, 1],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Idempotencia de emisión (cabecera Idempotency-Key, §11)
+    |--------------------------------------------------------------------------
+    */
+
+    'idempotencia' => [
+        // vida útil de una clave: pasada, se poda y puede reutilizarse
+        'ttl_horas' => env('SRI_IDEMPOTENCIA_TTL_HORAS', 24),
+        // ventana en la que una petición sin respuesta se considera "en
+        // curso" (409); pasada, se asume proceso muerto y se reprocesa
+        'en_curso_segundos' => env('SRI_IDEMPOTENCIA_EN_CURSO_SEGUNDOS', 90),
+    ],
 ];

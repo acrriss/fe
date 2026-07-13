@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\GuardarCertificadoController;
 use App\Http\Controllers\Api\V1\ListarComprobantesController;
 use App\Http\Controllers\Api\V1\ReintentarComprobanteController;
 use App\Http\Controllers\Api\V1\WebhooksController;
+use App\Http\Middleware\ManejarIdempotencia;
 use App\Http\Middleware\ResolverContribuyente;
 use App\Http\Middleware\SoloPartners;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,7 @@ Route::prefix('v1')->group(function () {
     // (este último actúa on-behalf con la cabecera X-Contribuyente, §11).
     Route::middleware(['auth:sanctum', ResolverContribuyente::class])->group(function () {
         Route::post('comprobantes', EmitirComprobanteController::class)
+            ->middleware(ManejarIdempotencia::class)
             ->name('api.v1.comprobantes.emitir');
 
         Route::get('comprobantes', ListarComprobantesController::class)
@@ -32,6 +34,7 @@ Route::prefix('v1')->group(function () {
             ->name('api.v1.comprobantes.mostrar');
 
         Route::post('comprobantes/{comprobante}/reintentar', ReintentarComprobanteController::class)
+            ->middleware(ManejarIdempotencia::class)
             ->name('api.v1.comprobantes.reintentar');
 
         Route::get('comprobantes/{comprobante}/ride', DescargarRideController::class)

@@ -11,3 +11,6 @@ Artisan::command('inspire', function () {
 // Aviso por webhook de certificados de firma próximos a vencer (§11).
 // Diario: cada umbral (30/7/1 días) dispara una sola vez por certificado.
 Schedule::command('webhooks:certificados-por-vencer')->dailyAt('08:00');
+
+// Poda de claves de idempotencia expiradas (ClaveIdempotencia, §11).
+Schedule::command('model:prune')->daily();
