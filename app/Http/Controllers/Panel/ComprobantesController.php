@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Panel;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\ResolverContribuyente;
 use App\Models\Comprobante;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +19,7 @@ class ComprobantesController extends Controller
 {
     public function __invoke(Request $request): Response
     {
-        $contribuyente = $request->user()?->contribuyente;
+        $contribuyente = ResolverContribuyente::de($request);
 
         abort_if($contribuyente === null, 403, 'El usuario no pertenece a ningún contribuyente.');
 
@@ -45,7 +46,7 @@ class ComprobantesController extends Controller
     public function descargarXml(Request $request, Comprobante $comprobante): HttpResponse
     {
         abort_unless(
-            $comprobante->contribuyente_id === $request->user()?->contribuyente_id,
+            $comprobante->contribuyente_id === ResolverContribuyente::de($request)?->id,
             404,
         );
 

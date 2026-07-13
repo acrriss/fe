@@ -31,6 +31,8 @@ class ComprobanteResource extends JsonResource
             'ambiente' => $this->ambiente->value,
             'secuencial' => $this->secuencial,
             'claveAcceso' => $this->clave_acceso,
+            'externalId' => $this->external_id,
+            'metadata' => $this->metadata,
             'importeTotal' => $this->importe_total,
             'emitidoEn' => $this->emitido_en?->toDateString(),
             'autorizacion' => $this->when($autorizado, fn (): array => [

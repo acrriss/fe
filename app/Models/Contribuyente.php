@@ -33,7 +33,9 @@ use SensitiveParameter;
  * @property string|null $certificado_emisor
  * @property Carbon|null $certificado_valido_hasta
  * @property int|null $plan_id
+ * @property int|null $partner_id
  * @property-read Plan|null $plan
+ * @property-read Partner|null $partner
  */
 class Contribuyente extends Model
 {
@@ -78,6 +80,14 @@ class Contribuyente extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    /**
+     * @return BelongsTo<Partner, $this>
+     */
+    public function partner(): BelongsTo
+    {
+        return $this->belongsTo(Partner::class);
     }
 
     public function tieneCertificado(): bool
@@ -138,10 +148,18 @@ class Contribuyente extends Model
     }
 
     /**
-     * Un contribuyente sin plan no tiene cuota (uso interno/ilimitado).
+     * Un contribuyente gestionado por un partner consume la cuota pool del
+     * partner; uno directo, la de su plan. Sin plan ni partner no hay cuota
+     * (uso interno/ilimitado).
      */
     public function agotoCuotaMensual(): bool
     {
+        $partner = $this->partner;
+
+        if ($partner !== null) {
+            return $partner->agotoCuotaMensual();
+        }
+
         $plan = $this->plan;
 
         return $plan !== null && $this->emisionesDelMes() >= $plan->cuota_mensual;

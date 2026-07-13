@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Panel;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\ResolverContribuyente;
 use App\Http\Resources\ComprobanteResource;
 use App\Sri\Enums\EstadoComprobante;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class InicioController extends Controller
 {
     public function __invoke(Request $request): Response
     {
-        $contribuyente = $request->user()?->contribuyente;
+        $contribuyente = ResolverContribuyente::de($request);
 
         abort_if($contribuyente === null, 403, 'El usuario no pertenece a ningún contribuyente.');
 

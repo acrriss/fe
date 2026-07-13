@@ -4,8 +4,10 @@ namespace App\Sri\Registro;
 
 use App\Models\Comprobante;
 use App\Models\Contribuyente;
+use App\Models\WebhookEndpoint;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Enums\EstadoComprobante;
+use App\Sri\Enums\EventoWebhook;
 use App\Sri\Exceptions\EmisionFallida;
 use App\Sri\Pipeline\EmisionEnCurso;
 use Illuminate\Support\Facades\Storage;
@@ -17,8 +19,15 @@ use Illuminate\Support\Facades\Storage;
  */
 class RegistroDeEmision
 {
-    public function crear(ComprobanteData $comprobante, Contribuyente $contribuyente): Comprobante
-    {
+    /**
+     * @param  array<array-key, mixed>|null  $metadata
+     */
+    public function crear(
+        ComprobanteData $comprobante,
+        Contribuyente $contribuyente,
+        ?string $externalId = null,
+        ?array $metadata = null,
+    ): Comprobante {
         return Comprobante::create([
             'contribuyente_id' => $contribuyente->id,
             'tipo' => $comprobante::tipo(),
@@ -29,6 +38,8 @@ class RegistroDeEmision
             'secuencial' => (string) $comprobante->infoTributaria->secuencial,
             'importe_total' => $comprobante->importeTotal(),
             'emitido_en' => $comprobante->fechaEmision()->toDateString(),
+            'external_id' => $externalId,
+            'metadata' => $metadata,
         ]);
     }
 
@@ -67,6 +78,8 @@ class RegistroDeEmision
             'xml_path' => $xmlPath,
         ]);
 
+        $this->publicarEventoDeEstado($registro);
+
         return $registro;
     }
 
@@ -78,7 +91,60 @@ class RegistroDeEmision
             'mensajes' => [$fallo->getMessage(), ...array_map(strval(...), $fallo->mensajes)],
         ]);
 
+        $this->publicarEventoDeEstado($registro);
+
         return $registro;
+    }
+
+    /**
+     * Fallo técnico definitivo (job asíncrono agotó sus reintentos): el
+     * registro queda fallido y se notifica igual que un fallo de negocio.
+     */
+    public function fallarPorErrorTecnico(Comprobante $registro, string $mensaje): Comprobante
+    {
+        $registro->update([
+            'estado' => EstadoComprobante::Fallido,
+            'mensajes' => [$mensaje],
+        ]);
+
+        $this->publicarEventoDeEstado($registro);
+
+        return $registro;
+    }
+
+    /**
+     * Publica el evento de webhook que corresponde al estado final que
+     * alcanzó el registro (§11). Los estados no finales (p. ej. recibido,
+     * cuando el SRI aún no resuelve) no se notifican. El XML no viaja en
+     * el payload: el integrador lo descarga por la API si lo necesita.
+     */
+    private function publicarEventoDeEstado(Comprobante $registro): void
+    {
+        $evento = EventoWebhook::porEstado($registro->estado);
+        $contribuyente = $registro->contribuyente;
+
+        if ($evento === null || $contribuyente === null) {
+            return;
+        }
+
+        WebhookEndpoint::publicar($evento, $contribuyente, [
+            'id' => $registro->uuid,
+            'tipo' => $registro->tipo->rootElement(),
+            'estado' => $registro->estado->value,
+            'estadoFinal' => $registro->estado->esFinal(),
+            'ambiente' => $registro->ambiente->value,
+            'secuencial' => $registro->secuencial,
+            'claveAcceso' => $registro->clave_acceso,
+            'externalId' => $registro->external_id,
+            'metadata' => $registro->metadata,
+            'importeTotal' => $registro->importe_total,
+            'emitidoEn' => $registro->emitido_en?->toDateString(),
+            'autorizacion' => $registro->estado === EstadoComprobante::Autorizado ? [
+                'numero' => $registro->numero_autorizacion,
+                'fecha' => $registro->autorizado_en?->toIso8601String(),
+            ] : null,
+            'mensajes' => $registro->mensajes ?? [],
+        ]);
     }
 
     /**

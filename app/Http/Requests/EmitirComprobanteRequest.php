@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Middleware\ResolverContribuyente;
 use App\Models\Contribuyente;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\Factura\FacturaData;
@@ -39,6 +40,10 @@ class EmitirComprobanteRequest extends FormRequest
             // sin reglas anidadas a propósito: la estructura interna la
             // valida el DTO tipado (ComprobanteData::from) con sus casts
             'comprobante' => ['required', 'array'],
+            // trazabilidad del sistema origen (§11): id y metadatos libres
+            // del integrador, para reconciliar contra sus registros
+            'external_id' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'metadata' => ['sometimes', 'nullable', 'array'],
         ];
     }
 
@@ -98,7 +103,24 @@ class EmitirComprobanteRequest extends FormRequest
 
     public function contribuyente(): ?Contribuyente
     {
-        return $this->user()?->contribuyente;
+        return ResolverContribuyente::de($this);
+    }
+
+    public function externalId(): ?string
+    {
+        $externalId = $this->validated('external_id');
+
+        return is_string($externalId) ? $externalId : null;
+    }
+
+    /**
+     * @return array<array-key, mixed>|null
+     */
+    public function metadata(): ?array
+    {
+        $metadata = $this->validated('metadata');
+
+        return is_array($metadata) ? $metadata : null;
     }
 
     public function tipoComprobante(): TipoComprobante

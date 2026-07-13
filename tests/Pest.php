@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Contribuyente;
+use App\Models\Partner;
 use App\Models\User;
 use App\Sri\ValueObjects\CertificadoFirma;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -96,4 +97,28 @@ function actuar_como_contribuyente(bool $conCertificado = true, array $atributos
     );
 
     return $contribuyente;
+}
+
+/**
+ * Crea un partner autenticado vía Sanctum (plano de gestión y on-behalf)
+ * y lo devuelve.
+ */
+function actuar_como_partner(array $atributos = []): Partner
+{
+    $partner = Partner::factory()->create($atributos);
+
+    Sanctum::actingAs($partner);
+
+    return $partner;
+}
+
+/**
+ * Contribuyente gestionado por el partner (con certificado y, por defecto,
+ * el RUC de los fixtures golden, como actuar_como_contribuyente()).
+ */
+function contribuyente_gestionado(Partner $partner, array $atributos = []): Contribuyente
+{
+    return Contribuyente::factory()
+        ->conCertificado()
+        ->create($atributos + ['ruc' => '0922596788001', 'partner_id' => $partner->id]);
 }

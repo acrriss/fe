@@ -23,6 +23,45 @@ info:
       (puede tardar varios segundos). Recomendada para pruebas y bajo volumen.
     - *Asíncrona* (`?async=1`): responde `202` de inmediato con un `id`;
       el estado se consulta con `GET /comprobantes/{id}`.
+
+    **Integración de partners/plataformas**
+
+    Un partner (POS, ERP…) emite en nombre de sus clientes con **una sola
+    credencial** (token de partner, emitido al abrir la relación comercial):
+
+    1. `POST /partner/v1/contribuyentes` — aprovisionar al cliente final
+       (idempotente por RUC). El `id` devuelto identifica al contribuyente.
+    2. `PUT /contribuyente/certificado` **con la cabecera
+       `X-Contribuyente: {id}`** — cargar el certificado del cliente.
+    3. Usar cualquier endpoint de esta API con esa misma cabecera para
+       actuar a nombre del contribuyente gestionado.
+
+    Con token de usuario directo la cabecera no aplica. Los campos
+    `external_id` y `metadata` de la emisión permiten al integrador
+    reconciliar los comprobantes contra su propio sistema.
+
+    **Webhooks**
+
+    En vez de hacer polling, registra un endpoint HTTPS y recibe los
+    eventos `comprobante.autorizado`, `comprobante.devuelto`,
+    `comprobante.no_autorizado`, `comprobante.fallido` y
+    `certificado.por_vencer`. Un endpoint de **partner** recibe los
+    eventos de todos sus contribuyentes gestionados; uno de
+    **contribuyente**, solo los suyos.
+
+    Cada entrega es un `POST` JSON con cabeceras `X-Evento`, `X-Entrega`
+    (id de la entrega) y firma HMAC-SHA256:
+
+    ```
+    X-Firma: v1={HMAC_SHA256(secreto, timestamp + "." + cuerpo)}
+    X-Firma-Timestamp: {unix}
+    ```
+
+    El secreto se muestra **una sola vez** al crear el endpoint. Responde
+    `2xx` cuanto antes: cualquier otra respuesta se reintenta con backoff
+    (1 min, 5 min, 30 min, 2 h; máx. 5 intentos) y el resultado de cada
+    intento queda consultable en el registro de entregas. El XML firmado
+    no viaja en el evento: descárgalo por la API con el `id` recibido.
   version: 1.0.0
 servers:
   - url: /api/v1
@@ -72,6 +111,8 @@ paths:
               properties:
                 p12: { type: string, description: 'Certificado .p12 en base64 (máx. ~90 KB).' }
                 clave: { type: string, description: Contraseña del certificado. }
+      parameters:
+        - $ref: '#/components/parameters/XContribuyente'
       responses:
         '204': { description: Certificado válido y guardado. }
         '403': { description: El usuario no pertenece a ningún contribuyente. }
@@ -100,6 +141,7 @@ paths:
           required: false
           schema: { type: boolean, default: false }
           description: Si es verdadero, encola la emisión y responde 202.
+        - $ref: '#/components/parameters/XContribuyente'
       requestBody:
         required: true
         content:
@@ -107,6 +149,13 @@ paths:
             schema:
               type: object
               properties:
+                external_id:
+                  type: string
+                  maxLength: 255
+                  description: Id del comprobante en el sistema origen (trazabilidad del integrador).
+                metadata:
+                  type: object
+                  description: Metadatos libres del integrador; se devuelven tal cual en las consultas.
                 factura: { $ref: '#/components/schemas/ComprobantePayload' }
                 notaCredito: { $ref: '#/components/schemas/ComprobantePayload' }
                 notaDebito: { $ref: '#/components/schemas/ComprobantePayload' }
@@ -174,6 +223,33 @@ paths:
               schema: { $ref: '#/components/schemas/EmisionFallida' }
         '429':
           description: Límite de peticiones excedido o cuota mensual del plan agotada.
+    get:
+      summary: Listar las emisiones del contribuyente
+      description: >
+        Listado paginado (25 por página, más recientes primero). El filtro
+        `external_id` permite recuperar un comprobante por el id del sistema
+        origen (p. ej. si se perdió la respuesta de la emisión).
+      parameters:
+        - $ref: '#/components/parameters/XContribuyente'
+        - name: external_id
+          in: query
+          required: false
+          schema: { type: string }
+        - name: estado
+          in: query
+          required: false
+          schema: { type: string, enum: [pendiente, firmado, recibido, autorizado, devuelto, no_autorizado, fallido] }
+      responses:
+        '200':
+          description: Página de emisiones.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Comprobante' }
   /comprobantes/{id}:
     get:
       summary: Consultar el estado de una emisión
@@ -182,6 +258,7 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/XContribuyente'
       responses:
         '200':
           description: Estado y resultado de la emisión.
@@ -213,6 +290,7 @@ paths:
           in: query
           required: false
           schema: { type: boolean, default: false }
+        - $ref: '#/components/parameters/XContribuyente'
       requestBody:
         required: true
         content:
@@ -251,6 +329,7 @@ paths:
           in: path
           required: true
           schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/XContribuyente'
       responses:
         '200':
           description: El RIDE en PDF.
@@ -261,13 +340,287 @@ paths:
           description: No existe la emisión o su XML ya no está disponible.
         '409':
           description: El comprobante aún no está autorizado.
+  /webhooks:
+    post:
+      summary: Registrar un endpoint de webhook
+      description: >
+        Suscribe una URL a eventos del contribuyente actual. La respuesta
+        incluye el `secreto` de firma **una sola vez**. (El plano de partner
+        tiene su equivalente en `POST /api/partner/v1/webhooks`, suscrito a
+        los eventos de todos sus gestionados.)
+      parameters:
+        - $ref: '#/components/parameters/XContribuyente'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, eventos]
+              properties:
+                url: { type: string, format: uri, description: URL http(s) del receptor. }
+                eventos:
+                  type: array
+                  minItems: 1
+                  items: { $ref: '#/components/schemas/EventoWebhook' }
+      responses:
+        '201':
+          description: Endpoint registrado; el secreto solo viaja aquí.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/WebhookEndpoint' }
+                  secreto: { type: string, description: Guardarlo ahora; no se puede volver a consultar. }
+        '422':
+          description: URL o eventos inválidos.
+    get:
+      summary: Listar los endpoints de webhook
+      parameters:
+        - $ref: '#/components/parameters/XContribuyente'
+      responses:
+        '200':
+          description: Endpoints registrados (sin el secreto).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/WebhookEndpoint' }
+  /webhooks/{id}:
+    delete:
+      summary: Eliminar un endpoint de webhook
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/XContribuyente'
+      responses:
+        '204': { description: Endpoint eliminado (junto con su registro de entregas). }
+        '404': { description: No existe (o pertenece a otro suscriptor). }
+  /webhooks/{id}/entregas:
+    get:
+      summary: Consultar el registro de entregas de un endpoint
+      description: >
+        Listado paginado (25 por página, más recientes primero) del
+        resultado de cada notificación: estado, intentos, código HTTP,
+        error y payload. Útil para depurar la integración.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - $ref: '#/components/parameters/XContribuyente'
+      responses:
+        '200':
+          description: Página de entregas.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/WebhookEntrega' }
+        '404': { description: No existe (o pertenece a otro suscriptor). }
+  /contribuyentes:
+    servers:
+      - url: /api/partner/v1
+    post:
+      summary: 'Partners: aprovisionar un contribuyente gestionado'
+      description: >
+        Da de alta al cliente final del partner sin registro en el panel.
+        Idempotente por RUC dentro del partner: repetir la llamada devuelve
+        el contribuyente existente (200) en vez de crearlo (201). Requiere
+        token de partner (403 con token de usuario directo). El contribuyente
+        nace sin certificado; se carga después con
+        `PUT /api/v1/contribuyente/certificado` + `X-Contribuyente`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ruc, razon_social]
+              properties:
+                ruc: { type: string, description: 13 dígitos. }
+                razon_social: { type: string, maxLength: 255 }
+                nombre_comercial: { type: string, maxLength: 255 }
+                dir_matriz: { type: string, maxLength: 255 }
+      responses:
+        '201':
+          description: Contribuyente aprovisionado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ContribuyenteGestionado' }
+        '200':
+          description: El RUC ya estaba aprovisionado por este partner (idempotencia).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ContribuyenteGestionado' }
+        '403':
+          description: El token no es de partner.
+        '409':
+          description: El RUC ya está registrado en otra cuenta del servicio.
+        '422':
+          description: Payload inválido (p. ej. RUC malformado).
+    get:
+      summary: 'Partners: listar contribuyentes gestionados'
+      description: Listado paginado (25 por página) con filtro opcional `ruc` exacto.
+      parameters:
+        - name: ruc
+          in: query
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Página de contribuyentes gestionados.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ContribuyenteGestionado' }
+        '403':
+          description: El token no es de partner.
+  /partner/v1/webhooks:
+    servers:
+      - url: /api
+    post:
+      summary: 'Partners: registrar un endpoint de webhook global'
+      description: >
+        Igual que `POST /api/v1/webhooks`, pero el endpoint queda suscrito a
+        los eventos de **todos** los contribuyentes gestionados del partner
+        (el payload identifica al contribuyente de cada evento). Los demás
+        recursos son equivalentes: `GET /api/partner/v1/webhooks`,
+        `DELETE /api/partner/v1/webhooks/{id}` y
+        `GET /api/partner/v1/webhooks/{id}/entregas`. Requiere token de
+        partner (403 en caso contrario).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [url, eventos]
+              properties:
+                url: { type: string, format: uri }
+                eventos:
+                  type: array
+                  minItems: 1
+                  items: { $ref: '#/components/schemas/EventoWebhook' }
+      responses:
+        '201':
+          description: Endpoint registrado; el secreto solo viaja aquí.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/WebhookEndpoint' }
+                  secreto: { type: string }
+        '403':
+          description: El token no es de partner.
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
-      description: Token personal emitido en POST /tokens (Laravel Sanctum).
+      description: >
+        Token personal emitido en POST /tokens (usuarios directos) o token
+        de partner (emitido al abrir la relación comercial). Laravel Sanctum.
+  parameters:
+    XContribuyente:
+      name: X-Contribuyente
+      in: header
+      required: false
+      schema: { type: string, format: uuid }
+      description: >
+        Solo con token de partner: id del contribuyente gestionado a cuyo
+        nombre se actúa. Obligatoria en ese caso (400 si falta; 404 si el
+        contribuyente no pertenece al partner). Con token de usuario directo
+        se ignora.
   schemas:
+    EventoWebhook:
+      type: string
+      enum:
+        - comprobante.autorizado
+        - comprobante.devuelto
+        - comprobante.no_autorizado
+        - comprobante.fallido
+        - certificado.por_vencer
+    WebhookEndpoint:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        url: { type: string, format: uri }
+        eventos:
+          type: array
+          items: { $ref: '#/components/schemas/EventoWebhook' }
+        activo: { type: boolean }
+        creadoEn: { type: string, format: date-time }
+    WebhookEntrega:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: El mismo valor que la cabecera X-Entrega recibida.
+        evento: { $ref: '#/components/schemas/EventoWebhook' }
+        estado: { type: string, enum: [pendiente, entregada, fallida] }
+        intentos: { type: integer }
+        codigoHttp: { type: [integer, 'null'] }
+        error: { type: [string, 'null'] }
+        payload: { $ref: '#/components/schemas/EventoWebhookPayload' }
+        entregadoEn: { type: [string, 'null'], format: date-time }
+        creadoEn: { type: string, format: date-time }
+    EventoWebhookPayload:
+      type: object
+      description: >
+        Cuerpo del POST que recibe el endpoint suscrito. En los eventos de
+        comprobante, `datos` tiene la forma del schema Comprobante (sin
+        `xmlFirmado`); en certificado.por_vencer trae `titular`,
+        `validoHasta` y `diasRestantes`.
+      properties:
+        evento: { $ref: '#/components/schemas/EventoWebhook' }
+        publicadoEn: { type: string, format: date-time }
+        contribuyente:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            ruc: { type: string }
+        datos: { type: object }
+    ContribuyenteGestionado:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Valor a usar en la cabecera X-Contribuyente.
+        ruc: { type: string }
+        razonSocial: { type: string }
+        nombreComercial: { type: [string, 'null'] }
+        dirMatriz: { type: [string, 'null'] }
+        certificado:
+          type: object
+          properties:
+            configurado: { type: boolean }
+            titular: { type: [string, 'null'] }
+            validoHasta: { type: [string, 'null'], format: date-time }
+        emisionesDelMes: { type: integer }
+        creadoEn: { type: string, format: date-time }
     ComprobantePayload:
       type: object
       description: |
@@ -314,6 +667,12 @@ components:
         claveAcceso:
           type: [string, 'null']
           description: 49 dígitos; es también el número de autorización.
+        externalId:
+          type: [string, 'null']
+          description: Id del comprobante en el sistema origen, si se envió al emitir.
+        metadata:
+          type: [object, 'null']
+          description: Metadatos libres del integrador, si se enviaron al emitir.
         importeTotal: { type: [string, 'null'] }
         emitidoEn: { type: [string, 'null'], format: date }
         autorizacion:

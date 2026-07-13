@@ -59,4 +59,18 @@ return [
         'intentos' => env('SRI_AUTORIZACION_INTENTOS', 5),
         'espera_ms' => env('SRI_AUTORIZACION_ESPERA_MS', 2000),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Webhooks: notificaciones firmadas a integradores (§11)
+    |--------------------------------------------------------------------------
+    */
+
+    'webhooks' => [
+        // timeout (s) de cada intento de entrega
+        'timeout' => env('SRI_WEBHOOKS_TIMEOUT', 10),
+        // días antes del vencimiento del certificado en los que se publica
+        // certificado.por_vencer (una vez por umbral, con el comando diario)
+        'certificado_umbrales_dias' => [30, 7, 1],
+    ],
 ];

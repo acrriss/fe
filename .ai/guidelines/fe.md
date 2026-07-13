@@ -2,6 +2,11 @@
 
 No hagas commits automáticamente, siempre debes consultarme primero.
 
+# Validación
+
+Siempre utiliza form requests para validar los datos de entrada en los
+controladores.
+
 # Idioma y naming
 
 - El dominio se escribe en español con el vocabulario de la ficha técnica del

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Panel;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\ResolverContribuyente;
 use App\Models\Contribuyente;
 use App\Sri\Exceptions\CertificadoInvalido;
 use App\Sri\Exceptions\DatoInvalido;
@@ -123,7 +124,7 @@ class ConfiguracionController extends Controller
 
     private function contribuyente(Request $request): Contribuyente
     {
-        $contribuyente = $request->user()?->contribuyente;
+        $contribuyente = ResolverContribuyente::de($request);
 
         abort_if($contribuyente === null, 403, 'El usuario no pertenece a ningún contribuyente.');
 

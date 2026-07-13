@@ -4,7 +4,6 @@ namespace App\Jobs;
 
 use App\Models\Comprobante;
 use App\Sri\Data\ComprobanteData;
-use App\Sri\Enums\EstadoComprobante;
 use App\Sri\Exceptions\EmisionFallida;
 use App\Sri\Pipeline\EmisionEnCurso;
 use App\Sri\Pipeline\EmitirComprobante;
@@ -74,9 +73,9 @@ class ProcesarComprobanteJob implements ShouldBeEncrypted, ShouldQueue
      */
     public function failed(?Throwable $excepcion): void
     {
-        $this->registro->update([
-            'estado' => EstadoComprobante::Fallido,
-            'mensajes' => ['La emisión falló por un error técnico; reintente más tarde.'],
-        ]);
+        app(RegistroDeEmision::class)->fallarPorErrorTecnico(
+            $this->registro,
+            'La emisión falló por un error técnico; reintente más tarde.',
+        );
     }
 }

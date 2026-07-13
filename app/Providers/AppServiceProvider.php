@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Partner;
+use App\Models\User;
 use App\Sri\Contracts\RideGenerator;
 use App\Sri\Contracts\SriGateway;
 use App\Sri\Contracts\XmlSigner;
@@ -40,9 +42,17 @@ class AppServiceProvider extends ServiceProvider
     {
         // La emisión llama a servicios externos lentos (SOAP del SRI): el
         // límite por minuto viene del plan del contribuyente (60 por
-        // defecto) y se aplica por contribuyente, no por usuario.
+        // defecto) y se aplica por contribuyente, no por usuario. Un
+        // partner tiene su propio límite, agregado sobre todos sus
+        // contribuyentes gestionados.
         RateLimiter::for('api', function (Request $request) {
-            $contribuyente = $request->user()?->contribuyente;
+            $actor = $request->user();
+
+            if ($actor instanceof Partner) {
+                return Limit::perMinute($actor->limite_por_minuto)->by("partner:{$actor->id}");
+            }
+
+            $contribuyente = $actor instanceof User ? $actor->contribuyente : null;
 
             return Limit::perMinute($contribuyente->plan->limite_por_minuto ?? 60)
                 ->by((string) ($contribuyente->id ?? $request->ip()));

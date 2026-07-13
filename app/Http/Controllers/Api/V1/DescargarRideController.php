@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\ResolverContribuyente;
 use App\Models\Comprobante;
 use App\Sri\Contracts\RideGenerator;
 use App\Sri\Enums\EstadoComprobante;
@@ -27,7 +28,7 @@ class DescargarRideController extends Controller
     ): Response {
         // aislamiento entre contribuyentes: un id ajeno "no existe"
         abort_unless(
-            $comprobante->contribuyente_id === $request->user()?->contribuyente_id,
+            $comprobante->contribuyente_id === ResolverContribuyente::de($request)?->id,
             404,
         );
 

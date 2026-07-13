@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\ResolverContribuyente;
 use App\Http\Resources\ComprobanteResource;
 use App\Models\Comprobante;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class ConsultarComprobanteController extends Controller
     {
         // aislamiento entre contribuyentes: un id ajeno "no existe"
         abort_unless(
-            $comprobante->contribuyente_id === $request->user()?->contribuyente_id,
+            $comprobante->contribuyente_id === ResolverContribuyente::de($request)?->id,
             404,
         );
 

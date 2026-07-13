@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Partner;
 use App\Models\User;
 
 return [
@@ -42,6 +43,14 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        // Tokens de partner (§11). El plano de emisión usa auth:sanctum,
+        // que acepta cualquier tokenable (User o Partner); este guard
+        // permite además restringir rutas a solo partners (auth:partner).
+        'partner' => [
+            'driver' => 'sanctum',
+            'provider' => 'partners',
+        ],
     ],
 
     /*
@@ -65,6 +74,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+
+        'partners' => [
+            'driver' => 'eloquent',
+            'model' => Partner::class,
         ],
 
         // 'users' => [

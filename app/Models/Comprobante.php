@@ -30,6 +30,8 @@ use Illuminate\Support\Carbon;
  * @property array<int, string>|null $mensajes
  * @property string|null $xml_path
  * @property string|null $ride_path
+ * @property string|null $external_id id del comprobante en el sistema origen
+ * @property array<array-key, mixed>|null $metadata
  * @property Carbon|null $emitido_en
  * @property int|null $contribuyente_id
  * @property-read Contribuyente|null $contribuyente
@@ -79,6 +81,7 @@ class Comprobante extends Model
             'ambiente' => Ambiente::class,
             'importe_total' => 'decimal:2',
             'mensajes' => 'array',
+            'metadata' => 'array',
             'autorizado_en' => 'datetime',
             'emitido_en' => 'date',
         ];

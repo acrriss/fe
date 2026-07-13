@@ -3,8 +3,8 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** TODAS las fases (0–6) completadas ✅ · firmador XAdES nativo,
-> código de barras y los 6 tipos de comprobante · **Actualizado:** 2026-07-11
+> **Estado:** fases 0–6, 7a (núcleo partner) y 7b (webhooks) completadas ✅ ·
+> firmador XAdES nativo y los 6 tipos de comprobante · **Actualizado:** 2026-07-12
 
 ---
 
@@ -216,7 +216,8 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
   ahora que el nativo es default y está validado (tras algo de rodaje).
 - **Validar los 3 tipos nuevos** emitiendo uno de cada uno en el ambiente de
   pruebas del SRI.
-- **Webhooks** de notificación al autorizar (alternativa al polling).
+- ~~Webhooks de notificación al autorizar (alternativa al polling)~~ ✅
+  2026-07-12: fase 7b — ver §11 y su registro.
 - ~~Documentación navegable de la API (Scalar en `/docs`)~~ ✅ 2026-07-11:
   Scalar bundled con Vite (`resources/js/docs.js`), público en `/docs`,
   sirve `docs/openapi.yaml` (actualizado con los 6 tipos); enlazado desde
@@ -605,11 +606,77 @@ permite aprovisionar sin fricción sin abrir la puerta al squatting.
 
 | Fase | Contenido | Resultado |
 |---|---|---|
-| **7a. Núcleo partner** | Modelo `Partner` (tokenable Sanctum), plano de gestión (aprovisionar/listar contribuyentes, certificado on-behalf), middleware on-behalf sobre API v1, `external_id`, rate limit por partner | El POS aprovisiona un cliente y emite en su nombre con una sola credencial |
-| **7b. Webhooks** | Endpoints por partner y por contribuyente, firma HMAC, reintentos, registro de entregas | Fin del polling; sirve también a cuentas directas |
+| **7a. Núcleo partner** ✅ | Modelo `Partner` (tokenable Sanctum), plano de gestión (aprovisionar/listar contribuyentes, certificado on-behalf), middleware on-behalf sobre API v1, `external_id`, rate limit por partner | El POS aprovisiona un cliente y emite en su nombre con una sola credencial |
+| **7b. Webhooks** ✅ | Endpoints por partner y por contribuyente, firma HMAC, reintentos, registro de entregas | Fin del polling; sirve también a cuentas directas |
 | **7c. Idempotencia** | `Idempotency-Key` en emisión (partner y directos) | Reintentos de POS seguros |
 | **7d. Onboarding fino** | Enlace hospedado de certificado, vinculación de RUC existente con consentimiento, panel de partner, cuotas pool con sublímites | Fricción y responsabilidad mínimas para el partner |
 
 7a es autosuficiente para la primera integración real (el POS puede hacer
 polling como hoy); 7b/7c la vuelven robusta en producción; 7d es pulido
 comercial.
+
+### Registro de la Fase 7a (2026-07-12)
+
+- **Modelo de confianza**: `Partner` tokenable de Sanctum (extiende
+  `Authenticatable`, como User); alta por CLI (`partner:crear`, imprime el
+  token inicial) y rotación (`partner:token --revocar`). Guard `partner`
+  (driver sanctum) + provider `partners` en `config/auth.php`: habilita
+  `auth:partner` a futuro y le da a Larastan el tipo `User|Partner` en
+  `$request->user()`.
+- **Tenancy on-behalf**: middleware `ResolverContribuyente` como única
+  fuente de verdad del "contribuyente actual" (User → el suyo; Partner →
+  cabecera `X-Contribuyente`, 400 si falta, 404 si el uuid no es de un
+  gestionado suyo). Lo usan la API v1 (middleware en el grupo) **y** el
+  panel (fallback por sesión). La API v1 no cambió de contrato: los
+  tokens de usuario directo funcionan igual.
+- **Plano de gestión** `/api/partner/v1` (middleware `SoloPartners`, 403
+  para tokens de usuario): `POST /contribuyentes` (idempotente por RUC
+  dentro del partner: 200 con el existente; 409 si el RUC es de otra
+  cuenta — la vinculación queda para 7d) y `GET /contribuyentes` (consumo
+  del mes, estado del certificado, filtro por RUC).
+- **Cuota pool**: `Contribuyente::agotoCuotaMensual()` delega en el
+  partner cuando `partner_id` no es null (`partners.cuota_mensual`
+  nullable = ilimitada); rate limit del limiter `api` por partner
+  (`partners.limite_por_minuto`). Los gestionados no llevan plan propio.
+- **Trazabilidad**: `external_id` + `metadata` (json) opcionales en la
+  emisión, persistidos en el registro y expuestos en `ComprobanteResource`;
+  nuevo `GET /api/v1/comprobantes` con filtros `external_id`/`estado`
+  (recupera emisiones cuando el integrador perdió la respuesta).
+- **Certificado on-behalf**: el `PUT /api/v1/contribuyente/certificado`
+  existente funciona con partner + cabecera (verificado por test).
+- OpenAPI/Scalar actualizado (sección de partners, cabecera, external_id,
+  listados). Suite: 200 tests / 642 aserciones (29 nuevas de 7a);
+  PHPStan max limpio.
+- **Pendiente (fases siguientes)**: webhooks (7b), `Idempotency-Key` (7c),
+  enlace de onboarding hospedado del certificado + vinculación de RUC +
+  panel de partner (7d).
+
+### Registro de la Fase 7b (2026-07-12)
+
+- **Modelo**: `WebhookEndpoint` (suscriptor **polimórfico**: un Partner
+  recibe los eventos de todos sus gestionados; un Contribuyente, solo los
+  suyos; secreto `whsec_…` cifrado en reposo, eventos suscritos en json,
+  flag activo) + `WebhookEntrega` (registro consultable por intento:
+  estado pendiente/entregada/fallida, código HTTP, error, payload).
+- **Eventos** (`EventoWebhook`): `comprobante.autorizado` / `.devuelto` /
+  `.no_autorizado` / `.fallido` (mapeados desde el estado final en
+  `RegistroDeEmision::completar/fallar/fallarPorErrorTecnico` — este
+  último centraliza el `failed()` del job asíncrono, antes inline) y
+  `certificado.por_vencer` (comando diario
+  `webhooks:certificados-por-vencer`, umbrales 30/7/1 días configurables
+  en `sri.webhooks`, programado 08:00).
+- **Entrega** (`EnviarWebhookJob`): POST JSON con `X-Evento`, `X-Entrega`
+  y firma `X-Firma: v1=HMAC_SHA256(secreto, "{timestamp}.{cuerpo}")` +
+  `X-Firma-Timestamp` (verificable y anti-replay). 5 intentos con backoff
+  1 m/5 m/30 m/2 h; cada intento actualiza la entrega. El XML firmado no
+  viaja: el integrador lo descarga por la API.
+- **Gestión** (trait `GestionaWebhooks` compartido): CRUD + entregas en
+  `/api/v1/webhooks` (suscriptor = contribuyente actual, funciona
+  on-behalf con `X-Contribuyente`) y `/api/partner/v1/webhooks`
+  (suscriptor = partner). El secreto solo viaja en la respuesta de
+  creación; un endpoint ajeno responde 404.
+- OpenAPI/Scalar: sección de webhooks con guía de verificación de firma,
+  4 rutas nuevas + espejo partner, schemas de endpoint/entrega/payload.
+- Suite: 224 tests / 727 aserciones (24 nuevas de 7b); PHPStan max limpio.
+- **Pendiente (fases siguientes)**: `Idempotency-Key` (7c), onboarding
+  hospedado del certificado + vinculación de RUC + panel de partner (7d).

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Middleware\ResolverContribuyente;
 use App\Sri\Exceptions\CertificadoInvalido;
 use App\Sri\Exceptions\DatoInvalido;
 use Illuminate\Http\Request;
@@ -22,7 +23,7 @@ class GuardarCertificadoController extends Controller
             'clave' => ['required', 'string', 'max:255'],
         ]);
 
-        $contribuyente = $request->user()?->contribuyente;
+        $contribuyente = ResolverContribuyente::de($request);
 
         if ($contribuyente === null) {
             abort(403, 'El usuario no pertenece a ningún contribuyente.');

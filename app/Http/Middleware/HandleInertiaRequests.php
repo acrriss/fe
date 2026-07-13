@@ -21,7 +21,9 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        $user = $request->user();
+        // el panel siempre autentica por sesión (guard web): aquí nunca
+        // actúa un partner
+        $user = $request->user('web');
         $contribuyente = $user?->contribuyente;
 
         return [

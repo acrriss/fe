@@ -35,7 +35,12 @@ class EmitirComprobanteController extends Controller
         );
 
         $comprobante = $request->comprobante();
-        $registro = $registroDeEmision->crear($comprobante, $contribuyente);
+        $registro = $registroDeEmision->crear(
+            $comprobante,
+            $contribuyente,
+            $request->externalId(),
+            $request->metadata(),
+        );
 
         return $this->procesarEmision($request, $comprobante, $registro, $contribuyente, $pipeline, $registroDeEmision);
     }
