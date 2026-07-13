@@ -51,6 +51,12 @@ return [
             'driver' => 'sanctum',
             'provider' => 'partners',
         ],
+
+        // Sesión del panel de partner (§11, 7d).
+        'partner-web' => [
+            'driver' => 'session',
+            'provider' => 'partners',
+        ],
     ],
 
     /*

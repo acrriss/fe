@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Partner;
+use Illuminate\Support\Facades\Hash;
 
 describe('partner:crear', function () {
     it('crea el partner y muestra su token inicial', function () {
@@ -27,6 +28,41 @@ describe('partner:crear', function () {
 
         $this->artisan('partner:crear', ['nombre' => 'POS Andino'])
             ->assertFailed();
+    });
+});
+
+describe('partner:credenciales', function () {
+    it('asigna email y contraseña para el panel', function () {
+        Partner::factory()->create(['slug' => 'pos-andino']);
+
+        $this->artisan('partner:credenciales', [
+            'slug' => 'pos-andino',
+            'email' => 'pos@ejemplo.test',
+            '--password' => 'secreto-123',
+        ])->assertSuccessful();
+
+        $partner = Partner::where('slug', 'pos-andino')->first();
+
+        expect($partner->email)->toBe('pos@ejemplo.test')
+            ->and(Hash::check('secreto-123', $partner->password))->toBeTrue();
+    });
+
+    it('rechaza contraseñas cortas', function () {
+        Partner::factory()->create(['slug' => 'pos-andino']);
+
+        $this->artisan('partner:credenciales', [
+            'slug' => 'pos-andino',
+            'email' => 'pos@ejemplo.test',
+            '--password' => 'corta',
+        ])->assertFailed();
+    });
+
+    it('falla si el partner no existe', function () {
+        $this->artisan('partner:credenciales', [
+            'slug' => 'nadie',
+            'email' => 'x@x.test',
+            '--password' => 'secreto-123',
+        ])->assertFailed();
     });
 });
 

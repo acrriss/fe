@@ -20,6 +20,8 @@ use Laravel\Sanctum\HasApiTokens;
  * @property string $uuid
  * @property string $nombre
  * @property string $slug
+ * @property string|null $email credenciales del panel (null = solo API/CLI)
+ * @property string|null $password
  * @property int|null $cuota_mensual null = sin cuota (ilimitado)
  * @property int $limite_por_minuto
  */
@@ -31,6 +33,8 @@ class Partner extends Authenticatable
     use HasUuids;
 
     protected $guarded = [];
+
+    protected $hidden = ['password', 'remember_token'];
 
     /**
      * @return array<int, string>
@@ -69,5 +73,23 @@ class Partner extends Authenticatable
     public function agotoCuotaMensual(): bool
     {
         return $this->cuota_mensual !== null && $this->emisionesDelMes() >= $this->cuota_mensual;
+    }
+
+    /**
+     * @return HasMany<Vinculacion, $this>
+     */
+    public function vinculaciones(): HasMany
+    {
+        return $this->hasMany(Vinculacion::class);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'password' => 'hashed',
+        ];
     }
 }

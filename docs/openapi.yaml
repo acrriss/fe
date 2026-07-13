@@ -464,6 +464,10 @@ paths:
                 razon_social: { type: string, maxLength: 255 }
                 nombre_comercial: { type: string, maxLength: 255 }
                 dir_matriz: { type: string, maxLength: 255 }
+                limite_mensual:
+                  type: [integer, 'null']
+                  minimum: 1
+                  description: Sublímite de emisiones mensuales dentro de la cuota pool (null = sin sublímite).
       responses:
         '201':
           description: Contribuyente aprovisionado.
@@ -508,6 +512,114 @@ paths:
                     items: { $ref: '#/components/schemas/ContribuyenteGestionado' }
         '403':
           description: El token no es de partner.
+  /contribuyentes/{id}:
+    servers:
+      - url: /api/partner/v1
+    patch:
+      summary: 'Partners: actualizar un contribuyente gestionado'
+      description: >
+        Actualiza los datos editables (razón social, nombre comercial,
+        dirección) y el sublímite mensual dentro de la cuota pool
+        (`limite_mensual`; enviar null lo quita). El RUC no se edita.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                razon_social: { type: string, maxLength: 255 }
+                nombre_comercial: { type: [string, 'null'], maxLength: 255 }
+                dir_matriz: { type: [string, 'null'], maxLength: 255 }
+                limite_mensual: { type: [integer, 'null'], minimum: 1 }
+      responses:
+        '200':
+          description: Contribuyente actualizado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/ContribuyenteGestionado' }
+        '404': { description: No existe (o pertenece a otro partner). }
+  /contribuyentes/{id}/enlace-certificado:
+    servers:
+      - url: /api/partner/v1
+    post:
+      summary: 'Partners: generar el enlace hospedado de carga de certificado'
+      description: >
+        Devuelve una URL firmada y temporal para compartir con el cliente
+        final: en ella sube su certificado .p12 y su clave **directamente al
+        servicio** — la clave privada nunca pasa por el sistema del partner.
+        Se puede regenerar cuando haga falta; cada enlace expira solo.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Enlace generado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  url: { type: string, format: uri }
+                  expiraEn: { type: string, format: date-time }
+        '404': { description: No existe (o pertenece a otro partner). }
+  /vinculaciones:
+    servers:
+      - url: /api/partner/v1
+    post:
+      summary: 'Partners: solicitar la vinculación de un RUC ya registrado'
+      description: >
+        Cuando el aprovisionamiento responde 409 (el RUC ya tiene cuenta
+        directa), este endpoint crea una solicitud de vinculación que el
+        dueño de la cuenta aprueba o rechaza desde su panel. Al aprobarse,
+        el contribuyente pasa a ser gestionado por el partner (emisión
+        on-behalf y cuota pool). Idempotente mientras la solicitud siga
+        pendiente. Consulte el estado con GET.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ruc]
+              properties:
+                ruc: { type: string, description: 13 dígitos. }
+      responses:
+        '201':
+          description: Solicitud creada (pendiente de aprobación del dueño).
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Vinculacion' }
+        '200':
+          description: Ya había una solicitud pendiente para ese RUC (idempotencia).
+        '404': { description: El RUC no está registrado en el servicio (aprovisiónelo). }
+        '409': { description: El contribuyente ya es gestionado (por este u otro partner). }
+    get:
+      summary: 'Partners: listar solicitudes de vinculación'
+      responses:
+        '200':
+          description: Página de solicitudes con su estado.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Vinculacion' }
   /partner/v1/webhooks:
     servers:
       - url: /api
@@ -644,7 +756,23 @@ components:
             titular: { type: [string, 'null'] }
             validoHasta: { type: [string, 'null'], format: date-time }
         emisionesDelMes: { type: integer }
+        limiteMensual:
+          type: [integer, 'null']
+          description: Sublímite mensual dentro de la cuota pool (null = sin sublímite).
         creadoEn: { type: string, format: date-time }
+    Vinculacion:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ruc: { type: string }
+        razonSocial: { type: string }
+        estado: { type: string, enum: [pendiente, aprobada, rechazada] }
+        contribuyente:
+          type: string
+          format: uuid
+          description: Presente solo al aprobarse; es el valor para X-Contribuyente.
+        solicitadaEn: { type: string, format: date-time }
+        resueltaEn: { type: [string, 'null'], format: date-time }
     ComprobantePayload:
       type: object
       description: |

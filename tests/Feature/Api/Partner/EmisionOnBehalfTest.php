@@ -81,6 +81,18 @@ describe('emisión on-behalf (§11)', function () {
             cabecera_on_behalf($this->gestionado),
         )->assertTooManyRequests();
     });
+
+    it('responde 429 al agotar el sublímite del contribuyente aunque el pool tenga espacio', function () {
+        $this->partner->update(['cuota_mensual' => 100]);
+        $this->gestionado->update(['limite_mensual' => 1]);
+        Comprobante::factory()->create(['contribuyente_id' => $this->gestionado->id]);
+
+        $this->postJson(
+            route('api.v1.comprobantes.emitir'),
+            golden_payload('factura'),
+            cabecera_on_behalf($this->gestionado),
+        )->assertTooManyRequests();
+    });
 });
 
 describe('gestión on-behalf', function () {

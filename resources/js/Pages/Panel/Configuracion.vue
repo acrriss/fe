@@ -1,12 +1,22 @@
 <script setup>
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import PanelLayout from '../../Layouts/PanelLayout.vue';
 
 const props = defineProps({
     contribuyente: { type: Object, required: true },
     certificado: { type: Object, default: null },
     logo_url: { type: String, default: null },
+    vinculaciones_pendientes: { type: Array, default: () => [] },
+    partner: { type: String, default: null },
 });
+
+const aprobarVinculacion = (id) => {
+    if (confirm('¿Aprobar? El partner podrá emitir comprobantes a tu nombre y sus emisiones consumirán la cuota del partner.')) {
+        router.post(`/panel/vinculaciones/${id}/aprobar`);
+    }
+};
+
+const rechazarVinculacion = (id) => router.post(`/panel/vinculaciones/${id}/rechazar`);
 
 const datos = useForm({
     razon_social: props.contribuyente.razon_social,
@@ -35,6 +45,53 @@ const guardarLogo = () => logo.post('/panel/configuracion/logo', { onSuccess: ()
     <Head title="Configuración" />
     <PanelLayout>
         <h1 class="mb-6 text-lg font-semibold text-gray-900">Configuración del contribuyente</h1>
+
+        <section
+            v-if="vinculaciones_pendientes.length"
+            class="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-6"
+        >
+            <h2 class="mb-1 text-sm font-semibold text-amber-900">Solicitudes de vinculación</h2>
+            <p class="mb-4 text-xs text-amber-800">
+                Estas plataformas piden emitir comprobantes a tu nombre (por ejemplo, tu sistema
+                de punto de venta). Aprueba solo si reconoces al proveedor.
+            </p>
+            <ul class="space-y-3">
+                <li
+                    v-for="vinculacion in vinculaciones_pendientes"
+                    :key="vinculacion.id"
+                    class="flex items-center justify-between gap-4 rounded-md bg-white p-3"
+                >
+                    <div>
+                        <p class="text-sm font-medium text-gray-900">{{ vinculacion.partner }}</p>
+                        <p class="text-xs text-gray-500">Solicitada el {{ vinculacion.solicitada_en }}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button
+                            type="button"
+                            class="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700"
+                            @click="aprobarVinculacion(vinculacion.id)"
+                        >
+                            Aprobar
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-md border border-gray-300 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50"
+                            @click="rechazarVinculacion(vinculacion.id)"
+                        >
+                            Rechazar
+                        </button>
+                    </div>
+                </li>
+            </ul>
+        </section>
+
+        <div
+            v-if="partner"
+            class="mb-6 rounded-xl border border-gray-200 bg-white p-4 text-sm text-gray-600"
+        >
+            Esta cuenta es gestionada por el partner <strong class="text-gray-900">{{ partner }}</strong>:
+            puede emitir comprobantes a tu nombre y sus emisiones consumen la cuota del partner.
+        </div>
 
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
             <section class="rounded-xl border border-gray-200 bg-white p-6">

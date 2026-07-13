@@ -30,6 +30,7 @@ class AprovisionarContribuyenteController extends Controller
             'razon_social' => ['required', 'string', 'max:255'],
             'nombre_comercial' => ['nullable', 'string', 'max:255'],
             'dir_matriz' => ['nullable', 'string', 'max:255'],
+            'limite_mensual' => ['nullable', 'integer', 'min:1'],
         ]);
 
         try {
@@ -59,6 +60,7 @@ class AprovisionarContribuyenteController extends Controller
             'razon_social' => $request->string('razon_social')->toString(),
             'nombre_comercial' => $request->input('nombre_comercial'),
             'dir_matriz' => $request->input('dir_matriz'),
+            'limite_mensual' => $request->input('limite_mensual'),
         ]);
 
         return (new ContribuyenteResource($contribuyente))

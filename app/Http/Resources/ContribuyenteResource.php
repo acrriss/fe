@@ -32,6 +32,7 @@ class ContribuyenteResource extends JsonResource
                 'validoHasta' => $this->certificado_valido_hasta?->toIso8601String(),
             ],
             'emisionesDelMes' => $this->emisionesDelMes(),
+            'limiteMensual' => $this->limite_mensual,
             'creadoEn' => $this->created_at?->toIso8601String(),
         ];
     }

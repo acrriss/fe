@@ -21,10 +21,11 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        // el panel siempre autentica por sesión (guard web): aquí nunca
-        // actúa un partner
+        // el panel de contribuyentes autentica por sesión web; el de
+        // partners, por su propio guard de sesión
         $user = $request->user('web');
         $contribuyente = $user?->contribuyente;
+        $partner = $request->user('partner-web');
 
         return [
             ...parent::share($request),
@@ -35,10 +36,12 @@ class HandleInertiaRequests extends Middleware
                     'tiene_certificado' => $contribuyente->tieneCertificado(),
                     'tiene_logo' => $contribuyente->logo_path !== null,
                 ],
+                'partner' => $partner?->only(['uuid', 'nombre', 'slug', 'email']),
             ],
             'flash' => [
                 'exito' => $request->session()->get('exito'),
                 'token' => $request->session()->get('token'),
+                'enlace_certificado' => $request->session()->get('enlace_certificado'),
             ],
         ];
     }

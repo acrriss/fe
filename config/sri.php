@@ -43,6 +43,8 @@ return [
 
     'certificados' => [
         'openssl' => env('SRI_OPENSSL_BIN', 'openssl'),
+        // vigencia del enlace hospedado de carga de certificado (§11, 7d)
+        'enlace_ttl_horas' => env('SRI_CERTIFICADOS_ENLACE_TTL_HORAS', 72),
     ],
 
     /*

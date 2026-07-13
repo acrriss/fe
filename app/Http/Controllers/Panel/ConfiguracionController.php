@@ -46,6 +46,16 @@ class ConfiguracionController extends Controller
                     && $contribuyente->certificado_valido_hasta->isFuture()
                     && $contribuyente->certificado_valido_hasta->lessThan(now()->addDays(30)),
             ] : null,
+            // solicitudes de partners que quieren gestionar este RUC (§11, 7d)
+            'vinculaciones_pendientes' => $contribuyente->vinculacionesPendientes()
+                ->with('partner')
+                ->get()
+                ->map(fn ($vinculacion): array => [
+                    'id' => $vinculacion->uuid,
+                    'partner' => $vinculacion->partner?->nombre,
+                    'solicitada_en' => $vinculacion->created_at?->format('d/m/Y'),
+                ]),
+            'partner' => $contribuyente->partner?->nombre,
         ]);
     }
 

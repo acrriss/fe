@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\Api\Partner\V1\ActualizarContribuyenteController;
 use App\Http\Controllers\Api\Partner\V1\AprovisionarContribuyenteController;
+use App\Http\Controllers\Api\Partner\V1\EnlaceCertificadoController;
 use App\Http\Controllers\Api\Partner\V1\ListarContribuyentesController;
+use App\Http\Controllers\Api\Partner\V1\VinculacionesController;
 use App\Http\Controllers\Api\Partner\V1\WebhooksController as PartnerWebhooksController;
 use App\Http\Controllers\Api\V1\ConsultarComprobanteController;
 use App\Http\Controllers\Api\V1\DescargarRideController;
@@ -63,6 +66,19 @@ Route::prefix('partner/v1')->middleware(['auth:sanctum', SoloPartners::class])->
 
     Route::get('contribuyentes', ListarContribuyentesController::class)
         ->name('api.partner.v1.contribuyentes.index');
+
+    Route::patch('contribuyentes/{uuid}', ActualizarContribuyenteController::class)
+        ->name('api.partner.v1.contribuyentes.actualizar');
+
+    // Enlace hospedado de carga de certificado (§11, 7d)
+    Route::post('contribuyentes/{uuid}/enlace-certificado', EnlaceCertificadoController::class)
+        ->name('api.partner.v1.contribuyentes.enlace-certificado');
+
+    // Vinculación de RUC existente (§11, 7d)
+    Route::post('vinculaciones', [VinculacionesController::class, 'store'])
+        ->name('api.partner.v1.vinculaciones.solicitar');
+    Route::get('vinculaciones', [VinculacionesController::class, 'index'])
+        ->name('api.partner.v1.vinculaciones.index');
 
     // Webhooks del partner: reciben los eventos de todos sus gestionados
     Route::get('webhooks', [PartnerWebhooksController::class, 'index'])

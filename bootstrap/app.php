@@ -20,6 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
+
+        // Cada panel tiene su propio login: los invitados de las rutas de
+        // partner van al suyo, el resto al del panel de contribuyentes.
+        $middleware->redirectGuestsTo(fn (Request $request): string => $request->routeIs('partner.*')
+            ? route('partner.login')
+            : route('login'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // La API siempre responde JSON, pida lo que pida el cliente.

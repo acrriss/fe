@@ -3,8 +3,8 @@
 > Documento vivo. Consolida el análisis del proyecto legado y la hoja de ruta del
 > refactor hacia un microservicio moderno, elegante y mantenible.
 >
-> **Estado:** fases 0–6 y 7a–7c (partner, webhooks, idempotencia) completadas ✅ ·
-> firmador XAdES nativo y los 6 tipos de comprobante · **Actualizado:** 2026-07-13
+> **Estado:** fases 0–6 y 7a–7d (capa partner COMPLETA: on-behalf, webhooks,
+> idempotencia, onboarding y panel) ✅ · **Actualizado:** 2026-07-13
 
 ---
 
@@ -609,7 +609,7 @@ permite aprovisionar sin fricción sin abrir la puerta al squatting.
 | **7a. Núcleo partner** ✅ | Modelo `Partner` (tokenable Sanctum), plano de gestión (aprovisionar/listar contribuyentes, certificado on-behalf), middleware on-behalf sobre API v1, `external_id`, rate limit por partner | El POS aprovisiona un cliente y emite en su nombre con una sola credencial |
 | **7b. Webhooks** ✅ | Endpoints por partner y por contribuyente, firma HMAC, reintentos, registro de entregas | Fin del polling; sirve también a cuentas directas |
 | **7c. Idempotencia** ✅ | `Idempotency-Key` en emisión (partner y directos) | Reintentos de POS seguros |
-| **7d. Onboarding fino** | Enlace hospedado de certificado, vinculación de RUC existente con consentimiento, panel de partner, cuotas pool con sublímites | Fricción y responsabilidad mínimas para el partner |
+| **7d. Onboarding fino** ✅ | Enlace hospedado de certificado, vinculación de RUC existente con consentimiento, panel de partner, cuotas pool con sublímites | Fricción y responsabilidad mínimas para el partner |
 
 7a es autosuficiente para la primera integración real (el POS puede hacer
 polling como hoy); 7b/7c la vuelven robusta en producción; 7d es pulido
@@ -702,3 +702,38 @@ comercial.
   uso. Suite: 238 tests / 773 aserciones (14 nuevas); PHPStan max limpio.
 - **Pendiente (7d)**: onboarding hospedado del certificado, vinculación
   de RUC verificado, panel de partner, cuotas pool con sublímites.
+
+### Registro de la Fase 7d (2026-07-13)
+
+- **Enlace hospedado de certificado**: `POST /partner/v1/contribuyentes/
+  {uuid}/enlace-certificado` (y botón en el panel de partner) genera una
+  URL firmada temporal (`sri.certificados.enlace_ttl_horas`, 72 h). La
+  página pública (`Certificado/Subir`, middleware `signed` — la firma
+  cubre GET y POST) permite al cliente final subir su .p12 + clave
+  directamente al servicio: la clave privada nunca pasa por el partner.
+- **Sublímites pool**: `contribuyentes.limite_mensual` (nullable) acota a
+  un gestionado dentro de la cuota pool; se acepta en el aprovisionamiento
+  y en el nuevo `PATCH /partner/v1/contribuyentes/{uuid}` (null lo quita).
+- **Vinculación de RUC existente**: modelo `Vinculacion` (pendiente/
+  aprobada/rechazada). El partner solicita por API (`POST/GET
+  /partner/v1/vinculaciones`, idempotente en pendiente; 404 RUC no
+  registrado, 409 ya gestionado) o desde su panel; el dueño la resuelve
+  en Configuración (aprobar asigna `partner_id` → on-behalf + cuota pool;
+  el panel del dueño muestra aviso de cuenta gestionada). Sin emails en
+  esta versión.
+- **Panel de partner**: credenciales opcionales en `partners`
+  (email/password nullable, comando `partner:credenciales`), guard de
+  sesión `partner-web` + `redirectGuestsTo` por rutas (los dos paneles no
+  se cruzan: verificado por tests en ambos sentidos). Páginas Inertia
+  (`PartnerPanel/`, layout esmeralda): Login, Inicio (consumo pool),
+  Contribuyentes (+ enlace de certificado), Webhooks (endpoints +
+  registro de entregas), Vinculaciones (solicitar/estado), Tokens
+  (rotación, visible una vez).
+- OpenAPI: PATCH contribuyentes, enlace-certificado, vinculaciones,
+  `limite_mensual`/`limiteMensual` y schema Vinculacion.
+- Suite: 272 tests / 922 aserciones (34 nuevas); PHPStan max limpio;
+  assets compilados (npm run build).
+- **La fase 7 (capa partner/plataforma, §11) queda completa.** Backlog
+  nuevo sugerido: evento de webhook `vinculacion.resuelta` (hoy el
+  partner consulta por GET), y aviso por correo al dueño cuando llega
+  una solicitud de vinculación.

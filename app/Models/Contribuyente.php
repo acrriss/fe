@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Sri\Certificados\CertificadoAbierto;
 use App\Sri\Certificados\LectorPkcs12;
+use App\Sri\Enums\EstadoVinculacion;
 use App\Sri\Exceptions\CertificadoInvalido;
 use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\ValueObjects\CertificadoFirma;
@@ -34,6 +35,7 @@ use SensitiveParameter;
  * @property Carbon|null $certificado_valido_hasta
  * @property int|null $plan_id
  * @property int|null $partner_id
+ * @property int|null $limite_mensual sublímite dentro de la cuota pool del partner
  * @property-read Plan|null $plan
  * @property-read Partner|null $partner
  */
@@ -88,6 +90,22 @@ class Contribuyente extends Model
     public function partner(): BelongsTo
     {
         return $this->belongsTo(Partner::class);
+    }
+
+    /**
+     * @return HasMany<Vinculacion, $this>
+     */
+    public function vinculaciones(): HasMany
+    {
+        return $this->hasMany(Vinculacion::class);
+    }
+
+    /**
+     * @return HasMany<Vinculacion, $this>
+     */
+    public function vinculacionesPendientes(): HasMany
+    {
+        return $this->vinculaciones()->where('estado', EstadoVinculacion::Pendiente);
     }
 
     public function tieneCertificado(): bool
@@ -149,14 +167,18 @@ class Contribuyente extends Model
 
     /**
      * Un contribuyente gestionado por un partner consume la cuota pool del
-     * partner; uno directo, la de su plan. Sin plan ni partner no hay cuota
-     * (uso interno/ilimitado).
+     * partner (acotada por su sublímite propio, si lo tiene); uno directo,
+     * la de su plan. Sin plan ni partner no hay cuota (uso interno).
      */
     public function agotoCuotaMensual(): bool
     {
         $partner = $this->partner;
 
         if ($partner !== null) {
+            if ($this->limite_mensual !== null && $this->emisionesDelMes() >= $this->limite_mensual) {
+                return true;
+            }
+
             return $partner->agotoCuotaMensual();
         }
 
