@@ -226,6 +226,9 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
   shadowing de props ya sufrido).
 - **Gestión de planes/facturación del servicio** (upgrade/downgrade, pagos).
 - **Verificación de propiedad del RUC (anti-suplantación)** — ver §10.
+- **Capa de integración partner/plataforma** (POS/ERPs que emiten en nombre
+  de sus clientes) — ver §11. Eleva la prioridad de los webhooks (7b) y de
+  la idempotencia de emisión (7c).
 
 ## 10. Diseño: verificación de propiedad del RUC (anti-suplantación)
 
@@ -487,3 +490,126 @@ Un cliente que paga y aún no emite es `no_verificado` + `pagado_activo`: estado
   hallazgos clave: código numérico `22568496` hardcodeado, `codDoc` erróneo en
   los ejemplos (el nuevo dominio debe derivarlo del tipo), importes como string
   y fechas `dd/mm/aaaa`, y la clave `#omit-xml-declaration` que el legado ignora.
+
+---
+
+## 11. Diseño: capa de integración partner/plataforma
+
+Análisis (2026-07-11) para integrar el servicio con sistemas terceros que
+emiten en nombre de **muchos** clientes finales (el caso concreto: un sistema
+de inventario/POS propio cuyas facturas internas no tienen validez tributaria
+hasta pasar por este servicio). Objetivo declarado: **mínima fricción** para
+el cliente final que activa facturación electrónica.
+
+### El problema
+
+El onboarding actual asume autoservicio por contribuyente: registro en el
+panel, carga del certificado, creación de token. Para una plataforma que
+gestiona N clientes eso no funciona:
+
+- **Fricción**: cada cliente final tendría que registrarse en *nuestro* panel,
+  un producto que él no eligió (él compró el POS).
+- **Credenciales compartidas**: `POST /v1/tokens` exige email/password de un
+  User; la plataforma tendría que conocer o inventar credenciales de sus
+  clientes. Inaceptable.
+- **Sin aprovisionamiento programático**: no hay forma de crear un
+  `Contribuyente` por API.
+- **Sin webhooks**: el POS necesita enterarse del resultado (autorizado/
+  devuelto) sin polling; ya estaba en el backlog, aquí se vuelve prerequisito.
+- **Sin idempotencia**: los reintentos automáticos de un POS ante timeouts
+  pueden duplicar emisiones.
+- **Facturación**: el cliente de pago es la plataforma (revende o incluye el
+  servicio), no el contribuyente final.
+
+### Decisión central: modelo de confianza
+
+| Opción | Cómo | Trade-off |
+|---|---|---|
+| A. Token por contribuyente entregado al partner | Al aprovisionar, se emite un token scoped al contribuyente; el partner guarda N tokens | Menor radio de daño por token, pero el partner gestiona N secretos y exige usuarios-máquina artificiales |
+| **B. Credencial de partner + on-behalf-of (elegida)** | Una credencial de partner; cada request lleva `X-Contribuyente: {uuid}`; middleware resuelve la tenancy | Un solo secreto que rotar, cero fricción por cliente (patrón Stripe Connect). Radio de daño mayor → mitigar con abilities, rate limit por partner y auditoría |
+
+La opción B sirve directamente al objetivo (fricción mínima) y es el patrón
+estándar de plataformas. Implementación: modelo `Partner` con `HasApiTokens`
+— **Sanctum ya soporta cualquier tokenable**, reutilizamos hashing,
+abilities y `last_used_at` sin guard custom. Un middleware
+`ResolverContribuyenteDelPartner` valida que el uuid del header pertenezca al
+partner (404 si no) y lo expone donde hoy los endpoints leen
+`$request->contribuyente()`, de modo que **la API v1 de emisión no cambia de
+contrato**: mismo pipeline, misma tenancy estricta, mismos endpoints.
+
+### Dos planos
+
+```
+Plano de gestión   /api/partner/v1/…     credencial de partner (sola)
+  POST   contribuyentes                  aprovisionar cliente final
+  GET    contribuyentes                  listar gestionados + consumo
+  PUT    contribuyentes/{uuid}/certificado
+  POST   webhooks / GET webhooks/{id}/entregas
+
+Plano de emisión   /api/v1/…  (existente, sin cambios de contrato)
+  credencial de partner + X-Contribuyente: {uuid}
+  (los tokens de usuario directos siguen funcionando igual)
+```
+
+### Requerimientos
+
+**Funcionales**
+
+1. **Entidad Partner** con credenciales API (hasheadas, rotables, revocables)
+   y rate limit propio.
+2. **Aprovisionamiento**: `POST /partner/v1/contribuyentes` (RUC, razón
+   social, dirección…) crea el Contribuyente con `partner_id`, **sin User**.
+   Idempotente por `(partner, ruc)`: repetir la llamada devuelve el existente.
+3. **On-behalf-of** sobre la API v1 completa (emitir, consultar, reintentar,
+   RIDE, certificado) vía `X-Contribuyente`.
+4. **Webhooks firmados** (HMAC por endpoint, reintentos con backoff vía queue,
+   registro de entregas consultable): `comprobante.autorizado`,
+   `comprobante.devuelto`, `comprobante.fallido`, `certificado.por_vencer`.
+   Se construyen genéricos: también sirven a cuentas directas.
+5. **Idempotencia de emisión**: header `Idempotency-Key`; se persiste clave +
+   huella del payload + respuesta; un reintento devuelve la respuesta
+   original (o 409 si la huella difiere).
+6. **Trazabilidad del partner**: `external_id` (+ `metadata` json) del sistema
+   origen en el comprobante, consultable y devuelto en webhooks — el POS
+   reconcilia contra sus propios ids.
+7. **Certificado con dos vías**: (a) el partner lo sube por API on-behalf;
+   (b) *fase posterior*: **enlace de onboarding hospedado** — URL firmada y
+   temporal donde el cliente final sube su .p12 directamente con nosotros,
+   sin que la clave privada pase por el partner (menos responsabilidad para
+   la plataforma, argumento de venta).
+8. **Conflicto de RUC**: si el RUC ya está **verificado** en otra cuenta
+   (directa o de otro partner) → 409; la unicidad diferida del §10 hace que
+   cuentas no verificadas no bloqueen. Flujo de vinculación con
+   consentimiento del dueño: fase posterior.
+9. **Facturación a nivel partner**: el partner es el cliente de pago; cuota
+   mensual agrupada (pool) en su plan, con límite opcional por contribuyente
+   gestionado. Los contribuyentes gestionados no requieren `plan_id` propio.
+10. **Panel de partner** (fase posterior): contribuyentes gestionados,
+    consumo, estado de certificados y de entregas de webhooks.
+
+**No funcionales**: tenancy estricta partner↔contribuyente (404 ante uuid
+ajeno, como hoy); auditoría de acciones del partner; el ambiente
+(pruebas/producción) sigue viniendo en el payload — un partner puede probar
+extremo a extremo contra el ambiente de pruebas del SRI sin infraestructura
+extra; superficie partner documentada en el OpenAPI/Scalar.
+
+### Interacción con §10 (verificación de RUC)
+
+Sin cambios de fondo: un contribuyente aprovisionado nace `no_verificado`,
+se verifica por certificado (mecanismo 3) o por primer `AUTORIZADO`
+(mecanismo 2). El candado del pruning por "plan pagado" se extiende a
+"gestionado por partner activo". La unicidad diferida es justamente lo que
+permite aprovisionar sin fricción sin abrir la puerta al squatting.
+
+### Fases propuestas
+
+| Fase | Contenido | Resultado |
+|---|---|---|
+| **7a. Núcleo partner** | Modelo `Partner` (tokenable Sanctum), plano de gestión (aprovisionar/listar contribuyentes, certificado on-behalf), middleware on-behalf sobre API v1, `external_id`, rate limit por partner | El POS aprovisiona un cliente y emite en su nombre con una sola credencial |
+| **7b. Webhooks** | Endpoints por partner y por contribuyente, firma HMAC, reintentos, registro de entregas | Fin del polling; sirve también a cuentas directas |
+| **7c. Idempotencia** | `Idempotency-Key` en emisión (partner y directos) | Reintentos de POS seguros |
+| **7d. Onboarding fino** | Enlace hospedado de certificado, vinculación de RUC existente con consentimiento, panel de partner, cuotas pool con sublímites | Fricción y responsabilidad mínimas para el partner |
+
+7a es autosuficiente para la primera integración real (el POS puede hacer
+polling como hoy); 7b/7c la vuelven robusta en producción; 7d es pulido
+comercial.
