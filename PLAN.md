@@ -737,3 +737,208 @@ comercial.
   nuevo sugerido: evento de webhook `vinculacion.resuelta` (hoy el
   partner consulta por GET), y aviso por correo al dueño cuando llega
   una solicitud de vinculación.
+
+---
+
+## 12. Plan: integración real del POS (UltimatePOS) y prueba de punta a punta
+
+Plan (2026-07-13) para conectar el POS (`../pos`, UltimatePOS sobre
+Laravel 12, multi-negocio) con la capa partner (§11) y validar la
+integración contra el **ambiente de pruebas del SRI**. El POS hoy no
+tiene ningún código de facturación electrónica: el plan incluye construir
+su lado cliente mínimo y luego probar.
+
+### Hallazgos del POS que anclan el diseño
+
+| Concepto SRI/FE | En UltimatePOS |
+|---|---|
+| Contribuyente (RUC) | `Business` — multi-negocio: cada negocio con FE activa se aprovisiona como contribuyente gestionado. RUC en `business.tax_number_1` (verificar formato al implementar) |
+| Establecimiento / punto de emisión | `BusinessLocation` (p. ej. `001`/`001` por location, configurable) |
+| Factura | `Transaction` (type `sell`, status `final`) con `invoice_no` propio |
+| Detalles | `TransactionSellLine` |
+| Impuestos | `TaxRate` → tabla de mapeo a códigos SRI (IVA 15% = codigo 2 / codigoPorcentaje 4…) |
+| Comprador | `Contact` (`tax_number` → tipoIdentificacion 04/05/06/07) |
+| Punto de enganche | Evento existente `SellCreatedOrModified` → listener encolado |
+
+### Decisiones a tomar antes de codificar (lado POS)
+
+1. **Secuencial SRI**: NO reutilizar `invoice_no` (formato libre del POS).
+   Contador propio de 9 dígitos por (business, location) en la tabla de
+   integración, o un `InvoiceScheme` numérico dedicado. El secuencial es
+   único por serie ante el SRI: la fuente debe ser transaccional.
+2. **Dónde vive el código**: módulo nwidart (`Modules/FacturacionEcuador`)
+   vs. `app/Services/FacturacionElectronica`. Propuesta: app/ simple para
+   el piloto; módulo si se comercializa.
+3. **Alcance del piloto**: solo `factura`. Notas de crédito
+   (`sell_return`) y retenciones: fase posterior.
+
+### Fase A — Lado POS: datos y cliente HTTP
+
+- Migración `fe_comprobantes` en el POS: `transaction_id`, `business_id`,
+  `fe_uuid`, `estado`, `clave_acceso`, `secuencial`, `mensajes` (json),
+  timestamps. + Config por negocio: `fe_activo`, `fe_contribuyente_uuid`.
+- `config/services.php` → `facturacion`: `base_url` (https://fe.test/api),
+  `token` (partner), `webhook_secret`, `timeout`.
+- Cliente HTTP (`FacturacionClient`): aprovisionar contribuyente, emitir
+  (`?async=1`, cabeceras `X-Contribuyente` + `Idempotency-Key: venta-{id}`,
+  `external_id`), consultar por id/external_id, descargar RIDE.
+- **Mapper** `Transaction → payload factura` (el trabajo fino): totales
+  como string con 2 decimales, fecha `dd/mm/aaaa`, detalles con impuestos
+  por línea, `totalConImpuestos` agregado, comprador desde `Contact`.
+- Listener encolado de `SellCreatedOrModified` (solo `status=final` y
+  negocio con FE activa) → job `EmitirFacturaElectronicaJob` (reintentos
+  con backoff; la idempotencia del lado FE lo hace seguro).
+
+### Fase B — Lado POS: webhook receiver y UI mínima
+
+- `POST /webhooks/facturacion` (sin CSRF, público): verifica
+  `X-Firma` (HMAC del cuerpo crudo + timestamp, tolerancia 5 min,
+  `hash_equals`), localiza por `datos.externalId` / `datos.id`, actualiza
+  `fe_comprobantes` (estado, clave de acceso, mensajes). Responde 2xx
+  rápido (procesar en job si crece).
+- UI mínima: badge de estado FE en la vista de la venta + botón RIDE
+  (proxy autenticado hacia `GET /comprobantes/{id}/ride`) + reintento
+  manual para devueltos (corrige datos → `POST /{id}/reintentar`).
+- Comando de reconciliación `fe:reconciliar`: ventas con FE pendiente y
+  sin webhook en N minutos → consulta por `external_id` (red de seguridad
+  si el webhook se perdió).
+
+### Fase C — Plumbing local de punta a punta (fe.test ↔ pos.test)
+
+Ambos servidos por Herd; los webhooks server-to-server entre `.test`
+funcionan localmente.
+
+1. En fe: `partner:crear "UltimatePOS"` (+ `partner:credenciales`),
+   **queue worker activo** (`php artisan queue:work`) — con
+   `QUEUE_CONNECTION=sync` el webhook saldría inline y distorsiona la
+   prueba.
+2. Desde el POS: aprovisionar un negocio de prueba, registrar el webhook
+   (`https://pos.test/webhooks/facturacion`), guardar secreto/uuid.
+3. Cargar el **certificado de prueba del repo fe** (no válido ante el
+   SRI): emitir una venta → el SRI de pruebas la DEVOLVERÁ (error 39,
+   firma inválida). Eso es deseable aquí: valida todo el plumbing
+   (mapper, async, webhook `comprobante.devuelto` verificado, estado en
+   el POS, reintento, replay de Idempotency-Key) sin tocar nada real.
+
+### Fase D — Contra el SRI (ambiente de pruebas) con certificado real
+
+Con el certificado real ya validado por el firmador nativo (2026-07-10):
+
+1. Contribuyente con el RUC real + certificado real, `ambiente: '1'`.
+2. **Checklist de casos** (cada uno verificado en POS, en fe y en el
+   portal del SRI de pruebas):
+   - [ ] Factura a consumidor final (identificación `07`).
+   - [ ] Factura con cliente identificado (cédula/RUC) e IVA 15%.
+   - [ ] Factura con descuento por línea.
+   - [ ] Webhook `comprobante.autorizado` recibido, firma verificada,
+         estado y clave de acceso en el POS.
+   - [ ] RIDE descargado desde el POS (logo incluido).
+   - [ ] Secuencial repetido a propósito → devuelto (error 45) →
+         corrección y reintento reutilizando la clave (§5.10).
+   - [ ] Timeout simulado en el POS → reintento con la misma
+         `Idempotency-Key` → replay, sin duplicado.
+   - [ ] Sublímite/cuota pool agotada → 429 manejado con gracia.
+   - [ ] Reconciliación: apagar el receiver, emitir, comprobar que
+         `fe:reconciliar` recupera el estado.
+3. Registrar hallazgos del mapper (impuestos, redondeos, campos que el
+   SRI observe) como fixtures/tests en el POS.
+
+### Fase E — Endurecimiento pre-producción
+
+- Alerta sobre entregas de webhook fallidas (panel de partner ya las
+  muestra; añadir aviso activo si se acumulan).
+- Switch por negocio a `ambiente: '2'` (producción) tras el piloto.
+- Logs/trazas correlacionados por `external_id` en ambos lados.
+- Rotación de token documentada (`partner:token --revocar`).
+- Del lado fe: retirar el certificado de prueba del contribuyente piloto.
+
+### Orden y tamaño
+
+A y B son el grueso (1 sesión cada una, con tests de POS usando
+`Http::fake`); C es una tarde con checklist; D depende del SRI (validar
+en días distintos); E es previa al go-live. Las decisiones 1–3 conviene
+fijarlas antes de empezar A.
+
+### Activación/desactivación por negocio (añadido 2026-07-13)
+
+La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
+
+- **Activar = onboarding guiado** (pantalla de ajustes del negocio en el
+  POS, no solo un flag): valida el RUC (`tax_number_1`, 13 dígitos),
+  aprovisiona el contribuyente (idempotente), asigna estab/ptoEmi y
+  secuencial inicial por location, y resuelve el certificado (subida
+  directa o **enlace hospedado** para no tocar la clave privada). El
+  switch queda "activo" solo cuando todo lo anterior está completo; el
+  estado del certificado se muestra ahí mismo (vencimiento incluido, con
+  el webhook `certificado.por_vencer` alimentándolo).
+- **Ventas con FE inactiva**: el listener las ignora y NO se emiten
+  retroactivamente al activar (regla explícita; la FE es aditiva — la
+  venta del POS sigue su vida normal con su `invoice_no`).
+- **Desactivar** solo detiene emisiones nuevas: no borra nada, el
+  historial de comprobantes y descargas de RIDE sigue disponible, y el
+  webhook receiver sigue aceptando actualizaciones de comprobantes ya
+  emitidos (uno en vuelo puede autorizarse después de desactivar).
+- **Reactivar** reutiliza el mismo contribuyente (el aprovisionamiento
+  idempotente por RUC lo garantiza) y el secuencial **continúa donde
+  quedó** — nunca se reinicia el contador.
+- Impacto en el checklist de la fase D: + activar un negocio desde cero
+  por el flujo guiado; + desactivar con una emisión en vuelo y verificar
+  que el webhook aún actualiza; + reactivar y comprobar continuidad del
+  secuencial.
+
+### Registro §12 — Fase A completada en el POS (2026-07-14)
+
+- **Datos**: `fe_ajustes` (opt-in por negocio: activo, contribuyente_uuid,
+  RUC/razón social/dirección explícitos, obligado_contabilidad, ambiente),
+  `fe_puntos_emision` (serie 001-001 por location + contador de secuencial
+  con `lockForUpdate`, nunca se reinicia), `fe_comprobantes` (venta ↔
+  fe_uuid/estado/clave/serie; estados propios pendiente_envio /
+  no_facturable / rechazada_api / error_envio + espejo de los del servicio).
+- **Cliente** (`app/Services/FacturacionElectronica/FacturacionClient`):
+  aprovisionar, emitir async (X-Contribuyente + Idempotency-Key =
+  external_id `venta-{id}`), consultar por id/external_id, RIDE, enlace de
+  certificado, registrar webhook. `FacturacionException` distingue
+  definitivo (4xx) de transitorio (5xx/429 → retry).
+- **Mapper** (`FacturaMapper`): formato SRI estricto (strings 2 decimales
+  con punto — nunca el formato por-negocio del POS —, fecha dd/mm/aaaa),
+  detalles con IVA por línea (mapeo `facturacion.iva.porcentajes`),
+  comprador 04/05/06/07 (walk-in → consumidor final), y **verificación de
+  cuadre** contra `final_total` (±0.02). Limitaciones deliberadas del
+  piloto → `VentaNoFacturable` visible en el POS: impuesto/descuento a
+  nivel de orden y grupos de impuestos.
+- **Flujo**: listener encolado sobre `SellCreatedOrModified` existente
+  (no-op sin FE activa; una venta ya emitida no se re-emite) → job con
+  reintentos (secuencial asignado una sola vez y conservado).
+- **CLI**: `fe:activar {business}` (aprovisiona + guarda ajustes + imprime
+  enlace de certificado) y `fe:registrar-webhook`.
+- Tests: 10 nuevos (`tests/Feature/FacturacionElectronica/`) con
+  `Http::fake`; suite completa del POS en verde (1160 tests).
+- **Siguiente**: fase B (webhook receiver + UI de estado en la venta +
+  pantalla de activación + `fe:reconciliar`).
+
+### Registro §12 — Fase B completada en el POS (2026-07-15)
+
+- **Webhook receiver** `POST /webhook/facturacion` (público; `/webhook/*`
+  ya estaba excluido de CSRF): verifica `X-Firma` (HMAC-SHA256 de
+  `timestamp.cuerpo crudo`, `hash_equals`, tolerancia 5 min anti-replay),
+  actualiza `fe_comprobantes` (localiza por fe_uuid con fallback a
+  external_id) y `fe_ajustes.certificado_valido_hasta` (evento
+  `certificado.por_vencer`). Eventos desconocidos se confirman con 2xx.
+- **Reintento §5.10**: `FacturacionClient::reintentarFactura` + rama en el
+  job — un comprobante devuelto/no_autorizado/fallido se reintenta contra
+  `/{uuid}/reintentar` (misma clave y secuencial) en vez de re-emitir.
+- **`fe:reconciliar`** (programado cada 15 min): enviados estancados →
+  consulta y adopta el estado; nunca enviados (error_envio) → consulta por
+  external_id (¿respuesta perdida?) y si no existe re-despacha la emisión.
+- **UI** (`/facturacion-electronica`, Blade AdminLTE): listado por negocio
+  con serie-secuencial, estado con color, clave/mensajes, RIDE (proxy
+  autenticado) y botón Reenviar; pantalla de **ajustes/activación**
+  (RUC/razón social/ambiente/obligado + switch activo con las reglas del
+  ciclo de vida: activar aprovisiona idempotente, desactivar conserva
+  todo, reactivar continúa el secuencial) + estado del certificado en
+  vivo desde la API + generación del enlace hospedado. Sin entrada de
+  menú todavía (URL directa, piloto).
+- Tests: +18 (webhook con firma válida/inválida/expirada, reconciliación,
+  reintento, UI con permisos y tenancy). Suite del POS completa en verde.
+- **Siguiente**: fase C — plumbing local fe.test ↔ pos.test con el
+  certificado de prueba (espera error 39) y luego fase D con el real.
