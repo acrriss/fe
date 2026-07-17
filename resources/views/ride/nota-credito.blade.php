@@ -81,7 +81,7 @@
         @foreach ($comprobante->infoNotaCredito->totalConImpuestos as $impuesto)
             <tr>
                 <td class="etiqueta">
-                    Impuesto {{ $impuesto->codigo }} ({{ $impuesto->codigoPorcentaje }})
+                    {{ $impuesto->etiqueta() }}
                     — base {{ $impuesto->baseImponible }}
                 </td>
                 <td class="num">{{ $impuesto->valor }}</td>

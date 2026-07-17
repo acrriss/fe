@@ -942,3 +942,56 @@ La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
   reintento, UI con permisos y tenancy). Suite del POS completa en verde.
 - **Siguiente**: fase C — plumbing local fe.test ↔ pos.test con el
   certificado de prueba (espera error 39) y luego fase D con el real.
+
+### Backlog del lado POS (§12, post-piloto)
+
+- **Cédula/RUC en rutas alternativas de creación de contactos** (2026-07-16):
+  la validación vive en `ContactController` (formulario y modal del POS).
+  Rutas que la evaden hoy: `ImportSalesController` **crea contactos al
+  vuelo** al importar ventas (verificado: `Contact::create` sin pasar por
+  la validación) — cubrirla. No existe import CSV de contactos ni el
+  módulo Connector físicamente en esta instalación (el manifiesto
+  `modules_statuses.json` lo lista, pero no hay `Modules/`): si algún día
+  se instalan, replicar la regla ahí también.
+- **Dígito verificador de la cédula ecuatoriana (módulo 10)**: hoy la
+  validación es estructural (10/13 dígitos). Añadir el algoritmo de
+  verificación de cédula (y la coherencia del RUC: cédula+establecimiento
+  para personas naturales) para atrapar typos que el SRI devolvería.
+- **Descuento a nivel de orden**: soportarlo prorrateando entre líneas
+  (con asignación de centavos de redondeo para que `importeTotal` cuadre
+  exacto). Hoy → `no_facturable` deliberado.
+- **Notas de crédito** (`sell_return` → notaCredito) y corrección de una
+  factura autorizada (NC + refacturación).
+- **Aviso activo de ventas `no_facturable`/`error_envio`** (hoy solo se
+  ven en el listado) y **entrada de menú** para las pantallas de FE.
+
+### Registro §12 — Fases C y D completadas: PILOTO CERRADO (2026-07-16)
+
+Circuito validado de punta a punta contra el **SRI real (ambiente de
+pruebas)** con certificado real: venta en el POS → mapper → emisión
+async on-behalf → firma XAdES nativa → recepción/autorización SRI →
+webhook firmado → estado y RIDE en el POS.
+
+**Checklist ejecutado** (todo en verde):
+consumidor final 07 · cliente con cédula 05 · factura mixta 15%/0% ·
+descuento por línea (base imponible y totalDescuento correctos, IVA por
+línea) · webhook autorizado · RIDE descargado · secuencial repetido
+(error 45) · replay de idempotencia (dispatch de venta autorizada = no-op
+verificado) · activación guiada · certificado por enlace hospedado ×2 ·
+descuento de orden → no_facturable · reconciliación real.
+Pendiente opcional: 429 de cuota en E2E (cubierto por tests) y logo en RIDE.
+
+**Hallazgos de las pruebas reales, todos resueltos con código + tests:**
+1. URL del webhook plural/singular en el comando del POS.
+2. Secuencial quemado (error 45) por pruebas previas → re-emisión
+   automática con secuencial nuevo.
+3. Clave con veredicto de firma registrado: el SRI NO re-evalúa un
+   NO AUTORIZADO por error 39 aunque el XML llegue corregido → clave
+   quemada, re-emisión automática (aprendizaje clave sobre §5.10: aplica
+   a devueltos de recepción, no a rechazos de autorización por firma).
+4. Webhooks entregados fuera de orden (reintento tardío pisó un
+   autorizado) → guardia por fe_uuid en el receiver.
+5. Cédula/RUC de clientes invisible en el POS (campo escondido en "Más
+   información") → campo visible + validación obligatoria con FE activa.
+6. RIDE con códigos crudos de impuesto → `TotalImpuestoData::etiqueta()`
+   ("IVA 15%", "IVA 0%", ICE, IRBPNR) en las 4 plantillas.

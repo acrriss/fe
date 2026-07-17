@@ -56,7 +56,7 @@
         </tr>
         @foreach ($comprobante->infoNotaDebito->impuestos as $impuesto)
             <tr>
-                <td class="etiqueta">Impuesto {{ $impuesto->codigo }} ({{ $impuesto->codigoPorcentaje }}) — base {{ $impuesto->baseImponible }}</td>
+                <td class="etiqueta">{{ $impuesto->etiqueta() }} — base {{ $impuesto->baseImponible }}</td>
                 <td class="num">{{ $impuesto->valor }}</td>
             </tr>
         @endforeach
