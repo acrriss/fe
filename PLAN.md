@@ -957,11 +957,19 @@ La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
   validación es estructural (10/13 dígitos). Añadir el algoritmo de
   verificación de cédula (y la coherencia del RUC: cédula+establecimiento
   para personas naturales) para atrapar typos que el SRI devolvería.
-- **Descuento a nivel de orden**: soportarlo prorrateando entre líneas
-  (con asignación de centavos de redondeo para que `importeTotal` cuadre
-  exacto). Hoy → `no_facturable` deliberado.
-- **Notas de crédito** (`sell_return` → notaCredito) y corrección de una
-  factura autorizada (NC + refacturación).
+- **Descuento a nivel de orden**: **NO se dará soporte** (decisión
+  2026-07-21). En vez de prorratearlo entre líneas, se elimina el caso de
+  raíz: hay que **desactivar en el POS la opción de aplicar descuentos
+  globales a ventas/órdenes** para los negocios con FE activa, de modo que
+  el descuento solo exista por línea (que sí se factura). Hoy una venta
+  con descuento de orden queda `no_facturable`; al desactivar la opción,
+  ese caso deja de ocurrir. **Pendiente**: localizar el ajuste/permiso del
+  POS que habilita el descuento global y ocultarlo/forzarlo a 0 cuando
+  `FeAjuste` está activo (o documentarlo como configuración manual del
+  negocio si no hay un flag único).
+- **Corrección de una factura autorizada** (NC + refacturación): flujo
+  guiado para anular y reemitir. (La emisión de notas de crédito por
+  `sell_return` ya está ✅ 2026-07-20.)
 - **Aviso activo de ventas `no_facturable`/`error_envio`** (hoy solo se
   ven en el listado) y **entrada de menú** para las pantallas de FE.
 
