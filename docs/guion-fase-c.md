@@ -131,8 +131,9 @@ firmado trajo el desenlace de vuelta hasta la tabla del POS.
 
 > Si en su lugar ves `devuelto` con **error 45 (SECUENCIAL REGISTRADO)**:
 > ese secuencial ya se usó en el SRI de pruebas (p. ej. pruebas manuales
-> previas con el mismo RUC). Ajusta `fe_puntos_emision.ultimo_secuencial`
-> al último usado y pulsa **Reenviar** — el job detecta el error 45 y
+> previas con el mismo RUC). Ajusta el contador
+> (`fe_secuenciales.ultimo_secuencial` de la fila `tipo = factura`) al
+> último usado y pulsa **Reenviar** — el job detecta el error 45 y
 > re-emite con secuencial nuevo automáticamente.
 >
 > **Clave quemada por firma**: un NO AUTORIZADO por error 39 deja el
@@ -211,3 +212,40 @@ Idéntico circuito con el **certificado real**: generas un nuevo enlace,
 el titular sube su .p12 real, y la misma venta termina en **AUTORIZADO**
 con RIDE descargable. Ahí se corre el checklist completo del §12
 (consumidor final, cliente con cédula, secuencial duplicado, cuotas…).
+
+---
+
+## Anexo · Probar notas de crédito (devoluciones)
+
+La nota de crédito **modifica una factura ya autorizada**, así que el
+requisito previo es tener una venta con su factura en estado
+`autorizado` en `/facturacion-electronica`.
+
+1. **Registrar la devolución** en el POS: *Ventas → Listar ventas → (fila
+   de la venta) → Devolución de venta*, indica las cantidades a devolver
+   y guarda. Basta con devolver una parte: la nota acredita solo lo
+   devuelto.
+2. **Observar el worker de fe**: procesa la emisión y luego el webhook,
+   igual que una factura.
+3. **Verificar en `/facturacion-electronica`**: aparece una fila nueva
+   con la etiqueta **Nota de crédito**, su propio secuencial
+   (`001-001-000000001` — serie independiente de las facturas) y estado
+   `autorizado`.
+4. **Descargar el RIDE** de la nota: debe mostrar el documento
+   modificado (`001-001-00000000X` de la factura), el motivo y solo las
+   líneas devueltas.
+
+**Casos que conviene ejercitar**
+
+- [ ] Devolución **total** → `valorModificacion` = total de la factura.
+- [ ] Devolución **parcial** → solo las unidades devueltas, con su IVA.
+- [ ] Devolución de una venta **sin factura electrónica** (negocio que
+      activó FE después) → queda `no_facturable` con la razón visible,
+      sin llamar al servicio.
+- [ ] Comprobar que el secuencial de facturas **no** se ve afectado por
+      las notas (series independientes).
+
+**Limitación del piloto**: se emite una sola nota por devolución. Si la
+devolución se amplía después de que su nota fue autorizada, la
+diferencia requeriría una nota adicional — no soportado (queda en el
+backlog del §12).

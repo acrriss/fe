@@ -995,3 +995,49 @@ Pendiente opcional: 429 de cuota en E2E (cubierto por tests) y logo en RIDE.
    información") → campo visible + validación obligatoria con FE activa.
 6. RIDE con códigos crudos de impuesto → `TotalImpuestoData::etiqueta()`
    ("IVA 15%", "IVA 0%", ICE, IRBPNR) en las 4 plantillas.
+
+### Registro §12 — Notas de crédito (2026-07-20)
+
+Devoluciones del POS (`sell_return`) → nota de crédito electrónica
+(codDoc 04). El servicio fe **no necesitó cambios**: sus DTOs y el RIDE
+de nota de crédito ya estaban validados con golden fixtures.
+
+- **Secuenciales por tipo de documento** (`fe_secuenciales`): el SRI
+  numera cada codDoc por separado — factura `001-001-000000010` y NC
+  `001-001-000000001` son series independientes. Reemplaza al contador
+  único de `fe_puntos_emision`, migrando su valor a la fila `factura`
+  (una tabla vacía habría re-emitido secuenciales ya registrados → 45).
+  `fe_comprobantes` gana `tipo`; su `transaction_id` único sigue
+  sirviendo porque la devolución es una Transaction propia.
+- **`NotaCreditoMapper`**: los detalles NO salen de líneas del retorno
+  (UltimatePOS no las crea) sino de `quantity_returned` en las líneas de
+  la venta PADRE; el ítem se identifica con `codigoInterno` (la factura
+  usa `codigoPrincipal`); `numDocModificado`/`fechaEmisionDocSustento`
+  salen del comprobante autorizado de la venta. **`tarifa` se omite en
+  el `totalImpuesto` de cabecera**: el esquema de la NC no la contempla
+  (verificado contra el XML golden real autorizado), aunque sí va en el
+  impuesto de cada línea.
+- **Precondición**: la venta de origen debe tener factura electrónica
+  AUTORIZADA — una NC modifica un documento existente. Sin ella la
+  devolución queda `no_facturable` con la razón visible (y se
+  auto-recupera si la factura se autoriza después).
+- **Flujo**: evento nuevo `SellReturnCreatedOrModified` despachado en
+  `SellReturnController@store` (el POS no tenía ninguno para
+  devoluciones) → listener encolado → `EmitirNotaCreditoJob`.
+  Webhooks, reconciliación, reenvío y RIDE funcionan igual (external_id
+  `devolucion-{id}`).
+- **Refactor**: base `ComprobanteMapper` y trait
+  `EmiteComprobanteElectronico` con lo compartido (comprador, IVA,
+  líneas, claves quemadas, envío/persistencia); el cliente pasó a
+  `emitirComprobante`/`reintentarComprobante` parametrizados por tipo.
+- **Trampa encontrada**: en UltimatePOS `return_parent()` es el hasOne
+  *de la venta hacia su devolución*; el que apunta a la venta desde la
+  devolución es `return_parent_sell()`.
+- **Verificación cruzada**: el payload real del mapper se validó contra
+  los DTOs de fe y se generó su XML — estructura idéntica al golden
+  autorizado, sin tocar el SRI.
+- Tests: +13 (13 de NC + webhook por `devolucion-{id}`). Suite completa
+  del POS: 1200 tests / 2079 aserciones en verde.
+- **Limitación del piloto**: una NC por devolución. Ampliar una
+  devolución ya autorizada exigiría una nota adicional por la diferencia
+  (backlog).
