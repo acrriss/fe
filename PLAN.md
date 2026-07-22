@@ -946,17 +946,30 @@ La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
 ### Backlog del lado POS (§12, post-piloto)
 
 - **Cédula/RUC en rutas alternativas de creación de contactos** (2026-07-16):
-  la validación vive en `ContactController` (formulario y modal del POS).
-  Rutas que la evaden hoy: `ImportSalesController` **crea contactos al
-  vuelo** al importar ventas (verificado: `Contact::create` sin pasar por
-  la validación) — cubrirla. No existe import CSV de contactos ni el
-  módulo Connector físicamente en esta instalación (el manifiesto
-  `modules_statuses.json` lo lista, pero no hay `Modules/`): si algún día
-  se instalan, replicar la regla ahí también.
-- **Dígito verificador de la cédula ecuatoriana (módulo 10)**: hoy la
-  validación es estructural (10/13 dígitos). Añadir el algoritmo de
-  verificación de cédula (y la coherencia del RUC: cédula+establecimiento
-  para personas naturales) para atrapar typos que el SRI devolvería.
+  la validación vive en `ContactController`. ✅ 2026-07-22: cubierto también
+  el **import CSV de contactos** (`ContactController@importContacts`, valida
+  fila a fila con `validarCedulaRucParaFacturacion`). `ImportSalesController`
+  crea contactos al vuelo **sin `tax_number`** (solo nombre/email/móvil): no
+  hay identificación que validar ahí. El módulo Connector no está instalado
+  físicamente (el `modules_statuses.json` lo lista, pero no hay `Modules/`):
+  si algún día se instala, replicar la regla ahí también.
+- ✅ **Dígito verificador de cédula (módulo 10) y RUC (módulo 11)**
+  (2026-07-22): `App\Services\FacturacionElectronica\ValidadorIdentificacion`
+  valida cédula (módulo 10 / Luhn), RUC de persona natural (cédula +
+  establecimiento), sociedad privada (3er díg. 9, módulo 11) y pública
+  (3er díg. 6, módulo 11), más provincia 01–24/30. Enganchado en el
+  formulario, el modal y el import CSV de contactos. Atrapa en digitación
+  los typos bien formados que el SRI devolvería. El pasaporte queda libre
+  (sin dígito verificador).
+- **Identificación del Exterior (tipo 08)** (diferido 2026-07-22): hoy toda
+  identificación **no numérica** se factura como **06 (pasaporte)**. El
+  `08` no es deducible del texto (06 y 08 son documentos libres sin dígito
+  verificador) y el SRI **acepta ambos** sin rechazar, así que no bloquea
+  la emisión. Para soportarlo haría falta una señal explícita del operador
+  (un selector de tipo de identificación en el formulario, o reusar la
+  bandera `is_export` a costa de acoplar "exportación" con "documento del
+  exterior"). Se retoma si un cliente factura extranjeros con documento del
+  exterior de forma habitual.
 - **Descuento a nivel de orden**: **NO se dará soporte** (decisión
   2026-07-21). En vez de prorratearlo entre líneas, se elimina el caso de
   raíz: hay que **desactivar en el POS la opción de aplicar descuentos
