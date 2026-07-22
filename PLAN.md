@@ -970,16 +970,22 @@ La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
   bandera `is_export` a costa de acoplar "exportación" con "documento del
   exterior"). Se retoma si un cliente factura extranjeros con documento del
   exterior de forma habitual.
-- **Descuento a nivel de orden**: **NO se dará soporte** (decisión
-  2026-07-21). En vez de prorratearlo entre líneas, se elimina el caso de
-  raíz: hay que **desactivar en el POS la opción de aplicar descuentos
-  globales a ventas/órdenes** para los negocios con FE activa, de modo que
-  el descuento solo exista por línea (que sí se factura). Hoy una venta
-  con descuento de orden queda `no_facturable`; al desactivar la opción,
-  ese caso deja de ocurrir. **Pendiente**: localizar el ajuste/permiso del
-  POS que habilita el descuento global y ocultarlo/forzarlo a 0 cuando
-  `FeAjuste` está activo (o documentarlo como configuración manual del
-  negocio si no hay un flag único).
+- ✅ **Descuento a nivel de orden desactivado** (2026-07-22; decisión
+  2026-07-21: NO se prorratea — se elimina el caso de raíz). Nueva política
+  `App\Services\FacturacionElectronica\DescuentoDeOrden`: (1) al activar FE
+  (pantalla de ajustes o `fe:activar`) se fuerza el flag nativo
+  `pos_settings.disable_discount = 1` y `default_sales_discount = 0`;
+  (2) las vistas de venta (POS y formulario clásico) ocultan el descuento
+  de orden y fuerzan sus campos a 0 cuando FE está activa — incluso al
+  editar una venta antigua con descuento, que lo descarta al reabrirse;
+  (3) **guard de servidor** en `SellPosController@store/@update`: una venta
+  FINAL con FE activa y descuento de orden > 0 se rechaza con mensaje
+  ("aplique el descuento en las líneas"); borradores/cotizaciones/órdenes
+  quedan fuera; (4) el checkbox `disable_discount` de los ajustes POS se
+  bloquea con nota mientras FE esté activa. La red `no_facturable` queda
+  como último recurso. De paso: fechas relativas en
+  `CreatesSells`/`CreatesPurchases` (la fecha fija 2026-06-20 salió de la
+  ventana `transaction_edit_days` y rompía los tests de edición).
 - **Corrección de una factura autorizada** (NC + refacturación): flujo
   guiado para anular y reemitir. (La emisión de notas de crédito por
   `sell_return` ya está ✅ 2026-07-20.)
