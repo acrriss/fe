@@ -1001,8 +1001,37 @@ La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
   `fe_secuenciales`. Los cambios de razón social / dir. matriz sí se
   espejan al servicio (✅ 2026-07-22, PATCH contribuyentes al guardar
   ajustes, con fallo duro si el servicio no responde).
-- **Aviso activo de ventas `no_facturable`/`error_envio`** (hoy solo se
-  ven en el listado) y **entrada de menú** para las pantallas de FE.
+- ✅ **Entrada de menú + aviso activo de fallos** (2026-07-22): ítem
+  "Facturación electrónica" en el sidebar (`AdminSidebarMenu`), visible
+  solo para negocios que ya configuraron FE (existe `FeAjuste`) y con
+  permiso `sell.view`. Badge rojo con el nº de comprobantes en estado
+  terminal negativo (`FeComprobante::scopeConProblema` /
+  `ESTADOS_CON_PROBLEMA`: no_facturable, rechazada_api, error_envio,
+  devuelto, no_autorizado, fallido — excluye los en vuelo y autorizado).
+  Antes las pantallas solo se alcanzaban por URL directa y los fallos solo
+  se veían entrando al listado. **Atender**: como un estado terminal (p. ej.
+  `no_facturable`) no cambia nunca, el badge contaría siempre ≥ 1; se añadió
+  la columna `novedad_atendida_at` y la acción `fe.atender` (botón "Marcar
+  atendido"/"Reabrir" en el listado) — el badge usa `scopeRequiereAtencion`
+  (`conProblema` + `novedad_atendida_at IS NULL`) y un reenvío limpia
+  `novedad_atendida_at` para re-armar el aviso si vuelve a fallar. Badge con estilos inline (las
+  clases `tw-` en strings PHP se purgan del CSS compilado).
+- ✅ **Estado FE en el listado de ventas** (2026-07-22): la columna de
+  factura (`SellController@index`, `editColumn('invoice_no')`) muestra un
+  badge coloreado con el estado del comprobante electrónico y, si está
+  autorizado, un enlace al RIDE — solo para negocios con FE activa. Sin
+  N+1: relación `Transaction::feComprobante` (hasOne tipo=factura)
+  eager-loaded condicionalmente. Sigue el patrón de los badges que la
+  columna ya acumula (devolución, suscripción, export). Iteración 2
+  pendiente si se quiere **filtrar** por estado: columna dedicada.
+- ✅ **Estado FE en el listado de devoluciones** (2026-07-22): mismo badge
+  (estado + RIDE) en la columna de la devolución del listado de sell_return
+  (`SellReturnController@index`), para la **nota de crédito**. Helper
+  extraído a `App\Services\FacturacionElectronica\ComprobanteBadge` (compartido
+  ventas/devoluciones; tooltip contextual "Factura" vs "Nota de crédito").
+  Relación `Transaction::feNotaCredito` (hasOne tipo=notaCredito) eager-loaded
+  condicionalmente. El RIDE sirve igual para NC (la ruta `fe.ride` solo exige
+  autorizado, no distingue tipo).
 
 ### Registro §12 — Fases C y D completadas: PILOTO CERRADO (2026-07-16)
 
