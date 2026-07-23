@@ -989,6 +989,18 @@ La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
 - **Corrección de una factura autorizada** (NC + refacturación): flujo
   guiado para anular y reemitir. (La emisión de notas de crédito por
   `sell_return` ya está ✅ 2026-07-20.)
+- **Re-onboarding por cambio de RUC** (2026-07-22): el RUC quedó
+  **bloqueado** en la pantalla de ajustes tras el aprovisionamiento
+  (readonly + rechazo en servidor): cambiarlo desincronizaba el
+  `contribuyente_uuid` y toda emisión fallaba con 422. Un cambio real de
+  entidad legal (persona natural → sociedad…) es un contribuyente NUEVO:
+  falta el flujo guiado (nuevo aprovisionamiento + enlace de certificado
+  nuevo + reinicio de secuenciales en 1; el historial queda con el
+  contribuyente viejo). Vía CLI ya posible: `fe:activar --ruc=NUEVO`
+  aprovisiona y genera el enlace — solo faltaría reiniciar
+  `fe_secuenciales`. Los cambios de razón social / dir. matriz sí se
+  espejan al servicio (✅ 2026-07-22, PATCH contribuyentes al guardar
+  ajustes, con fallo duro si el servicio no responde).
 - **Aviso activo de ventas `no_facturable`/`error_envio`** (hoy solo se
   ven en el listado) y **entrada de menú** para las pantallas de FE.
 
