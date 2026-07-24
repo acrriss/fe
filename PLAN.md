@@ -986,9 +986,38 @@ La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
   como último recurso. De paso: fechas relativas en
   `CreatesSells`/`CreatesPurchases` (la fecha fija 2026-06-20 salió de la
   ventana `transaction_edit_days` y rompía los tests de edición).
-- **Corrección de una factura autorizada** (NC + refacturación): flujo
-  guiado para anular y reemitir. (La emisión de notas de crédito por
-  `sell_return` ya está ✅ 2026-07-20.)
+- ✅ **Corrección de una factura autorizada** (2026-07-24, NC +
+  refacturación). Una factura autorizada no se edita ni se borra: el
+  documento existe ante el SRI aunque el POS cambie su copia. La única
+  corrección por web service es anularla con una nota de crédito por el
+  total y volver a facturar (la solicitud de anulación en el portal exige
+  la aceptación del receptor: trámite fuera de banda).
+  (1) **Guards** en `App\Services\FacturacionElectronica\CorreccionDeFactura`:
+  `SellPosController@update/@edit`, `SellController@edit` y
+  `TransactionUtil::deleteSale` (una sola puerta, cubre también
+  `ImportSalesController`) rechazan editar/eliminar una venta con factura
+  `autorizado`. Antes se podía editar (el listener no re-emite → POS y SRI
+  divergían en silencio) y borrar (con `onDelete cascade` desaparecía la
+  fila del comprobante).
+  (2) **Anulación guiada** (`CorreccionFacturaController`, rutas
+  `fe.corregir*`): pantalla con la factura, motivo obligatorio (viaja al
+  `motivo` de la NC como "Anulacion de la factura 001-001-NNNNNNNNN: …") y
+  confirmación; crea la **devolución total** vía `addSellReturn` (stock y
+  cuenta del cliente consistentes) y dispara `EmitirNotaCreditoJob` por el
+  evento habitual. Tabla nueva `fe_correcciones` (venta_id único,
+  devolucion_id, venta_reemplazo_id, motivo) para distinguir la anulación
+  por error de una devolución comercial sin tocar `transactions`; el
+  estado no se guarda, se deriva de la NC y de `venta_reemplazo_id`.
+  (3) **Refacturación**: con la NC **autorizada** (antes no: quedarían dos
+  facturas vivas), copia la venta como **borrador** —sin heredar
+  `quantity_returned` ni los puntos de recompensa— y lleva al operador a
+  editarlo; al finalizarlo se emite la factura nueva por el flujo normal.
+  Bloqueos: doble anulación, venta con devoluciones previas (duplicaría el
+  crédito) y líneas con sub-unidades (el importe no cuadraría). Fuera de
+  alcance: anulación parcial y el reembolso del dinero (queda como saldo a
+  favor, se liquida con las herramientas nativas). Enlace "Corregir
+  factura" en el listado FE y en el de ventas, donde además desaparecen
+  Editar y Eliminar. Tests: +19. Suite del POS completa en verde (1272).
 - **Re-onboarding por cambio de RUC** (2026-07-22): el RUC quedó
   **bloqueado** en la pantalla de ajustes tras el aprovisionamiento
   (readonly + rechazo en servidor): cambiarlo desincronizaba el
