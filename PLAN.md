@@ -992,11 +992,11 @@ La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
   corrección por web service es anularla con una nota de crédito por el
   total y volver a facturar (la solicitud de anulación en el portal exige
   la aceptación del receptor: trámite fuera de banda).
-  (1) **Guards** en `App\Services\FacturacionElectronica\CorreccionDeFactura`:
+  (1) **Guards** en `App\Services\FacturacionElectronica\ComprobanteInmutable`:
   `SellPosController@update/@edit`, `SellController@edit` y
   `TransactionUtil::deleteSale` (una sola puerta, cubre también
   `ImportSalesController`) rechazan editar/eliminar una venta con factura
-  `autorizado`. Antes se podía editar (el listener no re-emite → POS y SRI
+  ante el SRI. Antes se podía editar (el listener no re-emite → POS y SRI
   divergían en silencio) y borrar (con `onDelete cascade` desaparecía la
   fila del comprobante).
   (2) **Anulación guiada** (`CorreccionFacturaController`, rutas
@@ -1018,6 +1018,39 @@ La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
   favor, se liquida con las herramientas nativas). Enlace "Corregir
   factura" en el listado FE y en el de ventas, donde además desaparecen
   Editar y Eliminar. Tests: +19. Suite del POS completa en verde (1272).
+  De paso: `TransactionUtil::canBeEdited()` casteaba mal la ventana de
+  edición. Llega de la sesión como **string** (`BusinessController@update`
+  cachea el modelo del negocio con los datos del formulario) y Carbon 3
+  exige `int|float` en `addDays()`: `TypeError` en **cualquier** pantalla
+  de edición de transacción (ventas, compras, transferencias). Lo destapó
+  la refacturación, que redirige a `SellPosController@edit`.
+- ✅ **Devoluciones con nota de crédito emitida, congeladas** (2026-07-24):
+  el lado simétrico del ítem anterior, que quedaba abierto.
+  `SellReturnController@destroy` borraba una devolución sin mirar su NC y,
+  por `onDelete cascade`, desaparecía la fila del comprobante —y con la FK
+  de `fe_correcciones.devolucion_id`, el enlace factura → NC → factura
+  corregida, dejando la venta como si nunca se hubiera anulado mientras
+  ante el SRI seguía anulada. Editarla (`add` → `store` → `addSellReturn`,
+  que **actualiza**) descuadraba el importe devuelto respecto a la nota,
+  porque `EmitirNotaCreditoElectronica` no re-emite si ya hay `fe_uuid`
+  —esto cubre también la ampliación de una devolución autorizada, que
+  `EmitirNotaCreditoJob` documentaba como no soportada sin que nada la
+  impidiera. Guards en `destroy`, `add`, `store` y ocultación de
+  Editar/Eliminar en el listado de devoluciones.
+  **Criterio único** para ambos documentos, en
+  `ComprobanteInmutable` + `FeComprobante::ESTADOS_ANTE_EL_SRI`
+  (`pendiente`, `recibido`, `autorizado`) y `existeAnteElSri()`: lista
+  positiva a propósito, no la negación de `ESTADOS_CON_PROBLEMA`
+  —`pendiente_envio` es local (aún no salió) y los estados con problema
+  representan documentos que el SRI **no** tiene, donde borrar o reintentar
+  es la salida legítima. Los estados en vuelo bloquean porque el desenlace
+  es desconocido: si se borra y luego llega la autorización, el documento
+  queda huérfano. Contrapartida: un comprobante atascado en vuelo (webhook
+  perdido) congela su transacción hasta que `fe:reconciliar` resuelva el
+  estado real. De paso el criterio se unificó en las facturas (antes solo
+  bloqueaba `autorizado`); en el listado de ventas, una factura en vuelo
+  oculta Editar/Eliminar pero **no** ofrece "Corregir factura": no se anula
+  lo que aún no existe. Tests: +11. Suite del POS en verde (1287).
 - **Re-onboarding por cambio de RUC** (2026-07-22): el RUC quedó
   **bloqueado** en la pantalla de ajustes tras el aprovisionamiento
   (readonly + rechazo en servidor): cambiarlo desincronizaba el
