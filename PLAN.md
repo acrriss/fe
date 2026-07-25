@@ -1051,6 +1051,23 @@ La FE es **opt-in por negocio** y eso es un ciclo de vida, no un booleano:
   bloqueaba `autorizado`); en el listado de ventas, una factura en vuelo
   oculta Editar/Eliminar pero **no** ofrece "Corregir factura": no se anula
   lo que aún no existe. Tests: +11. Suite del POS en verde (1287).
+- ✅ **FE desactivada: qué sigue aplicando** (2026-07-24). Un negocio que
+  **nunca** activó FE no tiene comprobantes, así que ninguna restricción de
+  venta/devolución le afecta: editar y borrar funcionan como en UltimatePOS
+  de fábrica. Pero desactivar FE **después** de emitir no libera nada: los
+  guards (`ComprobanteInmutable`) no consultan `FeAjuste.activo`, solo la
+  existencia del comprobante, porque el SRI conserva el documento aunque el
+  negocio deje de emitir (la propia pantalla de ajustes ya avisa de que el
+  historial se conserva). Los listados sí miraban `activo`, así que Editar y
+  Eliminar reaparecían para que el servidor los rechazara: ahora la UI usa
+  **`$fe_con_historial`** (existe `FeAjuste`, igual que el ítem del menú) y
+  coincide con el servidor; un negocio sin FE no paga ni el eager load.
+  `$fe_activa` se conserva donde sí toca: los badges de estado y la oferta
+  de "Corregir factura", que exige emitir la nota que anula. De paso, hueco
+  cerrado en el servidor: `mensajeDeRechazoDeAnulacion` ahora exige
+  `listoParaEmitir()` — sin FE activa la anulación devolvía la mercadería y
+  registraba la corrección, pero la nota nunca se emitía: la factura quedaba
+  anulada en el POS y viva ante el SRI. Tests: +3 (1290).
 - **Re-onboarding por cambio de RUC** (2026-07-22): el RUC quedó
   **bloqueado** en la pantalla de ajustes tras el aprovisionamiento
   (readonly + rechazo en servidor): cambiarlo desincronizaba el
