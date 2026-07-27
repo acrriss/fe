@@ -88,6 +88,26 @@ describe('endurecimiento (fase 4)', function () {
         'tipo de identificación desconocido' => [function (array &$payload): void {
             $payload['factura']['infoFactura']['tipoIdentificacionComprador'] = '99';
         }],
+        'cédula con dígito verificador inválido' => [function (array &$payload): void {
+            $payload['factura']['infoFactura']['tipoIdentificacionComprador'] = '05';
+            $payload['factura']['infoFactura']['identificacionComprador'] = '1713328505';
+        }],
+        'RUC de comprador con dígito verificador inválido' => [function (array &$payload): void {
+            $payload['factura']['infoFactura']['tipoIdentificacionComprador'] = '04';
+            $payload['factura']['infoFactura']['identificacionComprador'] = '0992223334001';
+        }],
+        'identificación que no corresponde al tipo declarado' => [function (array &$payload): void {
+            // dice cédula, pero manda 13 dígitos
+            $payload['factura']['infoFactura']['tipoIdentificacionComprador'] = '05';
+            $payload['factura']['infoFactura']['identificacionComprador'] = '0992479248001';
+        }],
+        'consumidor final con identificación distinta de 9999999999999' => [function (array &$payload): void {
+            $payload['factura']['infoFactura']['identificacionComprador'] = '0999999999999';
+        }],
+        'identificación del comprador vacía' => [function (array &$payload): void {
+            $payload['factura']['infoFactura']['tipoIdentificacionComprador'] = '06';
+            $payload['factura']['infoFactura']['identificacionComprador'] = '';
+        }],
         'bloque infoFactura ausente' => [function (array &$payload): void {
             unset($payload['factura']['infoFactura']);
         }],
@@ -112,7 +132,7 @@ describe('endurecimiento (fase 4)', function () {
 describe('multi-tenancy (fase 6)', function () {
     it('rechaza emitir con el RUC de otro contribuyente', function () {
         $payload = golden_payload('factura');
-        $payload['factura']['infoTributaria']['ruc'] = '1790012345001'; // no es el del contribuyente
+        $payload['factura']['infoTributaria']['ruc'] = '1791411099001'; // válido, pero no es el del contribuyente
 
         $this->postJson(route('api.v1.comprobantes.emitir'), $payload)
             ->assertUnprocessable()

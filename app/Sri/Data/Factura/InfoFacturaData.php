@@ -5,6 +5,7 @@ namespace App\Sri\Data\Factura;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
+use App\Sri\Support\ValidadorIdentificacion;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Attributes\WithCast;
@@ -42,6 +43,12 @@ final class InfoFacturaData extends Data
      */
     public static function prepareForPipeline(array $properties): array
     {
+        ValidadorIdentificacion::validarEnPayload(
+            $properties,
+            'tipoIdentificacionComprador',
+            'identificacionComprador',
+        );
+
         $properties['totalConImpuestos'] = Payload::lista(
             data_get($properties, 'totalConImpuestos.totalImpuesto'),
         );

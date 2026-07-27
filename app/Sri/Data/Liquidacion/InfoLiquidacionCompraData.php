@@ -6,6 +6,7 @@ use App\Sri\Data\PagoData;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
+use App\Sri\Support\ValidadorIdentificacion;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Attributes\WithCast;
@@ -47,6 +48,12 @@ final class InfoLiquidacionCompraData extends Data
      */
     public static function prepareForPipeline(array $properties): array
     {
+        ValidadorIdentificacion::validarEnPayload(
+            $properties,
+            'tipoIdentificacionProveedor',
+            'identificacionProveedor',
+        );
+
         $properties['totalConImpuestos'] = Payload::lista(data_get($properties, 'totalConImpuestos.totalImpuesto'));
         $properties['pagos'] = Payload::lista(data_get($properties, 'pagos.pago'));
 

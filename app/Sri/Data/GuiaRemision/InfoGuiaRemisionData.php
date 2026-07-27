@@ -4,6 +4,7 @@ namespace App\Sri\Data\GuiaRemision;
 
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
+use App\Sri\Support\ValidadorIdentificacion;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
@@ -27,6 +28,25 @@ final class InfoGuiaRemisionData extends Data
         public ?string $dirEstablecimiento = null,
         public ?string $obligadoContabilidad = null,
     ) {}
+
+    /**
+     * Pese al nombre del campo, `rucTransportista` lleva la identificación
+     * que declare `tipoIdentificacionTransportista`: puede ser una cédula o
+     * un pasaporte, no solo un RUC.
+     *
+     * @param  array<string, mixed>  $properties
+     * @return array<string, mixed>
+     */
+    public static function prepareForPipeline(array $properties): array
+    {
+        ValidadorIdentificacion::validarEnPayload(
+            $properties,
+            'tipoIdentificacionTransportista',
+            'rucTransportista',
+        );
+
+        return $properties;
+    }
 
     /**
      * @return array<string, string>

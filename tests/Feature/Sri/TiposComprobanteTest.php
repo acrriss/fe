@@ -79,7 +79,7 @@ function payload_guia_remision(): array
             'placa' => 'MCL0827',
         ],
         'destinatarios' => ['destinatario' => [
-            'identificacionDestinatario' => '1716849140001',
+            'identificacionDestinatario' => '1713328506001',
             'razonSocialDestinatario' => 'DESTINO S.A.',
             'dirDestinatario' => 'Av. Simón Bolívar s/n',
             'motivoTraslado' => 'Venta de mercadería',
@@ -102,7 +102,7 @@ function payload_liquidacion(): array
             'fechaEmision' => '10/07/2026',
             'tipoIdentificacionProveedor' => '05',
             'razonSocialProveedor' => 'PROVEEDOR ARTESANAL',
-            'identificacionProveedor' => '1750863147',
+            'identificacionProveedor' => '1713328506',
             'totalSinImpuestos' => '50.00',
             'totalDescuento' => '0.00',
             'totalConImpuestos' => ['totalImpuesto' => [

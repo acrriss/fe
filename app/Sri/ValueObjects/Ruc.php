@@ -2,10 +2,12 @@
 
 namespace App\Sri\ValueObjects;
 
-use App\Sri\Exceptions\DatoInvalido;
+use App\Sri\Enums\TipoIdentificacion;
+use App\Sri\Support\ValidadorIdentificacion;
 
 /**
- * Registro Único de Contribuyentes: 13 dígitos.
+ * Registro Único de Contribuyentes: 13 dígitos con dígito verificador
+ * válido (módulo 10 para persona natural, módulo 11 para sociedades).
  */
 final readonly class Ruc implements ValueObject
 {
@@ -13,9 +15,7 @@ final readonly class Ruc implements ValueObject
 
     public static function fromString(string $value): static
     {
-        if (preg_match('/^\d{13}$/', $value) !== 1) {
-            throw DatoInvalido::porFormato('ruc', 'una cadena de 13 dígitos', $value);
-        }
+        ValidadorIdentificacion::validar(TipoIdentificacion::Ruc, $value, 'ruc');
 
         return new self($value);
     }

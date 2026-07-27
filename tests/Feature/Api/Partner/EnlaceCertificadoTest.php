@@ -23,7 +23,7 @@ describe('generación del enlace (API de partner)', function () {
 
     it('responde 404 para un contribuyente ajeno', function () {
         actuar_como_partner();
-        $ajeno = contribuyente_gestionado(Partner::factory()->create(), ['ruc' => '0992223334001']);
+        $ajeno = contribuyente_gestionado(Partner::factory()->create(), ['ruc' => '0992479248001']);
 
         $this->postJson(route('api.partner.v1.contribuyentes.enlace-certificado', $ajeno->uuid))
             ->assertNotFound();

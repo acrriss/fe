@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Panel\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\Contribuyente;
 use App\Models\User;
+use App\Sri\Exceptions\DatoInvalido;
+use App\Sri\ValueObjects\Ruc;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,7 +29,7 @@ class RegistroController extends Controller
     {
         $request->validate([
             'razon_social' => ['required', 'string', 'max:300'],
-            'ruc' => ['required', 'digits:13', 'unique:contribuyentes,ruc'],
+            'ruc' => ['required', 'string', self::reglaRuc(), 'unique:contribuyentes,ruc'],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -51,5 +54,26 @@ class RegistroController extends Controller
 
         return redirect()->route('panel.inicio')
             ->with('exito', '¡Bienvenido! Cargue su certificado de firma para empezar a emitir.');
+    }
+
+    /**
+     * Un único criterio de RUC válido en toda la aplicación: el del value
+     * object, que además del formato comprueba el dígito verificador.
+     */
+    private static function reglaRuc(): Closure
+    {
+        return function (string $atributo, mixed $valor, Closure $fallar): void {
+            if (! is_string($valor)) {
+                $fallar('El RUC debe ser una cadena de 13 dígitos.');
+
+                return;
+            }
+
+            try {
+                Ruc::fromString($valor);
+            } catch (DatoInvalido $excepcion) {
+                $fallar($excepcion->getMessage());
+            }
+        };
     }
 }

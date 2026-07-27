@@ -99,9 +99,9 @@ describe('idempotencia de emisión (§11)', function () {
         emitir_con_clave('venta-8842')->assertSuccessful();
 
         // otro contribuyente con su propio RUC y payload
-        $this->contribuyente = actuar_como_contribuyente(atributos: ['ruc' => '0992223334001']);
+        $this->contribuyente = actuar_como_contribuyente(atributos: ['ruc' => '0992479248001']);
         $payload = golden_payload('factura');
-        $payload['factura']['infoTributaria']['ruc'] = '0992223334001';
+        $payload['factura']['infoTributaria']['ruc'] = '0992479248001';
 
         emitir_con_clave('venta-8842', $payload)->assertSuccessful();
 

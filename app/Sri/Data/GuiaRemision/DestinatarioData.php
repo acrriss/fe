@@ -3,6 +3,7 @@
 namespace App\Sri\Data\GuiaRemision;
 
 use App\Sri\Support\Payload;
+use App\Sri\Support\ValidadorIdentificacion;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Data;
 
@@ -37,6 +38,10 @@ final class DestinatarioData extends Data
      */
     public static function prepareForPipeline(array $properties): array
     {
+        // el XSD de la guía no lleva tipoIdentificacionDestinatario: sin tipo
+        // declarado, el algoritmo se infiere de la forma del valor
+        ValidadorIdentificacion::validarEnPayload($properties, null, 'identificacionDestinatario');
+
         $properties['detalles'] = Payload::lista(data_get($properties, 'detalles.detalle'));
 
         return $properties;

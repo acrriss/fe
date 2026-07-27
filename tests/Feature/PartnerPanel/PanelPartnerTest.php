@@ -117,9 +117,9 @@ describe('páginas del panel', function () {
 
     it('vinculaciones permite solicitar desde el panel', function () {
         partner_en_panel();
-        Contribuyente::factory()->create(['ruc' => '0992223334001']);
+        Contribuyente::factory()->create(['ruc' => '0992479248001']);
 
-        $this->post(route('partner.vinculaciones.solicitar'), ['ruc' => '0992223334001'])
+        $this->post(route('partner.vinculaciones.solicitar'), ['ruc' => '0992479248001'])
             ->assertRedirect(route('partner.vinculaciones'));
 
         $this->get(route('partner.vinculaciones'))

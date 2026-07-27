@@ -61,7 +61,7 @@ describe('emisión on-behalf (§11)', function () {
 
     it('sigue exigiendo que el RUC del payload sea el del contribuyente actuado', function () {
         $payload = golden_payload('factura');
-        $payload['factura']['infoTributaria']['ruc'] = '1790012345001';
+        $payload['factura']['infoTributaria']['ruc'] = '1791411099001';
 
         $this->postJson(
             route('api.v1.comprobantes.emitir'),
@@ -107,7 +107,7 @@ describe('gestión on-behalf', function () {
     });
 
     it('aísla a los gestionados entre sí: el comprobante de uno "no existe" para otro', function () {
-        $otroGestionado = contribuyente_gestionado($this->partner, ['ruc' => '0992223334001']);
+        $otroGestionado = contribuyente_gestionado($this->partner, ['ruc' => '0992479248001']);
         $registro = Comprobante::factory()->create(['contribuyente_id' => $otroGestionado->id]);
 
         $this->getJson(
@@ -118,7 +118,7 @@ describe('gestión on-behalf', function () {
 
     it('carga el certificado del gestionado vía PUT /api/v1/contribuyente/certificado', function () {
         $sinCertificado = Contribuyente::factory()->create([
-            'ruc' => '0992223334001',
+            'ruc' => '0992479248001',
             'partner_id' => $this->partner->id,
         ]);
 

@@ -14,6 +14,14 @@ describe('Ruc', function () {
         Ruc::fromString($valor);
     })->with(['092259678800', '09225967880011', 'abcdefghijklm', ''])
         ->throws(DatoInvalido::class);
+
+    it('rechaza 13 dígitos con dígito verificador incorrecto', function (string $valor) {
+        Ruc::fromString($valor);
+    })->with([
+        '0922596789001', // persona natural: módulo 10
+        '0992223334001', // sociedad privada: módulo 11
+        '0922596788000', // establecimiento cero
+    ])->throws(DatoInvalido::class);
 });
 
 describe('Secuencial', function () {

@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Contribuyente;
+use App\Sri\Support\ValidadorIdentificacion;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -16,11 +17,25 @@ class ContribuyenteFactory extends Factory
     public function definition(): array
     {
         return [
-            'ruc' => $this->faker->unique()->numerify('#########0001'),
+            'ruc' => $this->rucValido(),
             'razon_social' => $this->faker->company(),
             'nombre_comercial' => $this->faker->company(),
             'dir_matriz' => $this->faker->address(),
         ];
+    }
+
+    /**
+     * RUC de sociedad privada con dígito verificador correcto: desde que
+     * `Ruc::fromString` valida módulo 11, un RUC al azar ya no sirve.
+     */
+    private function rucValido(): string
+    {
+        do {
+            $base = sprintf('%02d9%06d', $this->faker->numberBetween(1, 24), $this->faker->unique()->numberBetween(0, 999_999));
+            $digito = ValidadorIdentificacion::digitoVerificadorModulo11($base, [4, 3, 2, 7, 6, 5, 4, 3, 2]);
+        } while ($digito === null);
+
+        return $base.$digito.'001';
     }
 
     public function conCertificado(): static

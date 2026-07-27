@@ -29,7 +29,7 @@ it('permite quitar el sublímite con null', function () {
 
 it('responde 404 para un contribuyente ajeno', function () {
     actuar_como_partner();
-    $ajeno = contribuyente_gestionado(Partner::factory()->create(), ['ruc' => '0992223334001']);
+    $ajeno = contribuyente_gestionado(Partner::factory()->create(), ['ruc' => '0992479248001']);
 
     $this->patchJson(route('api.partner.v1.contribuyentes.actualizar', $ajeno->uuid), [
         'razon_social' => 'X',
@@ -40,7 +40,7 @@ it('el aprovisionamiento acepta limite_mensual', function () {
     actuar_como_partner();
 
     $this->postJson(route('api.partner.v1.contribuyentes.aprovisionar'), [
-        'ruc' => '0992223334001',
+        'ruc' => '0992479248001',
         'razon_social' => 'Mi Cliente S.A.',
         'limite_mensual' => 200,
     ])->assertCreated()

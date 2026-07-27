@@ -9,17 +9,17 @@ describe('aprovisionamiento (§11)', function () {
         $partner = actuar_como_partner();
 
         $respuesta = $this->postJson(route('api.partner.v1.contribuyentes.aprovisionar'), [
-            'ruc' => '0992223334001',
+            'ruc' => '0992479248001',
             'razon_social' => 'Mi Cliente S.A.',
             'nombre_comercial' => 'MiCliente',
         ]);
 
         $respuesta->assertCreated()
-            ->assertJsonPath('data.ruc', '0992223334001')
+            ->assertJsonPath('data.ruc', '0992479248001')
             ->assertJsonPath('data.razonSocial', 'Mi Cliente S.A.')
             ->assertJsonPath('data.certificado.configurado', false);
 
-        $contribuyente = Contribuyente::where('ruc', '0992223334001')->first();
+        $contribuyente = Contribuyente::where('ruc', '0992479248001')->first();
 
         expect($contribuyente->partner_id)->toBe($partner->id)
             ->and($contribuyente->plan_id)->toBeNull()
@@ -29,7 +29,7 @@ describe('aprovisionamiento (§11)', function () {
 
     it('es idempotente por RUC dentro del partner', function () {
         actuar_como_partner();
-        $payload = ['ruc' => '0992223334001', 'razon_social' => 'Mi Cliente S.A.'];
+        $payload = ['ruc' => '0992479248001', 'razon_social' => 'Mi Cliente S.A.'];
 
         $primera = $this->postJson(route('api.partner.v1.contribuyentes.aprovisionar'), $payload);
         $segunda = $this->postJson(route('api.partner.v1.contribuyentes.aprovisionar'), $payload);
@@ -38,16 +38,16 @@ describe('aprovisionamiento (§11)', function () {
         $segunda->assertOk()
             ->assertJsonPath('data.id', $primera->json('data.id'));
 
-        expect(Contribuyente::where('ruc', '0992223334001')->count())->toBe(1);
+        expect(Contribuyente::where('ruc', '0992479248001')->count())->toBe(1);
     });
 
     it('responde 409 si el RUC ya está registrado en otra cuenta', function () {
-        Contribuyente::factory()->create(['ruc' => '0992223334001']); // cuenta directa
+        Contribuyente::factory()->create(['ruc' => '0992479248001']); // cuenta directa
 
         actuar_como_partner();
 
         $this->postJson(route('api.partner.v1.contribuyentes.aprovisionar'), [
-            'ruc' => '0992223334001',
+            'ruc' => '0992479248001',
             'razon_social' => 'Mi Cliente S.A.',
         ])->assertStatus(409);
     });
@@ -60,7 +60,7 @@ describe('aprovisionamiento (§11)', function () {
     })->with([
         'vacío' => [[]],
         'ruc malformado' => [['ruc' => '123', 'razon_social' => 'X']],
-        'sin razón social' => [['ruc' => '0992223334001']],
+        'sin razón social' => [['ruc' => '0992479248001']],
     ]);
 });
 
@@ -71,7 +71,7 @@ describe('listado de gestionados', function () {
         Comprobante::factory()->count(2)->create(['contribuyente_id' => $gestionado->id]);
 
         // el gestionado de otro partner no aparece
-        contribuyente_gestionado(Partner::factory()->create(), ['ruc' => '0992223334001']);
+        contribuyente_gestionado(Partner::factory()->create(), ['ruc' => '0992479248001']);
 
         $respuesta = $this->getJson(route('api.partner.v1.contribuyentes.index'));
 
@@ -85,9 +85,9 @@ describe('listado de gestionados', function () {
     it('filtra por RUC exacto', function () {
         $partner = actuar_como_partner();
         contribuyente_gestionado($partner);
-        $buscado = contribuyente_gestionado($partner, ['ruc' => '0992223334001']);
+        $buscado = contribuyente_gestionado($partner, ['ruc' => '0992479248001']);
 
-        $this->getJson(route('api.partner.v1.contribuyentes.index', ['ruc' => '0992223334001']))
+        $this->getJson(route('api.partner.v1.contribuyentes.index', ['ruc' => '0992479248001']))
             ->assertSuccessful()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.id', $buscado->uuid);
@@ -99,7 +99,7 @@ describe('acceso al plano de gestión', function () {
         actuar_como_contribuyente();
 
         $this->postJson(route('api.partner.v1.contribuyentes.aprovisionar'), [
-            'ruc' => '0992223334001',
+            'ruc' => '0992479248001',
             'razon_social' => 'X',
         ])->assertForbidden();
 

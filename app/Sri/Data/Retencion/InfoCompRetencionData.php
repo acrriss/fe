@@ -4,6 +4,7 @@ namespace App\Sri\Data\Retencion;
 
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
+use App\Sri\Support\ValidadorIdentificacion;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
@@ -24,6 +25,21 @@ final class InfoCompRetencionData extends Data
         public string $periodoFiscal,
         public ?string $dirEstablecimiento = null,
     ) {}
+
+    /**
+     * @param  array<string, mixed>  $properties
+     * @return array<string, mixed>
+     */
+    public static function prepareForPipeline(array $properties): array
+    {
+        ValidadorIdentificacion::validarEnPayload(
+            $properties,
+            'tipoIdentificacionSujetoRetenido',
+            'identificacionSujetoRetenido',
+        );
+
+        return $properties;
+    }
 
     /**
      * @return array<string, string>

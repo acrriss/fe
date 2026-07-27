@@ -7,6 +7,7 @@ use App\Sri\Data\PagoData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
+use App\Sri\Support\ValidadorIdentificacion;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Attributes\WithCast;
@@ -49,6 +50,12 @@ final class InfoNotaDebitoData extends Data
      */
     public static function prepareForPipeline(array $properties): array
     {
+        ValidadorIdentificacion::validarEnPayload(
+            $properties,
+            'tipoIdentificacionComprador',
+            'identificacionComprador',
+        );
+
         $properties['impuestos'] = Payload::lista(data_get($properties, 'impuestos.impuesto'));
         $properties['pagos'] = Payload::lista(data_get($properties, 'pagos.pago'));
 
