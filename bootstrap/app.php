@@ -26,6 +26,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn (Request $request): string => $request->routeIs('partner.*')
             ? route('partner.login')
             : route('login'));
+
+        // Y su propio inicio: quien ya tiene sesión y vuelve a la pantalla de
+        // login aterriza en el panel que le corresponde, no en el otro.
+        $middleware->redirectUsersTo(fn (Request $request): string => $request->routeIs('partner.*')
+            ? route('partner.inicio')
+            : route('panel.inicio'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // La API siempre responde JSON, pida lo que pida el cliente.

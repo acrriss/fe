@@ -66,6 +66,12 @@ describe('login', function () {
         $this->assertGuest();
     });
 
+    it('devuelve al panel a quien ya tiene sesión', function () {
+        $this->actingAs(User::factory()->create())
+            ->get(route('login'))
+            ->assertRedirect(route('panel.inicio'));
+    });
+
     it('cierra sesión', function () {
         $user = User::factory()->create();
 

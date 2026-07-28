@@ -36,6 +36,12 @@ describe('login del panel de partner', function () {
         $this->assertAuthenticated('partner-web');
     });
 
+    it('devuelve al panel de partner a quien ya tiene sesión, no al login de contribuyentes', function () {
+        partner_en_panel();
+
+        $this->get(route('partner.login'))->assertRedirect(route('partner.inicio'));
+    });
+
     it('rechaza credenciales inválidas', function () {
         Partner::factory()->create(['email' => 'pos@ejemplo.test', 'password' => 'secreto-123']);
 
