@@ -1188,3 +1188,49 @@ de nota de crédito ya estaban validados con golden fixtures.
 - **Limitación del piloto**: una NC por devolución. Ampliar una
   devolución ya autorizada exigiría una nota adicional por la diferencia
   (backlog).
+
+### Registro §12 — XML autorizado en la API (2026-09-15)
+
+El POS entrega al comprador el comprobante por correo y necesita adjuntar
+el XML, que hasta ahora solo estaba en el panel web. Nuevo endpoint
+`GET /v1/comprobantes/{uuid}/xml` (`DescargarXmlController`), con las
+mismas guardas que el RIDE: 404 entre contribuyentes, 409 si no está
+autorizado, 404 si el XML ya no está en disco.
+
+- **Devuelve el XML envuelto**, no el firmado a secas:
+  `App\Sri\Support\XmlAutorizado` construye el nodo `<autorizacion>` del
+  SRI (`estado`, `numeroAutorizacion`, `fechaAutorizacion`, `ambiente` y el
+  comprobante en CDATA con su propia declaración XML). El XML firmado por
+  sí solo **no acredita la autorización**: el número y la fecha que otorga
+  el SRI viven en columnas del registro, no dentro del XML, y el software
+  receptor lo rechaza al importarlo. Es también el formato que devuelve la
+  consulta pública del SRI.
+- `numeroAutorizacion` cae a la clave de acceso cuando el SRI no devolvió
+  uno propio (esquema offline: son el mismo valor).
+- El helper `comprobante_autorizado_con_xml` pasa a `tests/Pest.php` para
+  compartirlo entre las descargas de RIDE y XML.
+
+#### ⏳ DECISIÓN PENDIENTE: el envoltorio en el panel
+
+**El panel y la API divergen a partir de este cambio.** El panel
+(`Panel\ComprobantesController@descargarXml`) sigue entregando el XML
+**firmado sin envolver**; la API entrega el **autorizado**. Los dos
+endpoints se llaman igual y devuelven documentos distintos.
+
+Se dejó así a propósito, no por descuido: unificarlo es apuntar el panel a
+`XmlAutorizado` (dos líneas), pero antes hay que decidir **qué espera
+encontrar quien descarga desde el panel**, y no está analizado:
+
+- Si el contribuyente descarga para **entregárselo a su cliente o a su
+  contador**, necesita el autorizado — el firmado no le sirve, y entonces
+  la divergencia es un bug latente que va a aparecer como "el sistema de mi
+  contador no acepta el XML".
+- Si descarga para **archivo propio, depuración o para re-firmar**, el
+  firmado a secas puede ser lo que quiere, y unificar le quitaría algo.
+- Cabe una tercera salida: ofrecer **ambas descargas** en el panel,
+  etiquetadas, a costa de una pantalla más cargada y de obligar al usuario
+  a entender una distinción técnica.
+
+Pendiente: contrastar con uso real del panel antes de tocarlo. Mientras
+tanto, el POS nunca depende del panel, así que la divergencia no rompe
+nada hoy.
