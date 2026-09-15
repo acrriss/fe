@@ -1,10 +1,15 @@
 <?php
 
+use App\Models\Comprobante;
 use App\Models\Contribuyente;
 use App\Models\Partner;
 use App\Models\User;
+use App\Sri\Actions\ConstruirXml;
+use App\Sri\Enums\TipoComprobante;
 use App\Sri\ValueObjects\CertificadoFirma;
+use App\Sri\ValueObjects\ClaveAcceso;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -121,4 +126,35 @@ function contribuyente_gestionado(Partner $partner, array $atributos = []): Cont
     return Contribuyente::factory()
         ->conCertificado()
         ->create($atributos + ['ruc' => '0922596788001', 'partner_id' => $partner->id]);
+}
+
+/**
+ * Crea un comprobante autorizado del contribuyente dado cuyo XML firmado es
+ * el golden del tipo indicado, ya guardado en el disco (requiere
+ * Storage::fake()). Base común de las descargas de RIDE y XML.
+ */
+function comprobante_autorizado_con_xml(
+    Contribuyente $contribuyente,
+    string $tipo,
+    ?string $dataClass = null,
+): Comprobante {
+    $registro = Comprobante::factory()->autorizado()->create([
+        'tipo' => TipoComprobante::fromRootElement($tipo),
+        'contribuyente_id' => $contribuyente->id,
+    ]);
+
+    $xml = file_get_contents(golden_path("$tipo/comprobante.xml"));
+
+    // el golden trae la clave del legado; para NC/retención regeneramos el
+    // XML con la clave del registro para mantener coherencia
+    if ($dataClass !== null) {
+        $comprobante = $dataClass::from(golden_input($tipo));
+        $comprobante->infoTributaria->claveAcceso = ClaveAcceso::fromString($registro->clave_acceso);
+        $xml = ConstruirXml::render($comprobante);
+    }
+
+    Storage::put($path = "comprobantes/{$registro->clave_acceso}.xml", $xml);
+    $registro->update(['xml_path' => $path]);
+
+    return $registro;
 }

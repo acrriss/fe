@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Partner\V1\VinculacionesController;
 use App\Http\Controllers\Api\Partner\V1\WebhooksController as PartnerWebhooksController;
 use App\Http\Controllers\Api\V1\ConsultarComprobanteController;
 use App\Http\Controllers\Api\V1\DescargarRideController;
+use App\Http\Controllers\Api\V1\DescargarXmlController;
 use App\Http\Controllers\Api\V1\EmitirComprobanteController;
 use App\Http\Controllers\Api\V1\EmitirTokenController;
 use App\Http\Controllers\Api\V1\GuardarCertificadoController;
@@ -42,6 +43,9 @@ Route::prefix('v1')->group(function () {
 
         Route::get('comprobantes/{comprobante}/ride', DescargarRideController::class)
             ->name('api.v1.comprobantes.ride');
+
+        Route::get('comprobantes/{comprobante}/xml', DescargarXmlController::class)
+            ->name('api.v1.comprobantes.xml');
 
         Route::put('contribuyente/certificado', GuardarCertificadoController::class)
             ->name('api.v1.contribuyente.certificado');

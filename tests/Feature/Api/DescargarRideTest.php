@@ -1,11 +1,8 @@
 <?php
 
 use App\Models\Comprobante;
-use App\Sri\Actions\ConstruirXml;
 use App\Sri\Data\NotaCredito\NotaCreditoData;
 use App\Sri\Data\Retencion\ComprobanteRetencionData;
-use App\Sri\Enums\TipoComprobante;
-use App\Sri\ValueObjects\ClaveAcceso;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -13,35 +10,8 @@ beforeEach(function () {
     $this->contribuyente = actuar_como_contribuyente();
 });
 
-/**
- * Crea un registro autorizado del contribuyente autenticado cuyo XML
- * firmado es el golden del tipo dado.
- */
-function comprobante_autorizado_con_xml(string $tipo, ?string $dataClass = null): Comprobante
-{
-    $registro = Comprobante::factory()->autorizado()->create([
-        'tipo' => TipoComprobante::fromRootElement($tipo),
-        'contribuyente_id' => test()->contribuyente->id,
-    ]);
-
-    $xml = file_get_contents(golden_path("$tipo/comprobante.xml"));
-
-    // el golden trae la clave del legado; para NC/retención regeneramos el
-    // XML con la clave del registro para mantener coherencia
-    if ($dataClass !== null) {
-        $comprobante = $dataClass::from(golden_input($tipo));
-        $comprobante->infoTributaria->claveAcceso = ClaveAcceso::fromString($registro->clave_acceso);
-        $xml = ConstruirXml::render($comprobante);
-    }
-
-    Storage::put($path = "comprobantes/{$registro->clave_acceso}.xml", $xml);
-    $registro->update(['xml_path' => $path]);
-
-    return $registro;
-}
-
 it('genera y descarga el RIDE en PDF de una factura autorizada', function () {
-    $registro = comprobante_autorizado_con_xml('factura');
+    $registro = comprobante_autorizado_con_xml($this->contribuyente, 'factura');
 
     $respuesta = $this->get(route('api.v1.comprobantes.ride', $registro));
 
@@ -56,7 +26,7 @@ it('genera y descarga el RIDE en PDF de una factura autorizada', function () {
 });
 
 it('genera el RIDE de :dataset', function (string $tipo, string $dataClass) {
-    $registro = comprobante_autorizado_con_xml($tipo, $dataClass);
+    $registro = comprobante_autorizado_con_xml($this->contribuyente, $tipo, $dataClass);
 
     $respuesta = $this->get(route('api.v1.comprobantes.ride', $registro));
 
@@ -68,7 +38,7 @@ it('genera el RIDE de :dataset', function (string $tipo, string $dataClass) {
 ]);
 
 it('sirve el RIDE cacheado sin regenerarlo', function () {
-    $registro = comprobante_autorizado_con_xml('factura');
+    $registro = comprobante_autorizado_con_xml($this->contribuyente, 'factura');
     Storage::put($ridePath = "rides/{$registro->clave_acceso}.pdf", '%PDF-cacheado');
     $registro->update(['ride_path' => $ridePath]);
 
