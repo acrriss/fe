@@ -1210,27 +1210,35 @@ autorizado, 404 si el XML ya no está en disco.
 - El helper `comprobante_autorizado_con_xml` pasa a `tests/Pest.php` para
   compartirlo entre las descargas de RIDE y XML.
 
-#### ⏳ DECISIÓN PENDIENTE: el envoltorio en el panel
+#### ✅ Decidido (2026-09-16): el panel entrega también el autorizado
 
-**El panel y la API divergen a partir de este cambio.** El panel
-(`Panel\ComprobantesController@descargarXml`) sigue entregando el XML
-**firmado sin envolver**; la API entrega el **autorizado**. Los dos
-endpoints se llaman igual y devuelven documentos distintos.
+La API y el panel divergían: el panel servía el XML **firmado sin envolver**.
+Se unificó — el panel **reutiliza `DescargarXmlController`**, igual que ya
+hacía con `DescargarRideController` para el RIDE. Un solo controlador, mismas
+guardas, imposible que vuelvan a divergir.
 
-Se dejó así a propósito, no por descuido: unificarlo es apuntar el panel a
-`XmlAutorizado` (dos líneas), pero antes hay que decidir **qué espera
-encontrar quien descarga desde el panel**, y no está analizado:
+Se descartó ofrecer **ambas descargas** etiquetadas. Razones, tras revisar qué
+hace el mercado ecuatoriano (Contífico, Factuplan, Tu Facturero, FacturaHero,
+Ecuafact):
 
-- Si el contribuyente descarga para **entregárselo a su cliente o a su
-  contador**, necesita el autorizado — el firmado no le sirve, y entonces
-  la divergencia es un bug latente que va a aparecer como "el sistema de mi
-  contador no acepta el XML".
-- Si descarga para **archivo propio, depuración o para re-firmar**, el
-  firmado a secas puede ser lo que quiere, y unificar le quitaría algo.
-- Cabe una tercera salida: ofrecer **ambas descargas** en el panel,
-  etiquetadas, a costa de una pantalla más cargada y de obligar al usuario
-  a entender una distinción técnica.
+- El patrón universal es **dos botones, XML y RIDE**. Ningún sistema expone al
+  usuario la distinción firmado/autorizado: el XML que ofrecen es el
+  autorizado, y varios lo generan **solo** cuando el comprobante ya lo está.
+- El **XML autorizado es el documento legal**; el RIDE sin número de
+  autorización no tiene validez. Entregar el firmado le daba al contribuyente
+  un archivo que **no cumple su obligación de conservarlo 7 años**.
+- Cuando un receptor pierde el comprobante, la vía estándar es pedir al emisor
+  que **reenvíe el XML**: lo que espera es el autorizado.
 
-Pendiente: contrastar con uso real del panel antes de tocarlo. Mientras
-tanto, el POS nunca depende del panel, así que la divergencia no rompe
-nada hoy.
+Cambios de comportamiento asumidos:
+
+- El panel ahora responde **409** si el comprobante no está autorizado. No
+  quita nada alcanzable: `Pages/Panel/Comprobantes.vue` ya mostraba los
+  enlaces solo con `estado === 'autorizado'`; el backend simplemente pasa a
+  coincidir con la pantalla. Y envolver en `<autorizacion><estado>AUTORIZADO`
+  algo sin autorizar habría sido mentir.
+- El archivo descargado pasa de `comprobante-{clave}.xml` a `{clave}.xml`,
+  como el de la API y como nombra el portal del SRI.
+- El XML firmado a secas deja de estar expuesto en ningún endpoint. Sigue en
+  `storage` para depurar o re-firmar, que es un artefacto interno y no algo
+  que el contribuyente pida.

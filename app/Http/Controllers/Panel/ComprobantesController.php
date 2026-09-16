@@ -6,14 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolverContribuyente;
 use App\Models\Comprobante;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
-use Symfony\Component\HttpFoundation\Response as HttpResponse;
 
 /**
- * Historial de emisiones del contribuyente, con descarga de XML.
- * (La descarga del RIDE reutiliza DescargarRideController.)
+ * Historial de emisiones del contribuyente.
+ *
+ * Las descargas (RIDE y XML autorizado) reutilizan los controladores de la
+ * API: el panel y la API deben entregar exactamente el mismo documento.
  */
 class ComprobantesController extends Controller
 {
@@ -41,25 +41,5 @@ class ComprobantesController extends Controller
         return Inertia::render('Panel/Comprobantes', [
             'comprobantes' => $comprobantes,
         ]);
-    }
-
-    public function descargarXml(Request $request, Comprobante $comprobante): HttpResponse
-    {
-        abort_unless(
-            $comprobante->contribuyente_id === ResolverContribuyente::de($request)?->id,
-            404,
-        );
-
-        abort_if(
-            $comprobante->xml_path === null || ! Storage::exists($comprobante->xml_path),
-            404,
-            'El XML del comprobante no está disponible.',
-        );
-
-        return Storage::download(
-            $comprobante->xml_path,
-            "comprobante-{$comprobante->clave_acceso}.xml",
-            ['Content-Type' => 'application/xml'],
-        );
     }
 }

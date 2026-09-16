@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\V1\DescargarRideController;
+use App\Http\Controllers\Api\V1\DescargarXmlController;
 use App\Http\Controllers\CertificadoHospedadoController;
 use App\Http\Controllers\DocsController;
 use App\Http\Controllers\Panel;
@@ -43,7 +44,7 @@ Route::middleware('auth')->group(function () {
         Route::get('comprobantes', Panel\ComprobantesController::class)->name('comprobantes');
         Route::get('comprobantes/{comprobante}/ride', DescargarRideController::class)
             ->name('comprobantes.ride');
-        Route::get('comprobantes/{comprobante}/xml', [Panel\ComprobantesController::class, 'descargarXml'])
+        Route::get('comprobantes/{comprobante}/xml', DescargarXmlController::class)
             ->name('comprobantes.xml');
 
         Route::get('tokens', [Panel\TokensController::class, 'index'])->name('tokens');

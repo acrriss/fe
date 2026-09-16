@@ -61,15 +61,31 @@ describe('comprobantes', function () {
         );
     });
 
-    it('descarga el XML del comprobante propio', function () {
+    it('descarga el XML autorizado del comprobante propio', function () {
         $contribuyente = entrar_al_panel();
         $registro = Comprobante::factory()->autorizado()->create(['contribuyente_id' => $contribuyente->id]);
         Storage::put($path = "comprobantes/{$registro->clave_acceso}.xml", '<factura/>');
         $registro->update(['xml_path' => $path]);
 
-        $this->get(route('panel.comprobantes.xml', $registro))
-            ->assertSuccessful()
-            ->assertDownload("comprobante-{$registro->clave_acceso}.xml");
+        $respuesta = $this->get(route('panel.comprobantes.xml', $registro));
+
+        $respuesta->assertSuccessful()
+            ->assertDownload("{$registro->clave_acceso}.xml");
+
+        // el mismo documento que sirve la API: es el que el contribuyente
+        // está obligado a conservar 7 años, y el que su contador importa
+        $xml = simplexml_load_string($respuesta->getContent());
+        expect($xml->getName())->toBe('autorizacion')
+            ->and((string) $xml->estado)->toBe('AUTORIZADO');
+    });
+
+    it('no ofrece el XML de un comprobante que el SRI no autorizó', function () {
+        $contribuyente = entrar_al_panel();
+        $registro = Comprobante::factory()->create(['contribuyente_id' => $contribuyente->id]);
+        Storage::put($path = "comprobantes/{$registro->clave_acceso}.xml", '<factura/>');
+        $registro->update(['xml_path' => $path]);
+
+        $this->get(route('panel.comprobantes.xml', $registro))->assertStatus(409);
     });
 
     it('no descarga XML ajeno', function () {
