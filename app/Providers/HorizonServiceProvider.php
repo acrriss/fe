@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Partner;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Laravel\Horizon\Horizon;
@@ -9,6 +11,15 @@ use Laravel\Horizon\HorizonApplicationServiceProvider;
 
 class HorizonServiceProvider extends HorizonApplicationServiceProvider
 {
+    /**
+     * Quién puede abrir Horizon fuera de local.
+     *
+     * @var list<string>
+     */
+    private const CORREOS_AUTORIZADOS = [
+        'jago86@gmail.com',
+    ];
+
     /**
      * Bootstrap any application services.
      */
@@ -28,14 +39,17 @@ class HorizonServiceProvider extends HorizonApplicationServiceProvider
      */
     protected function gate(): void
     {
-        Gate::define('viewHorizon', function ($user = null) {
-            return in_array(optional($user)->email, [
-                'jago86@gmail.com',
-            ]);
+        // Los dos guards que desembocan aquí: el panel (User) y el panel de
+        // partners (Partner). Tipar el closure es además lo que le dice al
+        // Gate que un invitado no llega a evaluarse.
+        Gate::define('viewHorizon', function (User|Partner $usuario): bool {
+            return in_array($usuario->email, self::CORREOS_AUTORIZADOS, true);
         });
     }
 
-    protected function authorization(): void                                                                                                             {                                                                                                                                                        $this->gate();
+    protected function authorization(): void
+    {
+        $this->gate();
 
         Horizon::auth(function (Request $request): bool {
             if (app()->environment('local')) {

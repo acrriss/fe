@@ -12,6 +12,8 @@ use Laravel\Sanctum\HasApiTokens;
 
 /**
  * @property int $id
+ * @property string $name
+ * @property string $email
  * @property int|null $contribuyente_id
  * @property-read Contribuyente|null $contribuyente
  */
