@@ -1242,3 +1242,58 @@ Cambios de comportamiento asumidos:
 - El XML firmado a secas deja de estar expuesto en ningún endpoint. Sigue en
   `storage` para depurar o re-firmar, que es un artefacto interno y no algo
   que el contribuyente pida.
+
+## 13. RUC del proveedor en los comprobantes (Resolución NAC-DGERCGC26-00000027)
+
+El SRI creó el registro de proveedores de sistemas de facturación electrónica
+(R.O. 335-5S, 28-jul-2026). Su **Art. 5** obliga al emisor a incluir el RUC de
+su proveedor en la información adicional del comprobante; la Transitoria
+Tercera da 60 días calendario (26-sep-2026).
+
+### Decisiones tomadas (2026-09-17)
+
+- **Lo inyecta `fe`, no el POS ni el partner.** `fe` construye y firma: si el
+  campo lo pone el servicio, todos sus integradores cumplen sin hacer nada, y
+  un cliente con POS casero no tiene que enterarse de la resolución.
+- **Formato confirmado** contra ejemplo del SRI:
+  `<campoAdicional nombre="RUC Proveedor">…</campoAdicional>`, con esa
+  capitalización exacta. **También debe salir en el RIDE**, como fila del
+  bloque de información adicional (junto a Teléfono/Email).
+- **Opcional por configuración**: sin `ruc_proveedor` resuelto no se emite el
+  nodo. Mantiene los golden byte a byte, respeta al emisor con sistema propio
+  (que no tiene proveedor que declarar) y permite desplegar antes de activar.
+- **Quién consta**: el criterio es *quién tiene el contrato de facturación
+  electrónica con el emisor*. Partner que revende bajo su marca → el del
+  partner; contribuyente directo o cliente del POS → el de `fe`
+  (0993205451001). Por eso `ruc_proveedor` es por partner, **sin valor por
+  defecto silencioso**: se decide en el alta.
+- **Dos columnas distintas en `partners`**: `ruc` (quién es el partner
+  legalmente, nullable — un partner extranjero no tiene) y `ruc_proveedor`
+  (lo que va en cada factura). Solo coinciden cuando el partner declara el
+  suyo.
+- **Validar con `Ruc::fromString()`, no con regex.** `infoAdicional` es texto
+  libre para el SRI: nadie valida ese RUC en recepción, así que un dígito mal
+  tecleado se autoriza en silencio en cada factura durante meses. El dígito
+  verificador en el alta es la única defensa.
+- **Sin autoservicio de partners.** Se mantiene la decisión de §11: un partner
+  es una relación comercial que se abre a mano (`partner:crear`, ahora
+  interactivo). La cláusula la acepta el partner desde el panel o la API;
+  aceptarla el operador por CLI no prueba nada.
+- **La puerta va en la emisión, no en el panel**: un partner puede emitir sin
+  entrar nunca a la UI.
+
+### ⏳ Pendiente: `partner:rectificar-declaracion`
+
+Comando para corregir el `ruc_proveedor` de un partner que no responde o no
+tiene acceso al panel. **No se implementa aún**: hoy hay un solo partner y es
+propio, y el backfill se hace mejor desde el panel (queda con `origen: panel`,
+que es el registro bueno).
+
+Se retoma en cuanto aparezca el primer caso real. Su razón de ser NO es el
+backfill —eso lo cubren el panel (§4) y la API (§5)— sino ser **el único
+camino fuera de la UI que sigue escribiendo la fila de declaración**: sin él,
+alguien corregirá el RUC con `tinker` escribiendo directo en la columna y
+romperá el rastro de la tabla cuya única razón de existir es el rastro.
+
+Debe registrar `origen: cli` y un `--motivo`, y avisar en pantalla de que una
+rectificación por CLI no sustituye la aceptación del partner.
