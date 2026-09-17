@@ -72,5 +72,21 @@
     </table>
 
     @yield('cuerpo')
+
+    {{-- Última sección del RIDE, igual que infoAdicional lo es del XML.
+         El "RUC Proveedor" vive aquí por la Resolución NAC-DGERCGC26-00000027. --}}
+    @if ($comprobante->infoAdicional !== [])
+        <div class="marco mt">
+            <h2>INFORMACIÓN ADICIONAL</h2>
+            <table class="tabla" style="width: 100%;">
+                @foreach ($comprobante->infoAdicional as $campo)
+                    <tr>
+                        <td class="etiqueta" style="width: 30%;">{{ $campo->nombre }}</td>
+                        <td>{{ $campo->valor }}</td>
+                    </tr>
+                @endforeach
+            </table>
+        </div>
+    @endif
 </body>
 </html>

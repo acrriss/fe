@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\GuiaRemision;
 
+use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\InfoTributariaData;
 use App\Sri\Enums\TipoComprobante;
@@ -19,6 +20,9 @@ final class GuiaRemisionData extends ComprobanteData
         public InfoGuiaRemisionData $infoGuiaRemision,
         #[DataCollectionOf(DestinatarioData::class)]
         public array $destinatarios,
+        /** @var array<int, CampoAdicionalData> */
+        #[DataCollectionOf(CampoAdicionalData::class)]
+        public array $infoAdicional = [],
     ) {}
 
     public static function tipo(): TipoComprobante
@@ -32,6 +36,8 @@ final class GuiaRemisionData extends ComprobanteData
      */
     public static function prepareForPipeline(array $properties): array
     {
+        $properties = parent::prepareForPipeline($properties);
+
         $properties['destinatarios'] = Payload::lista(data_get($properties, 'destinatarios.destinatario'));
 
         return $properties;
@@ -51,12 +57,12 @@ final class GuiaRemisionData extends ComprobanteData
      */
     public function xmlArray(): array
     {
-        return [
+        return array_merge([
             'infoTributaria' => $this->infoTributaria->xmlArray(self::tipo()),
             'infoGuiaRemision' => $this->infoGuiaRemision->xmlArray(),
             'destinatarios' => [
                 'destinatario' => array_map(fn (DestinatarioData $d): array => $d->xmlArray(), $this->destinatarios),
             ],
-        ];
+        ], $this->infoAdicionalXml());
     }
 }

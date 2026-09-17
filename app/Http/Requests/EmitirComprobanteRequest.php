@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Http\Middleware\ResolverContribuyente;
 use App\Models\Contribuyente;
+use App\Sri\Actions\AgregarRucProveedor;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\Factura\FacturaData;
 use App\Sri\Data\GuiaRemision\GuiaRemisionData;
@@ -138,7 +139,11 @@ class EmitirComprobanteRequest extends FormRequest
         $dataClass = self::DATA_POR_TIPO[$this->string('tipo')->toString()];
 
         try {
-            return $dataClass::from($this->validated('comprobante'));
+            $comprobante = $dataClass::from($this->validated('comprobante'));
+
+            AgregarRucProveedor::rechazarSiVieneEnElPayload($comprobante);
+
+            return $comprobante;
         } catch (DatoInvalido|CannotCreateData|CannotCastEnum|CannotCastDate|InvalidFormatException $excepcion) {
             throw ValidationException::withMessages([
                 'comprobante' => $excepcion->getMessage(),

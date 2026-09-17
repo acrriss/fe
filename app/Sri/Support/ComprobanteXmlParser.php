@@ -44,7 +44,33 @@ class ComprobanteXmlParser
         assert(is_array($datos));
         unset($datos['@attributes']);
 
+        // json_encode() sobre SimpleXML DESCARTA los atributos de un elemento
+        // que además tiene texto: `<campoAdicional nombre="X">v</campoAdicional>`
+        // llega como "v" a secas y el nombre se pierde. Hay que extraerlo a mano.
+        $datos['infoAdicional'] = $this->infoAdicional($documento);
+
         return $dataClass::from($datos);
+    }
+
+    /**
+     * @return array{campoAdicional: array<int, array{nombre: string, valor: string}>}|null
+     */
+    private function infoAdicional(\SimpleXMLElement $documento): ?array
+    {
+        if (! isset($documento->infoAdicional->campoAdicional)) {
+            return null;
+        }
+
+        $campos = [];
+
+        foreach ($documento->infoAdicional->campoAdicional as $campo) {
+            $campos[] = [
+                'nombre' => (string) $campo->attributes()->nombre,
+                'valor' => (string) $campo,
+            ];
+        }
+
+        return ['campoAdicional' => $campos];
     }
 
     public function tipoDe(string $xml): TipoComprobante

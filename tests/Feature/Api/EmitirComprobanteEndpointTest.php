@@ -146,3 +146,37 @@ describe('multi-tenancy (fase 6)', function () {
             ->assertStatus(409);
     });
 });
+
+/*
+ * El "RUC Proveedor" (Resolución NAC-DGERCGC26-00000027) lo pone el
+ * servicio: si el cliente pudiera enviarlo, desactivaría o falsearía la
+ * declaración con una línea de JSON, y nadie lo detectaría — para el SRI
+ * `infoAdicional` es texto libre y no valida su contenido.
+ */
+it('rechaza un comprobante que trae el RUC Proveedor en el payload', function () {
+    $payload = golden_payload('factura');
+    $payload['factura']['infoAdicional'] = ['campoAdicional' => [
+        ['nombre' => 'RUC Proveedor', 'valor' => '9999999999999'],
+    ]];
+
+    $this->postJson(route('api.v1.comprobantes.emitir'), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('comprobante');
+});
+
+it('emite el RUC Proveedor configurado junto a la información adicional del emisor', function () {
+    config()->set('sri.ruc_proveedor', '0993205451001');
+
+    $payload = golden_payload('factura');
+    $payload['factura']['infoAdicional'] = ['campoAdicional' => [
+        ['nombre' => 'Email', 'valor' => 'cliente@ejemplo.test'],
+    ]];
+
+    $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), $payload);
+
+    $respuesta->assertSuccessful();
+
+    expect(base64_decode((string) $respuesta->json('xmlFirmado')))
+        ->toContain('<campoAdicional nombre="Email">cliente@ejemplo.test</campoAdicional>')
+        ->toContain('<campoAdicional nombre="RUC Proveedor">0993205451001</campoAdicional>');
+});

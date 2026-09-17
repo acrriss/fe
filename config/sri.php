@@ -89,4 +89,13 @@ return [
         // curso" (409); pasada, se asume proceso muerto y se reprocesa
         'en_curso_segundos' => env('SRI_IDEMPOTENCIA_EN_CURSO_SEGUNDOS', 90),
     ],
+
+    /*
+     * RUC del proveedor del sistema de facturación (Resolución
+     * NAC-DGERCGC26-00000027, Art. 5). Se emite como un campoAdicional en
+     * cada comprobante. Vacío = no se emite el campo, que es lo correcto
+     * para un emisor con sistema propio.
+     */
+    'ruc_proveedor' => env('SRI_RUC_PROVEEDOR', ''),
+
 ];

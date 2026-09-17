@@ -2,6 +2,7 @@
 
 namespace App\Sri\Pipeline;
 
+use App\Sri\Actions\AgregarRucProveedor;
 use App\Sri\Actions\ConstruirXml;
 use App\Sri\Actions\EnviarRecepcion;
 use App\Sri\Actions\FirmarXml;
@@ -22,6 +23,7 @@ final class EmitirComprobante
      */
     private const array ETAPAS = [
         GenerarClaveAcceso::class,
+        AgregarRucProveedor::class,
         ConstruirXml::class,
         FirmarXml::class,
         EnviarRecepcion::class,

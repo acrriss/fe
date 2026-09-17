@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\Retencion;
 
+use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\InfoTributariaData;
 use App\Sri\Enums\TipoComprobante;
@@ -19,6 +20,9 @@ final class ComprobanteRetencionData extends ComprobanteData
         public InfoCompRetencionData $infoCompRetencion,
         #[DataCollectionOf(ImpuestoRetencionData::class)]
         public array $impuestos,
+        /** @var array<int, CampoAdicionalData> */
+        #[DataCollectionOf(CampoAdicionalData::class)]
+        public array $infoAdicional = [],
     ) {}
 
     public static function tipo(): TipoComprobante
@@ -32,6 +36,8 @@ final class ComprobanteRetencionData extends ComprobanteData
      */
     public static function prepareForPipeline(array $properties): array
     {
+        $properties = parent::prepareForPipeline($properties);
+
         $properties['impuestos'] = Payload::lista(data_get($properties, 'impuestos.impuesto'));
 
         return $properties;
@@ -47,7 +53,7 @@ final class ComprobanteRetencionData extends ComprobanteData
      */
     public function xmlArray(): array
     {
-        return [
+        return array_merge([
             'infoTributaria' => $this->infoTributaria->xmlArray(self::tipo()),
             'infoCompRetencion' => $this->infoCompRetencion->xmlArray(),
             'impuestos' => [
@@ -56,6 +62,6 @@ final class ComprobanteRetencionData extends ComprobanteData
                     $this->impuestos,
                 ),
             ],
-        ];
+        ], $this->infoAdicionalXml());
     }
 }

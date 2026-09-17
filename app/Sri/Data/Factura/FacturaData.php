@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\Factura;
 
+use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\DetalleData;
 use App\Sri\Data\InfoTributariaData;
@@ -20,6 +21,9 @@ final class FacturaData extends ComprobanteData
         public InfoFacturaData $infoFactura,
         #[DataCollectionOf(DetalleData::class)]
         public array $detalles,
+        /** @var array<int, CampoAdicionalData> */
+        #[DataCollectionOf(CampoAdicionalData::class)]
+        public array $infoAdicional = [],
     ) {}
 
     public static function tipo(): TipoComprobante
@@ -33,6 +37,8 @@ final class FacturaData extends ComprobanteData
      */
     public static function prepareForPipeline(array $properties): array
     {
+        $properties = parent::prepareForPipeline($properties);
+
         $properties['detalles'] = Payload::lista(data_get($properties, 'detalles.detalle'));
 
         return $properties;
@@ -53,7 +59,7 @@ final class FacturaData extends ComprobanteData
      */
     public function xmlArray(): array
     {
-        return [
+        return array_merge([
             'infoTributaria' => $this->infoTributaria->xmlArray(self::tipo()),
             'infoFactura' => $this->infoFactura->xmlArray(),
             'detalles' => [
@@ -62,6 +68,6 @@ final class FacturaData extends ComprobanteData
                     $this->detalles,
                 ),
             ],
-        ];
+        ], $this->infoAdicionalXml());
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\NotaDebito;
 
+use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\InfoTributariaData;
 use App\Sri\Enums\TipoComprobante;
@@ -19,6 +20,9 @@ final class NotaDebitoData extends ComprobanteData
         public InfoNotaDebitoData $infoNotaDebito,
         #[DataCollectionOf(MotivoData::class)]
         public array $motivos,
+        /** @var array<int, CampoAdicionalData> */
+        #[DataCollectionOf(CampoAdicionalData::class)]
+        public array $infoAdicional = [],
     ) {}
 
     public static function tipo(): TipoComprobante
@@ -32,6 +36,8 @@ final class NotaDebitoData extends ComprobanteData
      */
     public static function prepareForPipeline(array $properties): array
     {
+        $properties = parent::prepareForPipeline($properties);
+
         $properties['motivos'] = Payload::lista(data_get($properties, 'motivos.motivo'));
 
         return $properties;
@@ -52,12 +58,12 @@ final class NotaDebitoData extends ComprobanteData
      */
     public function xmlArray(): array
     {
-        return [
+        return array_merge([
             'infoTributaria' => $this->infoTributaria->xmlArray(self::tipo()),
             'infoNotaDebito' => $this->infoNotaDebito->xmlArray(),
             'motivos' => [
                 'motivo' => array_map(fn (MotivoData $m): array => $m->xmlArray(), $this->motivos),
             ],
-        ];
+        ], $this->infoAdicionalXml());
     }
 }
