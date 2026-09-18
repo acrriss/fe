@@ -1282,6 +1282,56 @@ Tercera da 60 días calendario (26-sep-2026).
 - **La puerta va en la emisión, no en el panel**: un partner puede emitir sin
   entrar nunca a la UI.
 
+### ✅ Fase 1 — en producción (2026-09-18)
+
+`infoAdicional` completo: `CampoAdicionalData` + soporte en la base
+`ComprobanteData` (los seis tipos lo heredan), etapa `AgregarRucProveedor`
+en el pipeline, extracción en `ComprobanteXmlParser` y bloque nuevo en
+`ride/base.blade.php`. Activado con `SRI_RUC_PROVEEDOR=0993205451001`.
+
+Verificado de punta a punta contra el ambiente de pruebas del SRI: factura
+emitida y autorizada con el campo, visible en el RIDE y en el XML
+autorizado que se entrega al comprador.
+
+- **Respuesta a la pregunta que quedaba abierta**: se emitió una segunda
+  factura con `SRI_RUC_PROVEEDOR` vacío y **el SRI la autorizó igual**. El
+  campo NO se valida en recepción; es un requisito formal que se audita
+  después. El 26-sep no era un acantilado, y el interruptor de
+  configuración es una válvula de seguridad real.
+- **Trampa encontrada**: `json_encode()` sobre SimpleXML descarta los
+  atributos de un elemento que además tiene texto, así que
+  `<campoAdicional nombre="X">v</campoAdicional>` llegaba al parser como
+  `"v"` y el nombre se perdía. Como el RIDE se genera parseando el XML
+  almacenado, habría salido con filas sin etiqueta. Se extrae a mano.
+- `phpunit.xml` fija `SRI_RUC_PROVEEDOR` vacío: el test que reproduce el
+  golden byte a byte leía la variable del entorno del desarrollador y
+  pasaba solo mientras estuviera sin definir.
+- De paso, al medir el peso de los adjuntos: `barryvdh/laravel-dompdf`
+  apaga el subsetting de fuentes que dompdf trae activado, y cada RIDE
+  incrustaba DejaVu Sans entera (863 KB → 29 KB al activarlo).
+
+### ⏳ Fases 2-5 — pendientes (≈4 días)
+
+**No las dispara una fecha, las dispara un cliente**: hoy, con el RUC
+global, todos los comprobantes cumplen. Solo hacen falta cuando entre un
+partner que declare **su propio** RUC en vez del nuestro.
+
+- **Fase 2 · Datos del partner y puerta** (1,5 d) — columnas `ruc` y
+  `ruc_proveedor` en `partners`; `partner:crear` interactivo que pregunta
+  el RUC propio antes para que la elección del declarado sea una selección
+  entre dos valores reales; validación con `Ruc::fromString()`; puerta en
+  la emisión (409 sin RUC o sin cláusula aceptada).
+- **Fase 3 · Declaración y cláusula** (1-1,5 d) — tabla
+  `partner_declaraciones` append-only con el RUC declarado, versión y hash
+  del texto aceptado, quién/IP/user-agent y `origen` (panel·api·cli);
+  cláusula versionada en el repo obligando al partner a registrarse ante
+  el SRI con su CIIU.
+- **Fase 4 · Panel del partner** (1 d) — declarar, leer y aceptar; aviso
+  persistente mientras esté pendiente; cambiar el RUC exige volver a
+  aceptar y abre fila nueva.
+- **Fase 5 · API** (0,5 d) — `GET`/`PUT /partner/v1/declaracion` con
+  `acepta: true` obligatorio, para el partner que no quiere tocar la UI.
+
 ### ⏳ Pendiente: `partner:rectificar-declaracion`
 
 Comando para corregir el `ruc_proveedor` de un partner que no responde o no
