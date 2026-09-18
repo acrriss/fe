@@ -32,5 +32,9 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- Los golden se reproducen byte a byte: el RUC del proveedor
+             añadiría infoAdicional y los rompería. Cada test que lo
+             necesite lo activa por su cuenta. -->
+        <env name="SRI_RUC_PROVEEDOR" value=""/>
     </php>
 </phpunit>

@@ -37,6 +37,20 @@ it('genera el RIDE de :dataset', function (string $tipo, string $dataClass) {
     'comprobanteRetencion' => ['comprobanteRetencion', ComprobanteRetencionData::class],
 ]);
 
+/*
+ * El RIDE viaja adjunto en cada correo al comprador, así que su peso es
+ * coste por factura emitida. Sin subsetting de fuentes se incrustaba DejaVu
+ * Sans entera y el PDF pasaba de ~29 KB a ~863 KB; el umbral generoso deja
+ * sitio al contenido pero atrapa una fuente completa.
+ */
+it('genera un RIDE liviano, sin incrustar la fuente entera', function () {
+    $registro = comprobante_autorizado_con_xml($this->contribuyente, 'factura');
+
+    $respuesta = $this->get(route('api.v1.comprobantes.ride', $registro));
+
+    expect(strlen($respuesta->getContent()))->toBeLessThan(150 * 1024);
+});
+
 it('sirve el RIDE cacheado sin regenerarlo', function () {
     $registro = comprobante_autorizado_con_xml($this->contribuyente, 'factura');
     Storage::put($ridePath = "rides/{$registro->clave_acceso}.pdf", '%PDF-cacheado');

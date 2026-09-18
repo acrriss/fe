@@ -28,14 +28,20 @@ class DompdfRideGenerator implements RideGenerator
             TipoComprobante::LiquidacionCompra => 'ride.liquidacion',
         };
 
-        return Pdf::loadView($vista, [
-            'registro' => $registro,
-            'comprobante' => $comprobante,
-            'logo' => $this->logoComoDataUri($registro),
-            'codigoBarras' => $registro->clave_acceso !== null
-                ? $this->codigoBarras->svgDataUri($registro->clave_acceso)
-                : null,
-        ])->output();
+        // dompdf trae el subsetting de fuentes activado, pero
+        // barryvdh/laravel-dompdf lo apaga en su config y manda su default:
+        // sin esto, cada RIDE incrusta DejaVu Sans ENTERA y pesa ~863 KB en
+        // vez de ~29 KB. El RIDE viaja adjunto en cada correo al comprador,
+        // así que son 30x de ancho de banda por factura emitida.
+        return Pdf::setOption('enable_font_subsetting', true)
+            ->loadView($vista, [
+                'registro' => $registro,
+                'comprobante' => $comprobante,
+                'logo' => $this->logoComoDataUri($registro),
+                'codigoBarras' => $registro->clave_acceso !== null
+                    ? $this->codigoBarras->svgDataUri($registro->clave_acceso)
+                    : null,
+            ])->output();
     }
 
     /**
