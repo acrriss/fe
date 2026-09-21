@@ -49,14 +49,20 @@ controladores.
 
 # Testing
 
-- `fixtures/golden/` es la red de seguridad del refactor: NUNCA se modifican
-  esos archivos. La construcción de XML y claves de acceso debe reproducirlos
-  byte a byte (ver ConstruirXmlTest, ComprobanteXmlParserTest).
+- El XML y la clave de acceso se prueban por invariantes de la ficha (raíz,
+  versión, orden de bloques, módulo 11) y por roundtrip parse → render sobre
+  lo que el propio sistema genera (ConstruirXmlTest, ComprobanteXmlParserTest,
+  ClaveAccesoTest); no hay snapshots byte a byte de un sistema externo.
 - Jamás golpear los servidores reales del SRI en tests: usar FakeSriGateway y
   FakeXmlSigner.
-- Helpers canónicos en tests/Pest.php: golden_path(), golden_input(),
-  golden_payload(), actuar_como_contribuyente(), p12_de_prueba(). Úsalos en
-  vez de reconstruir payloads o auth a mano.
+- Payloads de prueba en tests/Payloads.php (un builder por tipo:
+  payload_factura(), payload_nota_credito()…; `payload_emision($tipo)` para
+  POSTear, `payload_comprobante($tipo)` para el subárbol,
+  `comprobante_de_prueba()`/`xml_de_prueba()`/`clave_acceso_de_prueba()` para
+  DTO, XML y clave). Helpers de auth en tests/Pest.php:
+  actuar_como_contribuyente(), actuar_como_partner(), p12_de_prueba(). Úsalos
+  en vez de reconstruir payloads o auth a mano; un payload nuevo va en
+  Payloads.php, no inline en un test.
 - Tests que requieren binarios externos (java, openssl) deben saltarse
   limpiamente con markTestSkipped cuando el binario no existe.
 - El certificado de prueba es tests/Fixtures/certificado-prueba.p12

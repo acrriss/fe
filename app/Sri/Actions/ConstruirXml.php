@@ -10,9 +10,9 @@ use Spatie\ArrayToXml\ArrayToXml;
 /**
  * Construye el XML del comprobante (pre-firma) a partir de su DTO.
  *
- * Reproduce exactamente el formato del legado: raíz con id="comprobante" y
- * versión del esquema, declaración UTF-8 y salida indentada (verificado
- * byte a byte contra fixtures/golden).
+ * Raíz con id="comprobante" (la referencia que firma XAdES) y la versión
+ * del esquema del tipo, declaración UTF-8 y salida indentada. El SRI lo
+ * valida contra sus .xsd (ficha §5.1), no byte a byte.
  */
 final class ConstruirXml
 {

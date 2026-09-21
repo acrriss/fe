@@ -142,9 +142,13 @@ app/
 
 Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 
-- **Golden master (Fase 0):** capturar, desde los `exampleBody*.json` del legado,
+- ~~**Golden master (Fase 0):** capturar, desde los `exampleBody*.json` del legado,
   la **clave de acceso** y el **XML** que el código actual produce, como snapshots
-  de referencia. Cada paso del refactor se valida contra estos snapshots.
+  de referencia.~~ **Retirado el 2026-09-20** (ver registro más abajo): el
+  sistema superó al legado y los snapshots pasaron de red de seguridad a
+  lastre. Hoy el XML y la clave se prueban por invariantes de la ficha y por
+  roundtrip sobre lo que el propio sistema genera; los payloads viven en
+  `tests/Payloads.php`.
 - **Unit tests:** value objects (el módulo 11 tiene casos borde), enums, DTOs y
   cada Action en aislamiento.
 - **Feature tests:** el endpoint completo con `FakeSriGateway` + fake signer.
@@ -158,7 +162,7 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
 
 | Fase | Contenido | Resultado |
 |---|---|---|
-| **0. Red de seguridad** ✅ | Fixtures golden-master (XML + clave de acceso) desde los `exampleBody*.json`; documentar la estructura real de cada tipo | `fixtures/golden/` + `tools/golden/generate.php` — ver `fixtures/golden/README.md` |
+| **0. Red de seguridad** ✅ → retirada | Fixtures golden-master (XML + clave de acceso) desde los `exampleBody*.json`; documentar la estructura real de cada tipo | Cumplió su función durante las fases 1-6; retirada el 2026-09-20 (`fixtures/golden/` y `tools/golden/` eliminados) |
 | **1. Esqueleto** ✅ | Laravel 12 + PHP 8.4; Pest, Larastan, Pint, Rector; migraciones portadas | Laravel 12.62 en la raíz; `composer quality` en verde |
 | **2. Dominio** ✅ | Enums, Value Objects, DTOs con laravel-data | `app/Sri/` — clave golden reproducida desde el DTO |
 | **3. Lógica** ✅ | Actions + Pipeline + Gateway/Signer con fakes | Endpoint síncrono funcionando; XML golden byte a byte |
@@ -208,7 +212,7 @@ Refactor guiado por tests, con red de seguridad **antes** de tocar la lógica.
   2026-07-11: DTOs + `xmlArray` + plantilla RIDE + registro en Form Request
   y parser; `versionEsquema()` por tipo (05/06 en 1.0.0, 03 en 1.1.0).
   **Pendiente**: validarlos contra el SRI real (se construyeron desde la
-  ficha, sin fixtures golden ni prueba de autorización real).
+  ficha, sin prueba de autorización real).
 
 ### Backlog abierto
 
@@ -491,6 +495,45 @@ Un cliente que paga y aún no emite es `no_verificado` + `pagado_activo`: estado
   hallazgos clave: código numérico `22568496` hardcodeado, `codDoc` erróneo en
   los ejemplos (el nuevo dominio debe derivarlo del tipo), importes como string
   y fechas `dd/mm/aaaa`, y la clave `#omit-xml-declaration` que el legado ignora.
+
+### Registro del retiro de los golden (2026-09-20)
+
+Decisión: dejar de usar el legado como oráculo. Los fixtures ataban el
+sistema a un payload de 2022 (IVA 12 %, `codDoc` erróneo en NC/retención,
+bloque `info` con el .p12) y a la serialización exacta de `ArrayToXml`, y
+ya habían forzado parches: `phpunit.xml` vaciaba `SRI_RUC_PROVEEDOR` para
+no romper el byte a byte, `ConstruirXmlTest` corregía el golden con
+`str_replace`, y `comprobante_autorizado_con_xml()` tenía un caso especial
+porque las tres claves golden eran idénticas.
+
+Qué los reemplaza (cuatro commits, suite en verde en cada uno):
+
+- **`tests/Payloads.php`**: un builder por tipo (los seis) con datos
+  vigentes; `payload_emision()`, `payload_comprobante()`,
+  `comprobante_de_prueba()`, `xml_de_prueba()`, `clave_acceso_de_prueba()`.
+  Los 14 tests que usaban el golden solo como dato de muestra migraron
+  mecánicamente.
+- **Clave de acceso**: composición campo a campo según la Tabla 1 de la
+  ficha y el ejemplo oficial de módulo 11 (§5.2: `41261533` → 6), más los
+  casos borde 11 → 0 y 10 → 1 contrastados con una implementación
+  independiente en el test.
+- **XML**: invariantes estructurales sobre los seis tipos (raíz, `id`,
+  `version`, orden `infoTributaria → info<Tipo> → cuerpo`, `codDoc`
+  derivado y coherente con la clave, importes literales, wrappers con 1 y N
+  elementos). El SRI valida contra .xsd (§5.1), no bytes.
+- **Parser y pipeline**: roundtrip `render(parse(render(dto))) ===
+  render(dto)` para los seis tipos; el pipeline se contrasta con lo que el
+  VO y `ConstruirXml` producen por separado.
+- `GoldenFixturesTest` eliminado; `fixtures/golden/` y `tools/golden/`
+  borrados del árbol (quedan en el historial).
+
+Lo que se pierde, asumido: la evidencia byte a byte contra lo que el SRI
+autorizó al legado. Ya hay comprobantes reales autorizados por el sistema
+nuevo (§12, §13). Si algún día hace falta un oráculo externo, el correcto
+son los .xsd de la ficha validando el XML generado, no un snapshot.
+
+`legacy/` (16 MB) queda sin puente con el código; decisión pendiente sobre
+si sale de `main` a un tag de referencia.
 
 ---
 

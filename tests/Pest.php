@@ -36,35 +36,6 @@ pest()->extend(TestCase::class)
 |--------------------------------------------------------------------------
 */
 
-function golden_path(string $path = ''): string
-{
-    return dirname(__DIR__).'/fixtures/golden'.($path !== '' ? '/'.ltrim($path, '/') : '');
-}
-
-/**
- * Subárbol del comprobante dentro del input.json golden del tipo dado.
- */
-function golden_input(string $tipo): array
-{
-    $payload = json_decode(file_get_contents(golden_path("$tipo/input.json")), true);
-
-    return $payload[$tipo];
-}
-
-/**
- * Payload golden completo listo para POSTear. El bloque `info` del payload
- * legado se conserva (la API lo ignora: el certificado vive en el
- * contribuyente autenticado).
- */
-function golden_payload(string $tipo): array
-{
-    $payload = json_decode(file_get_contents(golden_path("$tipo/input.json")), true);
-    $payload['info']['p12'] = base64_encode('certificado-dummy');
-    $payload['info']['clavep12'] = 'secreto';
-
-    return $payload;
-}
-
 /**
  * Contenido binario del certificado .p12 de prueba (clave: clave-prueba).
  */

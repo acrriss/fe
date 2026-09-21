@@ -17,8 +17,8 @@ use DateTimeInterface;
  *   + ptoEmi (3) + secuencial (9) + código numérico (8) + tipoEmision (1)
  *   + dígito verificador módulo 11 (1)
  *
- * El algoritmo está verificado contra los fixtures golden-master del legado
- * (fixtures/golden) y contra la ficha técnica del SRI.
+ * El módulo 11 está verificado contra el ejemplo de la ficha técnica
+ * (§5.2) y sus casos borde (11 → 0, 10 → 1).
  */
 final readonly class ClaveAcceso implements ValueObject
 {

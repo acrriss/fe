@@ -190,7 +190,7 @@ paths:
                   obligadoContabilidad: 'SI'
                   tipoIdentificacionComprador: '05'
                   razonSocialComprador: Juan Pérez
-                  identificacionComprador: '0912345678'
+                  identificacionComprador: '0912345675'
                   totalSinImpuestos: '100.00'
                   totalDescuento: '0.00'
                   totalConImpuestos:

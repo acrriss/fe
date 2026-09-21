@@ -14,7 +14,8 @@ use App\Sri\Enums\TipoComprobante;
 /**
  * Reconstruye el DTO tipado desde el XML de un comprobante (p. ej. el XML
  * firmado que quedó almacenado tras la emisión). Es la operación inversa a
- * ConstruirXml y está verificada por roundtrip contra los fixtures golden.
+ * ConstruirXml y está verificada por roundtrip (parse → render reproduce
+ * byte a byte el XML generado) para todos los tipos.
  */
 class ComprobanteXmlParser
 {

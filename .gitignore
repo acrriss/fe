@@ -38,4 +38,3 @@ legacy/error_log
 legacy/public/error_log
 
 # vendor del generador de fixtures
-tools/golden/vendor/

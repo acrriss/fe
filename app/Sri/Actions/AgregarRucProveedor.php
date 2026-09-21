@@ -14,8 +14,8 @@ use Closure;
  *
  * El nombre del campo es literal y lo fija la Ficha Técnica: cualquier
  * variación deja de cumplir. Va como etapa del pipeline y no dentro del
- * DTO para que el comprobante siga siendo lo que el cliente envió: quien
- * construye el XML a mano (los golden) no ve este campo.
+ * DTO para que el comprobante siga siendo lo que el cliente envió: el
+ * campo lo aporta el servicio en la emisión, no el payload.
  */
 final class AgregarRucProveedor
 {
