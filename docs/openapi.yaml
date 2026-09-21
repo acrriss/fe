@@ -851,6 +851,27 @@ components:
         —panel o `PATCH /partner/v1/contribuyentes/{id}`— y `fe` los
         inyecta en cada comprobante y en el RIDE. No se envían en el
         payload: si vienen, la emisión responde 422.
+
+        **Segundo código del ítem (ficha técnica 2.34, Anexos 23 y 25 §1).**
+        Cada `detalle` admite un segundo código de hasta 25 caracteres
+        alfanuméricos: `codigoAuxiliar` en factura y liquidación de compra,
+        `codigoAdicional` en nota de crédito (el nombre lo fija el formato
+        XML de cada tipo). Ahí van, de forma exacta, los códigos que el SRI
+        exige por actividad regulada; `fe` no valida su contenido:
+
+        - *Materiales de construcción* (Anexo 23, Tabla 31; Resolución
+          NAC-DGERCGC24-00000013): `F010101` varilla laminada corrugada AS42
+          de 8, 10 y 12 mm · `F010201` arcilla · `F010202` arena · `F010203`
+          cal · `F010204` caliza · `F010205` pétreos · `F010301` hormigón
+          premezclado · `F010401` cemento y sus derivados · `F010402` residuo
+          cemento · `F010501` chatarra ferrosa · `F010601` morteros ·
+          `F010701` clinker · `F010702` puzolana · `F010703` yeso · `F010801`
+          adoquín · `F010802` bloques · `F010803` ladrillos · `F010804`
+          productos de hormigón prefabricado.
+        - *Transporte comercial, excepto taxis* (Anexo 25 §1, Tabla 32;
+          obligatorio desde el 01-11-2025): `H492001` factura de la
+          operadora a su cliente · `H492002` factura del socio o accionista
+          a la operadora.
       required: [infoTributaria]
       properties:
         infoTributaria:

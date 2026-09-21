@@ -25,6 +25,7 @@ use App\Sri\Data\Liquidacion\LiquidacionCompraData;
 use App\Sri\Data\NotaCredito\NotaCreditoData;
 use App\Sri\Data\NotaDebito\NotaDebitoData;
 use App\Sri\Data\Retencion\ComprobanteRetencionData;
+use App\Sri\Support\Payload;
 use App\Sri\ValueObjects\ClaveAcceso;
 use App\Sri\ValueObjects\CodigoNumerico;
 
@@ -61,9 +62,10 @@ function info_tributaria(string $secuencial): array
 }
 
 /**
+ * @param  string|null  $codigoAuxiliar  segundo código del único detalle (Anexos 23 y 25)
  * @return array<string, mixed>
  */
-function payload_factura(): array
+function payload_factura(?string $codigoAuxiliar = null): array
 {
     return [
         'infoTributaria' => info_tributaria('000000001'),
@@ -84,8 +86,9 @@ function payload_factura(): array
             'moneda' => 'DOLAR',
         ],
         'detalles' => ['detalle' => [
-            [
+            Payload::sinNulos([
                 'codigoPrincipal' => 'SERV-01',
+                'codigoAuxiliar' => $codigoAuxiliar,
                 'descripcion' => 'Servicio de consultoría',
                 'cantidad' => '1.00',
                 'precioUnitario' => '100.00',
@@ -96,7 +99,7 @@ function payload_factura(): array
                 'impuestos' => ['impuesto' => [
                     'codigo' => '2', 'codigoPorcentaje' => '4', 'tarifa' => '15.00', 'baseImponible' => '100.00', 'valor' => '15.00',
                 ]],
-            ],
+            ]),
         ]],
     ];
 }
@@ -104,9 +107,10 @@ function payload_factura(): array
 /**
  * Nota de crédito con dos detalles (uno gravado al 15 % y otro al 0 %).
  *
+ * @param  string|null  $codigoAdicional  segundo código del primer detalle (el «codigoAuxiliar» de la NC)
  * @return array<string, mixed>
  */
-function payload_nota_credito(): array
+function payload_nota_credito(?string $codigoAdicional = null): array
 {
     return [
         'infoTributaria' => info_tributaria('000000002'),
@@ -130,8 +134,9 @@ function payload_nota_credito(): array
             'motivo' => 'Devolución de productos o servicios',
         ],
         'detalles' => ['detalle' => [
-            [
+            Payload::sinNulos([
                 'codigoInterno' => 'PV-0001',
+                'codigoAdicional' => $codigoAdicional,
                 'descripcion' => 'Servicio devuelto',
                 'cantidad' => '1.00',
                 'precioUnitario' => '50.00',
@@ -140,7 +145,7 @@ function payload_nota_credito(): array
                 'impuestos' => ['impuesto' => [
                     'codigo' => '2', 'codigoPorcentaje' => '4', 'tarifa' => '15.00', 'baseImponible' => '50.00', 'valor' => '7.50',
                 ]],
-            ],
+            ]),
             [
                 'codigoInterno' => 'PV-0002',
                 'descripcion' => 'Producto exento devuelto',
@@ -243,9 +248,10 @@ function payload_guia_remision(): array
 }
 
 /**
+ * @param  string|null  $codigoAuxiliar  segundo código del único detalle (Anexo 23)
  * @return array<string, mixed>
  */
-function payload_liquidacion(): array
+function payload_liquidacion(?string $codigoAuxiliar = null): array
 {
     return [
         'infoTributaria' => info_tributaria('000000012'),
@@ -263,8 +269,9 @@ function payload_liquidacion(): array
             'moneda' => 'DOLAR',
             'pagos' => ['pago' => ['formaPago' => '01', 'total' => '57.50']],
         ],
-        'detalles' => ['detalle' => [
+        'detalles' => ['detalle' => Payload::sinNulos([
             'codigoPrincipal' => 'SERV-01',
+            'codigoAuxiliar' => $codigoAuxiliar,
             'descripcion' => 'Servicio prestado',
             'cantidad' => '1.00',
             'precioUnitario' => '50.00',
@@ -273,7 +280,7 @@ function payload_liquidacion(): array
             'impuestos' => ['impuesto' => [
                 'codigo' => '2', 'codigoPorcentaje' => '4', 'tarifa' => '15.00', 'baseImponible' => '50.00', 'valor' => '7.50',
             ]],
-        ]],
+        ])],
     ];
 }
 

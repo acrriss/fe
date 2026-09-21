@@ -211,3 +211,15 @@ it('imprime las leyendas configuradas en el contribuyente en el XML emitido', fu
         ->toContain('<contribuyenteRimpe>CONTRIBUYENTE RÉGIMEN RIMPE</contribuyenteRimpe>')
         ->toContain('<contribuyenteEspecial>5368</contribuyenteEspecial>');
 });
+
+/*
+ * Ficha 2.34, Anexo 23 / Anexo 25 §1: el código de actividad regulada del
+ * ítem (Tablas 31 y 32) viaja en el payload y sale tal cual en el XML.
+ */
+it('emite el codigoAuxiliar de cada ítem tal como llega en el payload', function () {
+    $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), ['factura' => payload_factura(codigoAuxiliar: 'F010101')])
+        ->assertSuccessful();
+
+    expect(base64_decode($respuesta->json('xmlFirmado')))
+        ->toContain('<codigoAuxiliar>F010101</codigoAuxiliar>');
+});

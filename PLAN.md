@@ -1408,9 +1408,9 @@ payload.** El cliente nunca duplica leyendas del emisor en el JSON (422).
 |---|---|---|---|
 | 21 | `<agenteRetencion>` nº resolución (≤8 dígitos, sin ceros a la izq.) + "Contribuyente Especial" en RIDE | `infoTributaria` tras `dirMatriz`; `contribuyenteEspecial` en el bloque info* | ✅ 2026-09-20 |
 | 22 | `<contribuyenteRimpe>` leyenda literal RIMPE / Negocio Popular | `infoTributaria` tras `agenteRetencion` | ✅ 2026-09-20 |
-| 23 | `<codigoAuxiliar>` Tabla 31 (materiales de construcción) | `detalle` tras `codigoPrincipal` | ⏳ (cierra también 25 §1) |
+| 23 | `<codigoAuxiliar>` Tabla 31 (materiales de construcción) | `detalle` tras `codigoPrincipal` | ✅ 2026-09-20 (cierra también 25 §1) |
 | 24 | `campoAdicional nombre="Gran Contribuyente"` | `infoAdicional` (factura, NC, ND) | ⏳ |
-| 25 | §1 `codigoAuxiliar` H492001/H492002 · §2 `<placa>` Tabla 33 | `detalle` · `infoFactura` tras `moneda` | ⏳ |
+| 25 | §1 `codigoAuxiliar` H492001/H492002 · §2 `<placa>` Tabla 33 | `detalle` · `infoFactura` tras `moneda` | §1 ✅ 2026-09-20 · §2 ⏳ |
 | 26 | `campoAdicional nombre="RUC Proveedor"` | `infoAdicional` | ✅ §13 |
 | — | Guardia: 422 ante claves desconocidas en `infoTributaria`/`infoFactura`/`detalle` | Form Request | ⏳ |
 
@@ -1557,3 +1557,63 @@ arquitectura:
   de los datos del emisor, en mayúsculas y sin abreviar —el texto es
   requisito, no decoración—; leerla de `fe_ajustes` con el mismo mapa
   clave → leyenda que usa `fe`.
+
+### ✅ Registro §14 — Anexo 23: código auxiliar (materiales de construcción) (2026-09-20)
+
+Primer anexo de la otra familia: **dato de la transacción**, lo manda el
+cliente en el payload y `fe` lo emite tal cual. Cierra de paso el
+Anexo 25 §1 (transporte comercial), que usa el mismo campo con otros
+códigos.
+
+- `DetalleData` gana el segundo par de códigos: `codigoAuxiliar`
+  (factura, liquidación) y `codigoAdicional` (nota de crédito), emitidos
+  justo tras `codigoPrincipal`/`codigoInterno`, antes de `descripcion`.
+  Cada tipo emite solo su par; sin valor no hay tag.
+- **Hallazgo**: el Anexo 23 dice "comprobantes de venta y documentos
+  complementarios … en el campo `<codigoAuxiliar>`", pero el formato
+  XML de la nota de crédito no tiene ese tag: su segundo código se
+  llama `<codigoAdicional>`. Se documenta el mapeo en OpenAPI.
+- El contenido **no se valida** en `fe`: la ficha da la tabla de
+  códigos, pero el campo es alfanumérico libre de 25 en el XSD y el SRI
+  lo audita después. Validarlo aquí obligaría a redesplegar `fe` cada
+  vez que el SRI amplíe la tabla.
+- Builders de prueba: `payload_factura(codigoAuxiliar:)`,
+  `payload_nota_credito(codigoAdicional:)`,
+  `payload_liquidacion(codigoAuxiliar:)`. Tests: `CodigoAuxiliarTest`
+  (posición del tag por tipo, ausencia sin valor, roundtrip) y endpoint.
+- OpenAPI: Tablas 31 y 32 transcritas como referencia en la descripción
+  del payload.
+
+#### Recomendaciones para `../pos` — Anexo 23 (y 25 §1)
+
+**Consumo de API**
+
+- `ComprobanteMapper::detalle()` añade al payload del ítem
+  `codigoAuxiliar` (factura) o `codigoAdicional` (nota de crédito, vía
+  `NotaCreditoMapper`) **solo cuando el producto tiene código**; nunca
+  cadena vacía. El nombre del campo sigue al de `$campoCodigo`:
+  `codigoPrincipal` → `codigoAuxiliar`, `codigoInterno` → `codigoAdicional`.
+- Enviar el código tal cual, en mayúsculas y sin espacios (`F010101`,
+  `H492001`); `fe` no lo normaliza ni lo valida.
+- Tests del mapper con `Http::fake`: producto con código → el detalle
+  lleva el campo con el nombre correcto según el tipo; producto sin
+  código → el detalle no lleva la clave.
+
+**UI**
+
+- Columna `fe_codigo_auxiliar` (string 25, nullable) en `products`, en
+  vez de reutilizar `product_custom_field1..4` (ya los usan los negocios
+  para otras cosas y no tienen semántica).
+- En `product/create.blade.php` y `edit.blade.php`, dentro del bloque
+  de datos fiscales, un select "Código SRI de actividad regulada"
+  agrupado por `<optgroup>`: "Materiales de construcción (Tabla 31)" con
+  los 18 códigos F01xxxx y su descripción; "Transporte comercial
+  (Tabla 32)" con H492001 / H492002; y una opción "Otro…" que descubre un
+  input libre de hasta 25 caracteres. Vacío = no aplica.
+- Para ferreterías con catálogos grandes, asignación **por categoría**
+  con herencia al producto (`categories.fe_codigo_auxiliar`, el producto
+  hereda si el suyo está vacío) y la posibilidad de sobreescribir por
+  producto.
+- Importador de productos: columna opcional `fe_codigo_auxiliar`.
+- En el listado de productos, filtro "con código SRI" para revisar
+  qué parte del catálogo está clasificada.
