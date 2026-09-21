@@ -2,18 +2,18 @@
 
 namespace App\Sri\Data\Retencion;
 
+use App\Sri\Data\BloqueInfoData;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
 use App\Sri\Support\ValidadorIdentificacion;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
-use Spatie\LaravelData\Data;
 
 /**
  * Bloque <infoCompRetencion>.
  */
-final class InfoCompRetencionData extends Data
+final class InfoCompRetencionData extends BloqueInfoData
 {
     public function __construct(
         #[WithCast(DateTimeInterfaceCast::class, format: 'd/m/Y')]
@@ -49,6 +49,7 @@ final class InfoCompRetencionData extends Data
         return Payload::sinNulos([
             'fechaEmision' => $this->fechaEmision->format('d/m/Y'),
             'dirEstablecimiento' => $this->dirEstablecimiento,
+            'contribuyenteEspecial' => $this->contribuyenteEspecial,
             'obligadoContabilidad' => $this->obligadoContabilidad,
             'tipoIdentificacionSujetoRetenido' => $this->tipoIdentificacionSujetoRetenido->value,
             'razonSocialSujetoRetenido' => $this->razonSocialSujetoRetenido,

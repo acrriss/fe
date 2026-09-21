@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\GuiaRemision;
 
+use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\InfoTributariaData;
@@ -50,6 +51,11 @@ final class GuiaRemisionData extends ComprobanteData
     public function fechaEmision(): CarbonImmutable
     {
         return $this->infoGuiaRemision->fechaIniTransporte;
+    }
+
+    public function bloqueInfo(): BloqueInfoData
+    {
+        return $this->infoGuiaRemision;
     }
 
     /**

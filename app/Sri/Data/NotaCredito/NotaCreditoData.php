@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\NotaCredito;
 
+use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\DetalleData;
@@ -47,6 +48,11 @@ final class NotaCreditoData extends ComprobanteData
     public function fechaEmision(): CarbonImmutable
     {
         return $this->infoNotaCredito->fechaEmision;
+    }
+
+    public function bloqueInfo(): BloqueInfoData
+    {
+        return $this->infoNotaCredito;
     }
 
     public function importeTotal(): string

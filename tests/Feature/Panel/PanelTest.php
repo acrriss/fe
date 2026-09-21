@@ -137,6 +137,37 @@ describe('configuración', function () {
         expect($contribuyente->refresh()->razon_social)->toBe('Razón Nueva S.A.');
     });
 
+    // ficha 2.34, Anexo 21: designaciones que salen como leyenda en cada comprobante
+    it('guarda las designaciones del SRI y las muestra en el formulario', function () {
+        $contribuyente = entrar_al_panel();
+
+        $this->put(route('panel.configuracion.update'), [
+            'razon_social' => 'Razón Nueva S.A.',
+            'agente_retencion_resolucion' => '0006498',
+            'contribuyente_especial_resolucion' => '5368',
+        ])->assertRedirect(route('panel.configuracion'));
+
+        expect($contribuyente->refresh()->agente_retencion_resolucion)->toBe('6498')
+            ->and($contribuyente->contribuyente_especial_resolucion)->toBe('5368');
+
+        $this->get(route('panel.configuracion'))->assertInertia(
+            fn (Assert $page) => $page
+                ->where('contribuyente.agente_retencion_resolucion', '6498')
+                ->where('contribuyente.contribuyente_especial_resolucion', '5368'),
+        );
+    });
+
+    it('rechaza una resolución de agente de retención con formato inválido', function () {
+        entrar_al_panel();
+
+        $this->from(route('panel.configuracion'))
+            ->put(route('panel.configuracion.update'), [
+                'razon_social' => 'Razón Nueva S.A.',
+                'agente_retencion_resolucion' => 'NAC-6498',
+            ])->assertRedirect(route('panel.configuracion'))
+            ->assertSessionHasErrors('agente_retencion_resolucion');
+    });
+
     it('sube el certificado .p12 desde el panel y muestra sus metadatos', function () {
         $contribuyente = entrar_al_panel(); // factory ya trae certificado; lo reemplazamos
         $archivo = UploadedFile::fake()->createWithContent('firma.p12', p12_de_prueba());

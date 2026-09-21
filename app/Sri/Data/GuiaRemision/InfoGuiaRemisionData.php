@@ -2,18 +2,18 @@
 
 namespace App\Sri\Data\GuiaRemision;
 
+use App\Sri\Data\BloqueInfoData;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
 use App\Sri\Support\ValidadorIdentificacion;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
-use Spatie\LaravelData\Data;
 
 /**
  * Bloque <infoGuiaRemision>: datos del transporte de la mercadería.
  */
-final class InfoGuiaRemisionData extends Data
+final class InfoGuiaRemisionData extends BloqueInfoData
 {
     public function __construct(
         public string $dirPartida,
@@ -60,6 +60,7 @@ final class InfoGuiaRemisionData extends Data
             'tipoIdentificacionTransportista' => $this->tipoIdentificacionTransportista->value,
             'rucTransportista' => $this->rucTransportista,
             'obligadoContabilidad' => $this->obligadoContabilidad,
+            'contribuyenteEspecial' => $this->contribuyenteEspecial,
             'fechaIniTransporte' => $this->fechaIniTransporte->format('d/m/Y'),
             'fechaFinTransporte' => $this->fechaFinTransporte->format('d/m/Y'),
             'placa' => $this->placa,

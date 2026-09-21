@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Panel;
 
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolverContribuyente;
+use App\Http\Requests\ActualizarConfiguracionRequest;
 use App\Models\Contribuyente;
 use App\Sri\Exceptions\CertificadoInvalido;
 use App\Sri\Exceptions\DatoInvalido;
@@ -30,6 +31,8 @@ class ConfiguracionController extends Controller
                 'razon_social' => $contribuyente->razon_social,
                 'nombre_comercial' => $contribuyente->nombre_comercial,
                 'dir_matriz' => $contribuyente->dir_matriz,
+                'agente_retencion_resolucion' => $contribuyente->agente_retencion_resolucion,
+                'contribuyente_especial_resolucion' => $contribuyente->contribuyente_especial_resolucion,
                 'tiene_certificado' => $contribuyente->tieneCertificado(),
                 'tiene_logo' => $contribuyente->logo_path !== null,
                 'plan' => $contribuyente->plan?->nombre,
@@ -59,19 +62,9 @@ class ConfiguracionController extends Controller
         ]);
     }
 
-    public function update(Request $request): RedirectResponse
+    public function update(ActualizarConfiguracionRequest $request): RedirectResponse
     {
-        $request->validate([
-            'razon_social' => ['required', 'string', 'max:300'],
-            'nombre_comercial' => ['nullable', 'string', 'max:300'],
-            'dir_matriz' => ['nullable', 'string', 'max:300'],
-        ]);
-
-        $this->contribuyente($request)->update([
-            'razon_social' => $request->string('razon_social')->toString(),
-            'nombre_comercial' => $request->string('nombre_comercial')->toString() ?: null,
-            'dir_matriz' => $request->string('dir_matriz')->toString() ?: null,
-        ]);
+        $this->contribuyente($request)->update($request->datosContribuyente());
 
         return redirect()->route('panel.configuracion')->with('exito', 'Datos actualizados.');
     }

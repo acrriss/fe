@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\NotaCredito;
 
+use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Enums\TipoIdentificacion;
@@ -11,13 +12,12 @@ use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
-use Spatie\LaravelData\Data;
 
 /**
  * Bloque <infoNotaCredito>. Referencia al documento que modifica
  * (codDocModificado + numDocModificado + fechaEmisionDocSustento).
  */
-final class InfoNotaCreditoData extends Data
+final class InfoNotaCreditoData extends BloqueInfoData
 {
     /**
      * @param  array<int, TotalImpuestoData>  $totalConImpuestos
@@ -72,6 +72,7 @@ final class InfoNotaCreditoData extends Data
             'tipoIdentificacionComprador' => $this->tipoIdentificacionComprador->value,
             'razonSocialComprador' => $this->razonSocialComprador,
             'identificacionComprador' => $this->identificacionComprador,
+            'contribuyenteEspecial' => $this->contribuyenteEspecial,
             'obligadoContabilidad' => $this->obligadoContabilidad,
             'codDocModificado' => $this->codDocModificado->value,
             'numDocModificado' => $this->numDocModificado,

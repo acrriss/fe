@@ -36,6 +36,12 @@ final class InfoTributariaData extends Data
         public ?string $nombreComercial = null,
         #[WithCast(ValueObjectCast::class, ClaveAcceso::class)]
         public ?ClaveAcceso $claveAcceso = null,
+        /**
+         * Nº de resolución de agente de retención (Anexo 21). Lo inyecta
+         * el pipeline desde la configuración del emisor; en el payload se
+         * rechaza.
+         */
+        public ?string $agenteRetencion = null,
     ) {}
 
     /**
@@ -48,7 +54,8 @@ final class InfoTributariaData extends Data
 
     /**
      * Bloque <infoTributaria> en el orden de la ficha del SRI. El codDoc
-     * viene del tipo del comprobante y la claveAcceso debe existir ya.
+     * viene del tipo del comprobante y la claveAcceso debe existir ya. Las
+     * leyendas del emisor cierran el bloque (Anexo 21: tras dirMatriz).
      *
      * @return array<string, string>
      */
@@ -70,6 +77,7 @@ final class InfoTributariaData extends Data
             'ptoEmi' => $this->ptoEmi,
             'secuencial' => (string) $this->secuencial,
             'dirMatriz' => $this->dirMatriz,
+            'agenteRetencion' => $this->agenteRetencion,
         ]);
     }
 }

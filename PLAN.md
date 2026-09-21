@@ -1392,3 +1392,117 @@ romperá el rastro de la tabla cuya única razón de existir es el rastro.
 
 Debe registrar `origen: cli` y un `--motivo`, y avisar en pantalla de que una
 rectificación por CLI no sustituye la aceptación del partner.
+
+## 14. Anexos 21–26 de la ficha técnica 2.34 (leyendas y campos obligatorios)
+
+La ficha 2.34 (jul-2026) trae dos anexos nuevos (25 §2 placa, 26 RUC
+proveedor); los anexos 21–24 existían desde 2020–2024 pero `fe` no cubría
+ninguno, y **la API descartaba en silencio** cualquiera de esos campos si un
+cliente los enviaba (laravel-data ignora claves desconocidas).
+
+Regla que ordena todo el bloque: **lo que es del emisor lo configura una vez
+y lo inyecta `fe`; lo que es de la transacción lo manda el cliente en el
+payload.** El cliente nunca duplica leyendas del emisor en el JSON (422).
+
+| Anexo | Requisito | Dónde va | Estado |
+|---|---|---|---|
+| 21 | `<agenteRetencion>` nº resolución (≤8 dígitos, sin ceros a la izq.) + "Contribuyente Especial" en RIDE | `infoTributaria` tras `dirMatriz`; `contribuyenteEspecial` en el bloque info* | ✅ 2026-09-20 |
+| 22 | `<contribuyenteRimpe>` leyenda literal RIMPE / Negocio Popular | `infoTributaria` tras `agenteRetencion` | ⏳ |
+| 23 | `<codigoAuxiliar>` Tabla 31 (materiales de construcción) | `detalle` tras `codigoPrincipal` | ⏳ (cierra también 25 §1) |
+| 24 | `campoAdicional nombre="Gran Contribuyente"` | `infoAdicional` (factura, NC, ND) | ⏳ |
+| 25 | §1 `codigoAuxiliar` H492001/H492002 · §2 `<placa>` Tabla 33 | `detalle` · `infoFactura` tras `moneda` | ⏳ |
+| 26 | `campoAdicional nombre="RUC Proveedor"` | `infoAdicional` | ✅ §13 |
+| — | Guardia: 422 ante claves desconocidas en `infoTributaria`/`infoFactura`/`detalle` | Form Request | ⏳ |
+
+Cada anexo cierra con: código + tests en `fe`, `docs/openapi.yaml`, y un
+bloque "Recomendaciones para `../pos`" (Consumo de API · UI) escrito con el
+contrato ya definitivo, para que la sesión que trabaje en el POS lo ejecute
+sin releer la ficha.
+
+### ✅ Registro §14 — Anexo 21: Agente de retención (+ contribuyente especial) (2026-09-20)
+
+Infraestructura compartida por los anexos 21, 22 y 24, ya montada:
+
+- **`LeyendasEmisor`** (value object): normaliza y valida las designaciones
+  (`agenteRetencion` numérico ≤8 dígitos, ceros a la izquierda fuera;
+  `contribuyenteEspecial` alfanumérico 3–13). Cadena vacía = no designado.
+- **`contribuyentes`**: columnas `agente_retencion_resolucion` y
+  `contribuyente_especial_resolucion`; `Contribuyente::leyendasEmisor()`.
+- **`EmisionEnCurso`** lleva `leyendas` (por defecto ninguna, así los tests
+  de pipeline existentes no cambian); ambos flujos (síncrono y job) las
+  pasan desde el contribuyente.
+- **Etapa `AgregarLeyendasEmisor`** en el pipeline, antes de
+  `AgregarRucProveedor`, con `rechazarSiVieneEnElPayload()` enganchada en
+  `EmitirComprobanteRequest`: mismo criterio que el RUC del proveedor.
+- **DTOs**: `InfoTributariaData::agenteRetencion` (último tag, tras
+  `dirMatriz`). `contribuyenteEspecial` vive en la nueva base abstracta
+  `BloqueInfoData` de los seis bloques info*, y cada uno lo emite donde lo
+  pone su formato: justo antes de `obligadoContabilidad` en cinco tipos y
+  justo después en la guía de remisión. `ComprobanteData::bloqueInfo()`
+  da acceso genérico (lo usa la etapa y el RIDE).
+- **RIDE** (`base.blade.php`, caja del emisor): "Contribuyente Especial
+  Nro." y "Agente de Retención Resolución No.", como el ejemplo 2 del anexo.
+- **Entrada**: Form Requests nuevos (`ActualizarConfiguracionRequest`,
+  `AprovisionarContribuyenteRequest`, `ActualizarContribuyenteRequest`)
+  con el trait `ValidaLeyendasEmisor`; de paso los tres controladores
+  dejan la validación inline. Panel: bloque "Designaciones del SRI" en
+  `Configuracion.vue`. Resource de partner expone
+  `agenteRetencionResolucion` / `contribuyenteEspecialResolucion`.
+- **Tests**: `LeyendasEmisorTest` (orden de tags en los seis tipos,
+  XML idéntico sin designaciones, rechazo en payload, roundtrip parser,
+  RIDE, normalización); endpoint (leyendas en el XML emitido + 422 si
+  vienen en el payload); partner (configurar, borrar con null, formatos
+  inválidos, aprovisionar); panel (guardar, mostrar, rechazar).
+- **Hallazgo**: el Anexo 21 sigue diciendo "entre `<regimenMicroempresas>`
+  y `</infoTributaria>`"; esa etiqueta se derogó con el RIMPE (v2.21). El
+  orden real es `dirMatriz → agenteRetencion → contribuyenteRimpe`
+  (Anexo 22 lo confirma: "entre `<agenteRetencion>` y `</infoTributaria>`").
+- Pendiente operativo: `php artisan migrate` en cada entorno.
+
+#### Recomendaciones para `../pos` — Anexo 21
+
+**Consumo de API**
+
+- No tocar `FacturaMapper` ni `NotaCreditoMapper`: la leyenda la inyecta
+  `fe`. Si el POS manda `infoTributaria.agenteRetencion` o
+  `infoFactura.contribuyenteEspecial`, recibe **422** con
+  `errors.comprobante` = "El campo «agenteRetencion» lo fija la
+  configuración del contribuyente…".
+- Añadir a `FacturacionClient` un `actualizarContribuyente(uuid, datos)`
+  → `PATCH /api/partner/v1/contribuyentes/{uuid}` con
+  `agente_retencion_resolucion` y `contribuyente_especial_resolucion`
+  (string o `null`; `null` borra). El aprovisionamiento (`POST
+  …/contribuyentes`) acepta los mismos campos. La respuesta los devuelve
+  como `data.agenteRetencionResolucion` / `data.contribuyenteEspecialResolucion`,
+  ya normalizados (sin ceros a la izquierda).
+- Reenviarlos en cada guardado de `fe_ajustes` (idempotente); los ceros
+  a la izquierda los quita `fe`, el POS no necesita normalizar.
+- Errores 422 posibles sobre esos campos: `agente_retencion_resolucion`
+  (letras, >8 dígitos, solo ceros) y `contribuyente_especial_resolucion`
+  (<3 o >13 caracteres, símbolos). Mostrarlos junto al campo.
+- Test con `Http::fake`: (a) el payload de emisión **no** contiene
+  `agenteRetencion` ni `contribuyenteEspecial`; (b) guardar ajustes con
+  designaciones dispara el PATCH con las claves snake_case.
+
+**UI**
+
+- `fe_ajustes`: columnas `agente_retencion_resolucion` (string 8,
+  nullable) y `contribuyente_especial_resolucion` (string 13, nullable);
+  `FeGuardarAjustesRequest`: `['nullable','string','max:8']` /
+  `['nullable','string','max:13']` (el formato fino lo valida `fe`).
+- `facturacion_electronica/ajustes.blade.php`: nueva sección
+  **"Designaciones del SRI"** con un input opcional por designación
+  —"Agente de retención · resolución No." y "Contribuyente especial ·
+  resolución No."; son designaciones independientes, cada una con su
+  propio número de resolución, y el negocio puede tener una, ambas o
+  ninguna— y texto de ayuda:
+  "Solo si el SRI le ha designado. El número de resolución se imprime
+  como leyenda en cada comprobante; déjelo vacío si no aplica."
+  Placeholders `6498` / `5368`; `inputmode="numeric"` en el primero.
+- Bajo la sección, un resumen de solo lectura "Leyendas que saldrán en
+  sus comprobantes" leído de la respuesta del PATCH/GET de `fe`, para que
+  el negocio vea lo que va a imprimir el SRI antes de emitir.
+- Si el POS imprime tickets propios además del RIDE, añadir en la
+  plantilla de impresión "Agente de Retención Resolución No. X" y
+  "Contribuyente Especial Nro. X" leyendo de `fe_ajustes` (la norma habla
+  del comprobante, no solo del XML).

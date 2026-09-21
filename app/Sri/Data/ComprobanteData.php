@@ -22,6 +22,13 @@ abstract class ComprobanteData extends Data
     abstract public function fechaEmision(): CarbonImmutable;
 
     /**
+     * El bloque info* del tipo (infoFactura, infoNotaCredito…), para lo que
+     * el esquema repite en todos ellos, como la leyenda de contribuyente
+     * especial.
+     */
+    abstract public function bloqueInfo(): BloqueInfoData;
+
+    /**
      * Importe del documento, si el tipo lo declara (la retención no tiene).
      */
     public function importeTotal(): ?string

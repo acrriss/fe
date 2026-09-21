@@ -46,3 +46,50 @@ it('el aprovisionamiento acepta limite_mensual', function () {
     ])->assertCreated()
         ->assertJsonPath('data.limiteMensual', 200);
 });
+
+/*
+ * Ficha 2.34, Anexo 21: el partner configura las designaciones del SRI
+ * de su gestionado; `fe` las imprime como leyenda en cada comprobante.
+ */
+it('configura y borra las designaciones del emisor', function () {
+    $partner = actuar_como_partner();
+    $gestionado = contribuyente_gestionado($partner);
+
+    $this->patchJson(route('api.partner.v1.contribuyentes.actualizar', $gestionado->uuid), [
+        'agente_retencion_resolucion' => '00006498', // se guarda sin ceros a la izquierda
+        'contribuyente_especial_resolucion' => '5368',
+    ])->assertSuccessful()
+        ->assertJsonPath('data.agenteRetencionResolucion', '6498')
+        ->assertJsonPath('data.contribuyenteEspecialResolucion', '5368');
+
+    $this->patchJson(route('api.partner.v1.contribuyentes.actualizar', $gestionado->uuid), [
+        'agente_retencion_resolucion' => null,
+    ])->assertSuccessful()
+        ->assertJsonPath('data.agenteRetencionResolucion', null)
+        ->assertJsonPath('data.contribuyenteEspecialResolucion', '5368');
+});
+
+it('rechaza designaciones con formato inválido: :dataset', function (array $payload, string $campo) {
+    $partner = actuar_como_partner();
+    $gestionado = contribuyente_gestionado($partner);
+
+    $this->patchJson(route('api.partner.v1.contribuyentes.actualizar', $gestionado->uuid), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors($campo);
+})->with([
+    'agente de retención con letras' => [['agente_retencion_resolucion' => 'NAC-1'], 'agente_retencion_resolucion'],
+    'agente de retención de 9 dígitos' => [['agente_retencion_resolucion' => '123456789'], 'agente_retencion_resolucion'],
+    'contribuyente especial muy corto' => [['contribuyente_especial_resolucion' => '12'], 'contribuyente_especial_resolucion'],
+]);
+
+it('el aprovisionamiento acepta las designaciones del emisor', function () {
+    actuar_como_partner();
+
+    $this->postJson(route('api.partner.v1.contribuyentes.aprovisionar'), [
+        'ruc' => '0992479248001',
+        'razon_social' => 'Mi Cliente S.A.',
+        'agente_retencion_resolucion' => '6498',
+    ])->assertCreated()
+        ->assertJsonPath('data.agenteRetencionResolucion', '6498')
+        ->assertJsonPath('data.contribuyenteEspecialResolucion', null);
+});

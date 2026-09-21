@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\NotaDebito;
 
+use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\ImpuestoData;
 use App\Sri\Data\PagoData;
 use App\Sri\Enums\TipoComprobante;
@@ -12,13 +13,12 @@ use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
-use Spatie\LaravelData\Data;
 
 /**
  * Bloque <infoNotaDebito>. Referencia al documento que modifica y detalla
  * los impuestos y las formas de pago del débito.
  */
-final class InfoNotaDebitoData extends Data
+final class InfoNotaDebitoData extends BloqueInfoData
 {
     /**
      * @param  array<int, ImpuestoData>  $impuestos
@@ -73,6 +73,7 @@ final class InfoNotaDebitoData extends Data
             'tipoIdentificacionComprador' => $this->tipoIdentificacionComprador->value,
             'razonSocialComprador' => $this->razonSocialComprador,
             'identificacionComprador' => $this->identificacionComprador,
+            'contribuyenteEspecial' => $this->contribuyenteEspecial,
             'obligadoContabilidad' => $this->obligadoContabilidad,
             'codDocModificado' => $this->codDocModificado->value,
             'numDocModificado' => $this->numDocModificado,

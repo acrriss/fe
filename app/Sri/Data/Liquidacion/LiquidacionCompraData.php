@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\Liquidacion;
 
+use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\DetalleData;
@@ -47,6 +48,11 @@ final class LiquidacionCompraData extends ComprobanteData
     public function fechaEmision(): CarbonImmutable
     {
         return $this->infoLiquidacionCompra->fechaEmision;
+    }
+
+    public function bloqueInfo(): BloqueInfoData
+    {
+        return $this->infoLiquidacionCompra;
     }
 
     public function importeTotal(): string

@@ -40,6 +40,20 @@
                         {{ $comprobante->infoTributaria->dirMatriz }}
                     </div>
                     @yield('emisor-extra')
+                    {{-- Leyendas del emisor (ficha 2.34, Anexo 21 y Tabla 11): las
+                         inyecta el pipeline desde la configuración del contribuyente. --}}
+                    @if ($comprobante->bloqueInfo()->contribuyenteEspecial)
+                        <div>
+                            <span class="etiqueta">Contribuyente Especial Nro.:</span>
+                            {{ $comprobante->bloqueInfo()->contribuyenteEspecial }}
+                        </div>
+                    @endif
+                    @if ($comprobante->infoTributaria->agenteRetencion)
+                        <div>
+                            <span class="etiqueta">Agente de Retención Resolución No.:</span>
+                            {{ $comprobante->infoTributaria->agenteRetencion }}
+                        </div>
+                    @endif
                 </div>
             </td>
             <td class="col">

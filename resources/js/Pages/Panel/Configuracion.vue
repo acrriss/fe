@@ -22,6 +22,8 @@ const datos = useForm({
     razon_social: props.contribuyente.razon_social,
     nombre_comercial: props.contribuyente.nombre_comercial,
     dir_matriz: props.contribuyente.dir_matriz,
+    agente_retencion_resolucion: props.contribuyente.agente_retencion_resolucion,
+    contribuyente_especial_resolucion: props.contribuyente.contribuyente_especial_resolucion,
 });
 
 const formCertificado = useForm({
@@ -118,6 +120,39 @@ const guardarLogo = () => logo.post('/panel/configuracion/logo', { onSuccess: ()
                         <input id="dir_matriz" v-model="datos.dir_matriz" type="text"
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
                     </div>
+
+                    <!-- Designaciones del SRI (ficha 2.34, Anexo 21): salen como leyenda en cada comprobante -->
+                    <fieldset class="space-y-4 border-t border-gray-100 pt-4">
+                        <legend class="text-sm font-semibold text-gray-900">Designaciones del SRI</legend>
+                        <p class="text-xs text-gray-500">
+                            Solo si el SRI le ha designado. El número de resolución se imprime como leyenda en cada
+                            comprobante que emita; déjelo vacío si no aplica.
+                        </p>
+                        <div>
+                            <label for="agente_retencion_resolucion" class="mb-1 block text-sm font-medium text-gray-700">
+                                Agente de retención · resolución No.
+                            </label>
+                            <input id="agente_retencion_resolucion" v-model="datos.agente_retencion_resolucion" type="text"
+                                inputmode="numeric" maxlength="8" placeholder="p. ej. 6498"
+                                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                            <p class="mt-1 text-xs text-gray-500">Hasta 8 dígitos, sin ceros a la izquierda.</p>
+                            <p v-if="datos.errors.agente_retencion_resolucion" class="mt-1 text-xs text-red-600">
+                                {{ datos.errors.agente_retencion_resolucion }}
+                            </p>
+                        </div>
+                        <div>
+                            <label for="contribuyente_especial_resolucion" class="mb-1 block text-sm font-medium text-gray-700">
+                                Contribuyente especial · resolución No.
+                            </label>
+                            <input id="contribuyente_especial_resolucion" v-model="datos.contribuyente_especial_resolucion" type="text"
+                                maxlength="13" placeholder="p. ej. 5368"
+                                class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
+                            <p class="mt-1 text-xs text-gray-500">De 3 a 13 caracteres alfanuméricos.</p>
+                            <p v-if="datos.errors.contribuyente_especial_resolucion" class="mt-1 text-xs text-red-600">
+                                {{ datos.errors.contribuyente_especial_resolucion }}
+                            </p>
+                        </div>
+                    </fieldset>
                     <button type="submit" :disabled="datos.processing"
                         class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
                         Guardar datos

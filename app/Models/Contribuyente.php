@@ -8,6 +8,7 @@ use App\Sri\Enums\EstadoVinculacion;
 use App\Sri\Exceptions\CertificadoInvalido;
 use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\ValueObjects\CertificadoFirma;
+use App\Sri\ValueObjects\LeyendasEmisor;
 use Database\Factories\ContribuyenteFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,6 +28,8 @@ use SensitiveParameter;
  * @property string $razon_social
  * @property string|null $nombre_comercial
  * @property string|null $dir_matriz
+ * @property string|null $agente_retencion_resolucion nº de resolución, sin ceros a la izquierda (Anexo 21)
+ * @property string|null $contribuyente_especial_resolucion nº de resolución (Tabla 11, fila 8)
  * @property string|null $logo_path
  * @property string|null $certificado_p12 base64 del .p12 (cifrado en reposo)
  * @property string|null $certificado_clave (cifrada en reposo)
@@ -141,6 +144,17 @@ class Contribuyente extends Model
         ]);
 
         return $abierto;
+    }
+
+    /**
+     * Designaciones que el pipeline imprime como leyenda en cada comprobante.
+     */
+    public function leyendasEmisor(): LeyendasEmisor
+    {
+        return new LeyendasEmisor(
+            agenteRetencion: $this->agente_retencion_resolucion,
+            contribuyenteEspecial: $this->contribuyente_especial_resolucion,
+        );
     }
 
     public function certificadoFirma(): CertificadoFirma

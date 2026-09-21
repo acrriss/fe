@@ -8,11 +8,12 @@ use App\Sri\Respuestas\RespuestaRecepcion;
 use App\Sri\ValueObjects\CertificadoFirma;
 use App\Sri\ValueObjects\ClaveAcceso;
 use App\Sri\ValueObjects\CodigoNumerico;
+use App\Sri\ValueObjects\LeyendasEmisor;
 
 /**
- * Estado que viaja por el pipeline de emisión: entra con el comprobante y
- * el certificado; cada Action añade su resultado (clave, XML, firma,
- * respuestas del SRI).
+ * Estado que viaja por el pipeline de emisión: entra con el comprobante,
+ * el certificado y las leyendas del emisor; cada Action añade su resultado
+ * (clave, XML, firma, respuestas del SRI).
  */
 final class EmisionEnCurso
 {
@@ -30,6 +31,7 @@ final class EmisionEnCurso
         public readonly ComprobanteData $comprobante,
         public readonly CertificadoFirma $certificado,
         public readonly ?CodigoNumerico $codigoNumerico = null,
+        public readonly LeyendasEmisor $leyendas = new LeyendasEmisor,
     ) {}
 
     public function claveAcceso(): ClaveAcceso

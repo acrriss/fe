@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Http\Middleware\ResolverContribuyente;
 use App\Models\Contribuyente;
+use App\Sri\Actions\AgregarLeyendasEmisor;
 use App\Sri\Actions\AgregarRucProveedor;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\Factura\FacturaData;
@@ -141,6 +142,7 @@ class EmitirComprobanteRequest extends FormRequest
         try {
             $comprobante = $dataClass::from($this->validated('comprobante'));
 
+            AgregarLeyendasEmisor::rechazarSiVieneEnElPayload($comprobante);
             AgregarRucProveedor::rechazarSiVieneEnElPayload($comprobante);
 
             return $comprobante;

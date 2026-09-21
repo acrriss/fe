@@ -468,6 +468,19 @@ paths:
                   type: [integer, 'null']
                   minimum: 1
                   description: Sublímite de emisiones mensuales dentro de la cuota pool (null = sin sublímite).
+                agente_retencion_resolucion:
+                  type: [string, 'null']
+                  description: |
+                    Nº de resolución que designa al contribuyente Agente de Retención
+                    (ficha técnica, Anexo 21). Hasta 8 dígitos; los ceros a la izquierda
+                    se descartan. `fe` lo imprime como `<agenteRetencion>` en cada
+                    comprobante. Null o vacío = no designado.
+                contribuyente_especial_resolucion:
+                  type: [string, 'null']
+                  description: |
+                    Nº de resolución de Contribuyente Especial (3 a 13 caracteres
+                    alfanuméricos). `fe` lo imprime como `<contribuyenteEspecial>` en
+                    cada comprobante. Null o vacío = no designado.
       responses:
         '201':
           description: Contribuyente aprovisionado.
@@ -537,6 +550,19 @@ paths:
                 nombre_comercial: { type: [string, 'null'], maxLength: 255 }
                 dir_matriz: { type: [string, 'null'], maxLength: 255 }
                 limite_mensual: { type: [integer, 'null'], minimum: 1 }
+                agente_retencion_resolucion:
+                  type: [string, 'null']
+                  description: |
+                    Nº de resolución que designa al contribuyente Agente de Retención
+                    (ficha técnica, Anexo 21). Hasta 8 dígitos; los ceros a la izquierda
+                    se descartan. `fe` lo imprime como `<agenteRetencion>` en cada
+                    comprobante. Null o vacío = no designado.
+                contribuyente_especial_resolucion:
+                  type: [string, 'null']
+                  description: |
+                    Nº de resolución de Contribuyente Especial (3 a 13 caracteres
+                    alfanuméricos). `fe` lo imprime como `<contribuyenteEspecial>` en
+                    cada comprobante. Null o vacío = no designado.
       responses:
         '200':
           description: Contribuyente actualizado.
@@ -749,6 +775,12 @@ components:
         razonSocial: { type: string }
         nombreComercial: { type: [string, 'null'] }
         dirMatriz: { type: [string, 'null'] }
+        agenteRetencionResolucion:
+          type: [string, 'null']
+          description: Leyenda Agente de Retención impresa en cada comprobante (Anexo 21).
+        contribuyenteEspecialResolucion:
+          type: [string, 'null']
+          description: Leyenda Contribuyente Especial impresa en cada comprobante.
         certificado:
           type: object
           properties:
@@ -789,6 +821,13 @@ components:
 
         Importes como texto (`"100.00"`), fechas en `dd/mm/aaaa`. Ver el
         ejemplo del endpoint de emisión para una factura completa.
+
+        **Leyendas del emisor (ficha técnica 2.34, Anexo 21).** Los tags
+        `agenteRetencion` (en `infoTributaria`) y `contribuyenteEspecial`
+        (en el bloque `info*`) los fija la configuración del contribuyente
+        —panel o `PATCH /partner/v1/contribuyentes/{id}`— y `fe` los
+        inyecta en cada comprobante y en el RIDE. No se envían en el
+        payload: si vienen, la emisión responde 422.
       required: [infoTributaria]
       properties:
         infoTributaria:

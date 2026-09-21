@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\Liquidacion;
 
+use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\PagoData;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoIdentificacion;
@@ -11,13 +12,12 @@ use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
-use Spatie\LaravelData\Data;
 
 /**
  * Bloque <infoLiquidacionCompra>. El "comprador" del comprobante es en
  * realidad el proveedor de bienes/servicios que se liquida.
  */
-final class InfoLiquidacionCompraData extends Data
+final class InfoLiquidacionCompraData extends BloqueInfoData
 {
     /**
      * @param  array<int, TotalImpuestoData>  $totalConImpuestos
@@ -68,6 +68,7 @@ final class InfoLiquidacionCompraData extends Data
         return Payload::sinNulos([
             'fechaEmision' => $this->fechaEmision->format('d/m/Y'),
             'dirEstablecimiento' => $this->dirEstablecimiento,
+            'contribuyenteEspecial' => $this->contribuyenteEspecial,
             'obligadoContabilidad' => $this->obligadoContabilidad,
             'tipoIdentificacionProveedor' => $this->tipoIdentificacionProveedor->value,
             'razonSocialProveedor' => $this->razonSocialProveedor,

@@ -50,6 +50,7 @@ trait ProcesaEmisiones
         $emision = new EmisionEnCurso(
             comprobante: $comprobante,
             certificado: $contribuyente->certificadoFirma(),
+            leyendas: $contribuyente->leyendasEmisor(),
         );
         $emision->claveAcceso = $claveAcceso;
 

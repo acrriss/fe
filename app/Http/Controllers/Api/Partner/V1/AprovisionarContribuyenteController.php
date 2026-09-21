@@ -3,14 +3,11 @@
 namespace App\Http\Controllers\Api\Partner\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AprovisionarContribuyenteRequest;
 use App\Http\Resources\ContribuyenteResource;
 use App\Models\Contribuyente;
 use App\Models\Partner;
-use App\Sri\Exceptions\DatoInvalido;
-use App\Sri\ValueObjects\Ruc;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Validation\ValidationException;
 
 /**
  * Aprovisiona un contribuyente gestionado (§11): el partner da de alta a
@@ -23,21 +20,9 @@ use Illuminate\Validation\ValidationException;
  */
 class AprovisionarContribuyenteController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(AprovisionarContribuyenteRequest $request): JsonResponse
     {
-        $request->validate([
-            'ruc' => ['required', 'string'],
-            'razon_social' => ['required', 'string', 'max:255'],
-            'nombre_comercial' => ['nullable', 'string', 'max:255'],
-            'dir_matriz' => ['nullable', 'string', 'max:255'],
-            'limite_mensual' => ['nullable', 'integer', 'min:1'],
-        ]);
-
-        try {
-            $ruc = (string) Ruc::fromString($request->string('ruc')->toString());
-        } catch (DatoInvalido $excepcion) {
-            throw ValidationException::withMessages(['ruc' => $excepcion->getMessage()]);
-        }
+        $ruc = $request->ruc();
 
         /** @var Partner $partner */
         $partner = $request->user();
@@ -55,13 +40,7 @@ class AprovisionarContribuyenteController extends Controller
             'El RUC ya está registrado en otra cuenta.',
         );
 
-        $contribuyente = $partner->contribuyentes()->create([
-            'ruc' => $ruc,
-            'razon_social' => $request->string('razon_social')->toString(),
-            'nombre_comercial' => $request->input('nombre_comercial'),
-            'dir_matriz' => $request->input('dir_matriz'),
-            'limite_mensual' => $request->input('limite_mensual'),
-        ]);
+        $contribuyente = $partner->contribuyentes()->create($request->datosContribuyente());
 
         return (new ContribuyenteResource($contribuyente))
             ->response()

@@ -79,6 +79,13 @@ describe('endurecimiento (fase 4)', function () {
         'ruc inválido' => [function (array &$payload): void {
             $payload['factura']['infoTributaria']['ruc'] = '123';
         }],
+        // leyendas del emisor (ficha 2.34, Anexo 21): las fija la configuración, no el payload
+        'agenteRetencion en el payload' => [function (array &$payload): void {
+            $payload['factura']['infoTributaria']['agenteRetencion'] = '1';
+        }],
+        'contribuyenteEspecial en el payload' => [function (array &$payload): void {
+            $payload['factura']['infoFactura']['contribuyenteEspecial'] = '5368';
+        }],
         'secuencial inválido' => [function (array &$payload): void {
             $payload['factura']['infoTributaria']['secuencial'] = 'ABC';
         }],
@@ -179,4 +186,23 @@ it('emite el RUC Proveedor configurado junto a la información adicional del emi
     expect(base64_decode((string) $respuesta->json('xmlFirmado')))
         ->toContain('<campoAdicional nombre="Email">cliente@ejemplo.test</campoAdicional>')
         ->toContain('<campoAdicional nombre="RUC Proveedor">0993205451001</campoAdicional>');
+});
+
+/*
+ * Ficha 2.34, Anexo 21: las designaciones del emisor se configuran una vez
+ * en el contribuyente y el pipeline las imprime en cada comprobante, sin
+ * que el integrador tenga que enviarlas.
+ */
+it('imprime las leyendas configuradas en el contribuyente en el XML emitido', function () {
+    $this->contribuyente->update([
+        'agente_retencion_resolucion' => '6498',
+        'contribuyente_especial_resolucion' => '5368',
+    ]);
+
+    $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
+        ->assertSuccessful();
+
+    expect(base64_decode($respuesta->json('xmlFirmado')))
+        ->toContain('<agenteRetencion>6498</agenteRetencion>')
+        ->toContain('<contribuyenteEspecial>5368</contribuyenteEspecial>');
 });

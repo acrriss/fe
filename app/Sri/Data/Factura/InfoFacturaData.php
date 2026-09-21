@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\Factura;
 
+use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
@@ -10,12 +11,11 @@ use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Attributes\WithCast;
 use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
-use Spatie\LaravelData\Data;
 
 /**
  * Bloque <infoFactura>.
  */
-final class InfoFacturaData extends Data
+final class InfoFacturaData extends BloqueInfoData
 {
     /**
      * @param  array<int, TotalImpuestoData>  $totalConImpuestos
@@ -64,6 +64,7 @@ final class InfoFacturaData extends Data
         return Payload::sinNulos([
             'fechaEmision' => $this->fechaEmision->format('d/m/Y'),
             'dirEstablecimiento' => $this->dirEstablecimiento,
+            'contribuyenteEspecial' => $this->contribuyenteEspecial,
             'obligadoContabilidad' => $this->obligadoContabilidad,
             'tipoIdentificacionComprador' => $this->tipoIdentificacionComprador->value,
             'razonSocialComprador' => $this->razonSocialComprador,

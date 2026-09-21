@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\Factura;
 
+use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\DetalleData;
@@ -47,6 +48,11 @@ final class FacturaData extends ComprobanteData
     public function fechaEmision(): CarbonImmutable
     {
         return $this->infoFactura->fechaEmision;
+    }
+
+    public function bloqueInfo(): BloqueInfoData
+    {
+        return $this->infoFactura;
     }
 
     public function importeTotal(): string

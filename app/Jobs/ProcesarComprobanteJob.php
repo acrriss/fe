@@ -53,6 +53,7 @@ class ProcesarComprobanteJob implements ShouldBeEncrypted, ShouldQueue
         $emision = new EmisionEnCurso(
             comprobante: $this->dataClass::from($this->payloadComprobante),
             certificado: $contribuyente->certificadoFirma(),
+            leyendas: $contribuyente->leyendasEmisor(),
         );
 
         if ($this->claveAcceso !== null) {
