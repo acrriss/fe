@@ -1557,7 +1557,3 @@ arquitectura:
   de los datos del emisor, en mayúsculas y sin abreviar —el texto es
   requisito, no decoración—; leerla de `fe_ajustes` con el mismo mapa
   clave → leyenda que usa `fe`.
-- Los negocios populares están exentos de facturar en muchas ventas (solo
-  emiten a pedido del cliente o sobre ciertos montos): si el POS ya
-  permite marcar ventas como no facturables, conviene recordarlo en la
-  ayuda del select; no es tarea de `fe`.
