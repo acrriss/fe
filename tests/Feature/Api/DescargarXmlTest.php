@@ -1,7 +1,6 @@
 <?php
 
 use App\Models\Comprobante;
-use App\Sri\Data\NotaCredito\NotaCreditoData;
 use App\Sri\Enums\Ambiente;
 use Illuminate\Support\Facades\Storage;
 
@@ -58,7 +57,7 @@ it('usa el numero de autorizacion del SRI cuando difiere de la clave', function 
 });
 
 it('descarga el XML autorizado de una nota de credito', function () {
-    $registro = comprobante_autorizado_con_xml($this->contribuyente, 'notaCredito', NotaCreditoData::class);
+    $registro = comprobante_autorizado_con_xml($this->contribuyente, 'notaCredito');
 
     $respuesta = $this->get(route('api.v1.comprobantes.xml', $registro));
 

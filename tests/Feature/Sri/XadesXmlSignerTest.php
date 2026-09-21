@@ -17,7 +17,7 @@ function firmador_nativo(): XadesXmlSigner
 }
 
 it('produce una firma XAdES-BES que verifica al 100% (digests y firma)', function () {
-    $xml = file_get_contents(golden_path('factura/comprobante.xml'));
+    $xml = xml_de_prueba();
 
     $firmado = firmador_nativo()->firmar($xml, certificado_de_prueba());
 
@@ -29,7 +29,7 @@ it('produce una firma XAdES-BES que verifica al 100% (digests y firma)', functio
 });
 
 it('replica la estructura de firma que el SRI acepta (paridad con el jar)', function () {
-    $xml = file_get_contents(golden_path('factura/comprobante.xml'));
+    $xml = xml_de_prueba();
 
     $firmado = firmador_nativo()->firmar($xml, certificado_de_prueba());
 
@@ -47,19 +47,19 @@ it('replica la estructura de firma que el SRI acepta (paridad con el jar)', func
 });
 
 it('el contenido del comprobante queda intacto y parseable (roundtrip)', function () {
-    $xml = file_get_contents(golden_path('factura/comprobante.xml'));
+    $xml = xml_de_prueba();
 
     $firmado = firmador_nativo()->firmar($xml, certificado_de_prueba());
 
     $comprobante = new ComprobanteXmlParser()->parse($firmado);
 
-    expect($comprobante->infoFactura->importeTotal)->toBe('11.20')
+    expect($comprobante->infoFactura->importeTotal)->toBe('115.00')
         ->and((string) $comprobante->infoTributaria->claveAcceso)
-        ->toBe(trim(file_get_contents(golden_path('factura/claveAcceso.txt'))));
+        ->toBe((string) clave_acceso_de_prueba());
 });
 
 it('reporta la clave incorrecta igual que el firmador jar', function () {
-    $xml = file_get_contents(golden_path('factura/comprobante.xml'));
+    $xml = xml_de_prueba();
 
     try {
         firmador_nativo()->firmar($xml, certificado_de_prueba(clave: 'clave-equivocada'));
@@ -72,7 +72,7 @@ it('reporta la clave incorrecta igual que el firmador jar', function () {
 });
 
 it('firma también con certificados .p12 legacy', function () {
-    $xml = file_get_contents(golden_path('factura/comprobante.xml'));
+    $xml = xml_de_prueba();
     $certificado = CertificadoFirma::desdeBase64(base64_encode(p12_de_prueba(legacy: true)), 'clave-prueba');
 
     $firmado = firmador_nativo()->firmar($xml, $certificado);
@@ -99,7 +99,7 @@ describe('driver conmutable', function () {
 
         $contribuyente = actuar_como_contribuyente();
 
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertSuccessful()
             ->assertJsonPath('emitido', true);
 

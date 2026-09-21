@@ -32,7 +32,7 @@ describe('emisión on-behalf (§11)', function () {
     it('emite a nombre del contribuyente gestionado con la cabecera X-Contribuyente', function () {
         $respuesta = $this->postJson(
             route('api.v1.comprobantes.emitir'),
-            golden_payload('factura'),
+            payload_emision('factura'),
             cabecera_on_behalf($this->gestionado),
         );
 
@@ -45,7 +45,7 @@ describe('emisión on-behalf (§11)', function () {
     });
 
     it('responde 400 si falta la cabecera X-Contribuyente', function () {
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertStatus(400);
     });
 
@@ -54,13 +54,13 @@ describe('emisión on-behalf (§11)', function () {
 
         $this->postJson(
             route('api.v1.comprobantes.emitir'),
-            golden_payload('factura'),
+            payload_emision('factura'),
             cabecera_on_behalf($ajeno),
         )->assertNotFound();
     });
 
     it('sigue exigiendo que el RUC del payload sea el del contribuyente actuado', function () {
-        $payload = golden_payload('factura');
+        $payload = payload_emision('factura');
         $payload['factura']['infoTributaria']['ruc'] = '1791411099001';
 
         $this->postJson(
@@ -77,7 +77,7 @@ describe('emisión on-behalf (§11)', function () {
 
         $this->postJson(
             route('api.v1.comprobantes.emitir'),
-            golden_payload('factura'),
+            payload_emision('factura'),
             cabecera_on_behalf($this->gestionado),
         )->assertTooManyRequests();
     });
@@ -89,7 +89,7 @@ describe('emisión on-behalf (§11)', function () {
 
         $this->postJson(
             route('api.v1.comprobantes.emitir'),
-            golden_payload('factura'),
+            payload_emision('factura'),
             cabecera_on_behalf($this->gestionado),
         )->assertTooManyRequests();
     });

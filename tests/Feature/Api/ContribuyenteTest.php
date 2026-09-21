@@ -19,7 +19,7 @@ beforeEach(function () {
 
 describe('autenticación', function () {
     it('rechaza peticiones sin token en todos los endpoints protegidos', function () {
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertUnauthorized();
 
         $this->getJson(route('api.v1.comprobantes.mostrar', 'cualquier-uuid'))
@@ -67,7 +67,7 @@ describe('certificado del contribuyente', function () {
     it('valida, guarda cifrado con sus metadatos y habilita la emisión', function () {
         $contribuyente = actuar_como_contribuyente(conCertificado: false);
 
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertStatus(409); // sin certificado aún
 
         $this->putJson(route('api.v1.contribuyente.certificado'), [
@@ -84,7 +84,7 @@ describe('certificado del contribuyente', function () {
             ->and($contribuyente->getRawOriginal('certificado_p12'))
             ->not->toContain(base64_encode(p12_de_prueba()));
 
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertSuccessful();
     });
 
@@ -141,10 +141,10 @@ describe('cuota por plan', function () {
         $plan = Plan::factory()->conCuota(1)->create();
         $contribuyente = actuar_como_contribuyente(atributos: ['plan_id' => $plan->id]);
 
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertSuccessful();
 
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertTooManyRequests();
     });
 
@@ -152,9 +152,9 @@ describe('cuota por plan', function () {
         actuar_como_contribuyente();
 
         // el código numérico aleatorio hace única cada clave de acceso
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertSuccessful();
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertSuccessful();
     });
 });

@@ -132,30 +132,21 @@ function contribuyente_gestionado(Partner $partner, array $atributos = []): Cont
 
 /**
  * Crea un comprobante autorizado del contribuyente dado cuyo XML firmado es
- * el golden del tipo indicado, ya guardado en el disco (requiere
- * Storage::fake()). Base común de las descargas de RIDE y XML.
+ * el del comprobante de prueba del tipo indicado (con la clave de acceso
+ * del registro), ya guardado en el disco (requiere Storage::fake()). Base
+ * común de las descargas de RIDE y XML.
  */
-function comprobante_autorizado_con_xml(
-    Contribuyente $contribuyente,
-    string $tipo,
-    ?string $dataClass = null,
-): Comprobante {
+function comprobante_autorizado_con_xml(Contribuyente $contribuyente, string $tipo): Comprobante
+{
     $registro = Comprobante::factory()->autorizado()->create([
         'tipo' => TipoComprobante::fromRootElement($tipo),
         'contribuyente_id' => $contribuyente->id,
     ]);
 
-    $xml = file_get_contents(golden_path("$tipo/comprobante.xml"));
+    $comprobante = comprobante_de_prueba($tipo);
+    $comprobante->infoTributaria->claveAcceso = ClaveAcceso::fromString($registro->clave_acceso);
 
-    // el golden trae la clave del legado; para NC/retención regeneramos el
-    // XML con la clave del registro para mantener coherencia
-    if ($dataClass !== null) {
-        $comprobante = $dataClass::from(golden_input($tipo));
-        $comprobante->infoTributaria->claveAcceso = ClaveAcceso::fromString($registro->clave_acceso);
-        $xml = ConstruirXml::render($comprobante);
-    }
-
-    Storage::put($path = "comprobantes/{$registro->clave_acceso}.xml", $xml);
+    Storage::put($path = "comprobantes/{$registro->clave_acceso}.xml", ConstruirXml::render($comprobante));
     $registro->update(['xml_path' => $path]);
 
     return $registro;

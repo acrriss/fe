@@ -18,7 +18,7 @@ beforeEach(function () {
 });
 
 it('emite una factura vía POST /api/v1/comprobantes', function () {
-    $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'));
+    $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'));
 
     $respuesta->assertSuccessful()
         ->assertJsonPath('emitido', true)
@@ -31,7 +31,7 @@ it('emite una factura vía POST /api/v1/comprobantes', function () {
 });
 
 it('emite los otros tipos de comprobante: :dataset', function (string $tipo) {
-    $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload($tipo))
+    $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision($tipo))
         ->assertSuccessful()
         ->assertJsonPath('emitido', true)
         ->assertJsonPath('tipo', $tipo);
@@ -40,7 +40,7 @@ it('emite los otros tipos de comprobante: :dataset', function (string $tipo) {
 it('responde 422 con los mensajes del SRI cuando el comprobante es devuelto', function () {
     $this->gateway->devolverComprobantes();
 
-    $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+    $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
         ->assertUnprocessable()
         ->assertJsonPath('emitido', false)
         ->assertJsonPath('etapa', 'recepcion');
@@ -49,7 +49,7 @@ it('responde 422 con los mensajes del SRI cuando el comprobante es devuelto', fu
 it('responde 422 con la clave de acceso cuando la autorización es rechazada', function () {
     $this->gateway->rechazarAutorizacion();
 
-    $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'));
+    $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'));
 
     $respuesta->assertUnprocessable()
         ->assertJsonPath('emitido', false)
@@ -70,7 +70,7 @@ it('valida el payload: :dataset', function (array $payload) {
 
 describe('endurecimiento (fase 4)', function () {
     it('reporta como 422 los datos que violan la ficha del SRI: :dataset', function (callable $sabotear) {
-        $payload = golden_payload('factura');
+        $payload = payload_emision('factura');
         $sabotear($payload);
 
         $this->postJson(route('api.v1.comprobantes.emitir'), $payload)
@@ -131,7 +131,7 @@ describe('endurecimiento (fase 4)', function () {
 
 describe('multi-tenancy (fase 6)', function () {
     it('rechaza emitir con el RUC de otro contribuyente', function () {
-        $payload = golden_payload('factura');
+        $payload = payload_emision('factura');
         $payload['factura']['infoTributaria']['ruc'] = '1791411099001'; // válido, pero no es el del contribuyente
 
         $this->postJson(route('api.v1.comprobantes.emitir'), $payload)
@@ -142,7 +142,7 @@ describe('multi-tenancy (fase 6)', function () {
     it('responde 409 si el contribuyente no tiene certificado configurado', function () {
         $this->contribuyente->update(['certificado_p12' => null, 'certificado_clave' => null]);
 
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertStatus(409);
     });
 });
@@ -154,7 +154,7 @@ describe('multi-tenancy (fase 6)', function () {
  * `infoAdicional` es texto libre y no valida su contenido.
  */
 it('rechaza un comprobante que trae el RUC Proveedor en el payload', function () {
-    $payload = golden_payload('factura');
+    $payload = payload_emision('factura');
     $payload['factura']['infoAdicional'] = ['campoAdicional' => [
         ['nombre' => 'RUC Proveedor', 'valor' => '9999999999999'],
     ]];
@@ -167,7 +167,7 @@ it('rechaza un comprobante que trae el RUC Proveedor en el payload', function ()
 it('emite el RUC Proveedor configurado junto a la información adicional del emisor', function () {
     config()->set('sri.ruc_proveedor', '0993205451001');
 
-    $payload = golden_payload('factura');
+    $payload = payload_emision('factura');
     $payload['factura']['infoAdicional'] = ['campoAdicional' => [
         ['nombre' => 'Email', 'valor' => 'cliente@ejemplo.test'],
     ]];

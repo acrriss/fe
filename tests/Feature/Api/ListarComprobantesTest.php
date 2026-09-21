@@ -20,7 +20,7 @@ beforeEach(function () {
 
 describe('trazabilidad del sistema origen (§11)', function () {
     it('persiste external_id y metadata de la emisión y los expone en la consulta', function () {
-        $payload = golden_payload('factura') + [
+        $payload = payload_emision('factura') + [
             'external_id' => 'venta-123',
             'metadata' => ['caja' => '01', 'vendedor' => 'ana'],
         ];
@@ -36,7 +36,7 @@ describe('trazabilidad del sistema origen (§11)', function () {
     });
 
     it('rechaza un external_id demasiado largo', function () {
-        $payload = golden_payload('factura') + ['external_id' => str_repeat('x', 256)];
+        $payload = payload_emision('factura') + ['external_id' => str_repeat('x', 256)];
 
         $this->postJson(route('api.v1.comprobantes.emitir'), $payload)
             ->assertUnprocessable()

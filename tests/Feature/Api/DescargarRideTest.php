@@ -1,8 +1,6 @@
 <?php
 
 use App\Models\Comprobante;
-use App\Sri\Data\NotaCredito\NotaCreditoData;
-use App\Sri\Data\Retencion\ComprobanteRetencionData;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -25,16 +23,16 @@ it('genera y descarga el RIDE en PDF de una factura autorizada', function () {
     Storage::assertExists($registro->ride_path);
 });
 
-it('genera el RIDE de :dataset', function (string $tipo, string $dataClass) {
-    $registro = comprobante_autorizado_con_xml($this->contribuyente, $tipo, $dataClass);
+it('genera el RIDE de :dataset', function (string $tipo) {
+    $registro = comprobante_autorizado_con_xml($this->contribuyente, $tipo);
 
     $respuesta = $this->get(route('api.v1.comprobantes.ride', $registro));
 
     $respuesta->assertSuccessful();
     expect($respuesta->getContent())->toStartWith('%PDF');
 })->with([
-    'notaCredito' => ['notaCredito', NotaCreditoData::class],
-    'comprobanteRetencion' => ['comprobanteRetencion', ComprobanteRetencionData::class],
+    'notaCredito',
+    'comprobanteRetencion',
 ]);
 
 /*

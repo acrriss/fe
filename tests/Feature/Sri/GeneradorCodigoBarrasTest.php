@@ -3,7 +3,7 @@
 use App\Sri\Ride\GeneradorCodigoBarras;
 
 it('genera un data-uri SVG con el código de barras de la clave de acceso', function () {
-    $clave = trim(file_get_contents(golden_path('factura/claveAcceso.txt')));
+    $clave = (string) clave_acceso_de_prueba();
 
     $dataUri = new GeneradorCodigoBarras()->svgDataUri($clave);
 

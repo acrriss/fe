@@ -40,7 +40,7 @@ describe('emisión asíncrona', function () {
 
         $respuesta = $this->postJson(
             route('api.v1.comprobantes.emitir', ['async' => 1]),
-            golden_payload('factura'),
+            payload_emision('factura'),
         );
 
         $respuesta->assertStatus(202)
@@ -61,7 +61,7 @@ describe('emisión asíncrona', function () {
         new ProcesarComprobanteJob(
             registro: $registro,
             dataClass: FacturaData::class,
-            payloadComprobante: golden_input('factura'),
+            payloadComprobante: payload_comprobante('factura'),
         )->handle(app(EmitirComprobante::class), app(RegistroDeEmision::class));
 
         $registro->refresh();
@@ -82,7 +82,7 @@ describe('emisión asíncrona', function () {
         new ProcesarComprobanteJob(
             registro: $registro,
             dataClass: FacturaData::class,
-            payloadComprobante: golden_input('factura'),
+            payloadComprobante: payload_comprobante('factura'),
         )->handle(app(EmitirComprobante::class), app(RegistroDeEmision::class));
 
         $registro->refresh();
@@ -98,7 +98,7 @@ describe('emisión asíncrona', function () {
         new ProcesarComprobanteJob(
             registro: $registro,
             dataClass: FacturaData::class,
-            payloadComprobante: golden_input('factura'),
+            payloadComprobante: payload_comprobante('factura'),
         )->failed(new RuntimeException('SRI caído'));
 
         expect($registro->refresh()->estado)->toBe(EstadoComprobante::Fallido);
@@ -150,7 +150,7 @@ describe('persistencia del flujo síncrono', function () {
     it('registra la emisión autorizada a nombre del contribuyente', function () {
         $contribuyente = actuar_como_contribuyente();
 
-        $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'));
+        $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'));
 
         $respuesta->assertSuccessful();
 
@@ -159,7 +159,7 @@ describe('persistencia del flujo síncrono', function () {
         expect($registro->contribuyente_id)->toBe($contribuyente->id)
             ->and($registro->estado)->toBe(EstadoComprobante::Autorizado)
             ->and($registro->clave_acceso)->toBe($respuesta->json('claveAcceso'))
-            ->and($registro->importe_total)->toBe('11.20');
+            ->and($registro->importe_total)->toBe('115.00');
 
         Storage::assertExists($registro->xml_path);
     });
@@ -168,7 +168,7 @@ describe('persistencia del flujo síncrono', function () {
         actuar_como_contribuyente();
         $this->gateway->devolverComprobantes();
 
-        $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'));
+        $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'));
 
         $respuesta->assertUnprocessable();
 

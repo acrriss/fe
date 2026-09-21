@@ -12,14 +12,33 @@
 |
 | payload_comprobante($tipo) devuelve el subárbol del comprobante y
 | payload_emision($tipo) lo envuelve como {tipo: …}, listo para POSTear.
+| comprobante_de_prueba($tipo) es el DTO con clave de acceso ya generada y
+| xml_de_prueba($tipo) su XML pre-firma.
 |
 */
+
+use App\Sri\Actions\ConstruirXml;
+use App\Sri\Data\ComprobanteData;
+use App\Sri\Data\Factura\FacturaData;
+use App\Sri\Data\GuiaRemision\GuiaRemisionData;
+use App\Sri\Data\Liquidacion\LiquidacionCompraData;
+use App\Sri\Data\NotaCredito\NotaCreditoData;
+use App\Sri\Data\NotaDebito\NotaDebitoData;
+use App\Sri\Data\Retencion\ComprobanteRetencionData;
+use App\Sri\ValueObjects\ClaveAcceso;
+use App\Sri\ValueObjects\CodigoNumerico;
 
 /**
  * RUC del contribuyente de prueba: el que crean actuar_como_contribuyente()
  * y contribuyente_gestionado(), y el que llevan todos los payloads.
  */
 const RUC_PRUEBA = '0922596788001';
+
+/**
+ * Código numérico fijo para que la clave de acceso de un mismo payload sea
+ * reproducible entre tests (en producción es aleatorio por comprobante).
+ */
+const CODIGO_NUMERICO_PRUEBA = '12345678';
 
 /**
  * infoTributaria común (RUC = el del contribuyente de prueba).
@@ -284,4 +303,63 @@ function payload_comprobante(string $tipo): array
 function payload_emision(string $tipo): array
 {
     return [$tipo => payload_comprobante($tipo)];
+}
+
+/**
+ * Clase de DTO del tipo dado (por nombre del elemento raíz).
+ *
+ * @return class-string<ComprobanteData>
+ */
+function data_class_de(string $tipo): string
+{
+    return match ($tipo) {
+        'factura' => FacturaData::class,
+        'notaCredito' => NotaCreditoData::class,
+        'comprobanteRetencion' => ComprobanteRetencionData::class,
+        'notaDebito' => NotaDebitoData::class,
+        'guiaRemision' => GuiaRemisionData::class,
+        'liquidacionCompra' => LiquidacionCompraData::class,
+        default => throw new InvalidArgumentException("No hay DTO de prueba para «{$tipo}»."),
+    };
+}
+
+/**
+ * DTO del comprobante de prueba con su clave de acceso ya generada (la
+ * que produciría el pipeline con CODIGO_NUMERICO_PRUEBA).
+ */
+function comprobante_de_prueba(string $tipo = 'factura'): ComprobanteData
+{
+    $comprobante = data_class_de($tipo)::from(payload_comprobante($tipo));
+    $comprobante->infoTributaria->claveAcceso = clave_acceso_de_prueba($tipo);
+
+    return $comprobante;
+}
+
+/**
+ * Clave de acceso determinista del comprobante de prueba del tipo dado.
+ */
+function clave_acceso_de_prueba(string $tipo = 'factura'): ClaveAcceso
+{
+    $comprobante = data_class_de($tipo)::from(payload_comprobante($tipo));
+    $infoTributaria = $comprobante->infoTributaria;
+
+    return ClaveAcceso::generar(
+        fechaEmision: $comprobante->fechaEmision(),
+        tipoComprobante: $comprobante::tipo(),
+        ruc: $infoTributaria->ruc,
+        ambiente: $infoTributaria->ambiente,
+        establecimiento: $infoTributaria->estab,
+        puntoEmision: $infoTributaria->ptoEmi,
+        secuencial: $infoTributaria->secuencial,
+        codigoNumerico: CodigoNumerico::fromString(CODIGO_NUMERICO_PRUEBA),
+        tipoEmision: $infoTributaria->tipoEmision,
+    );
+}
+
+/**
+ * XML pre-firma del comprobante de prueba del tipo dado.
+ */
+function xml_de_prueba(string $tipo = 'factura'): string
+{
+    return ConstruirXml::render(comprobante_de_prueba($tipo));
 }

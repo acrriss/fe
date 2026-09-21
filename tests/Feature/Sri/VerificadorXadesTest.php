@@ -3,7 +3,7 @@
 use App\Sri\Firma\VerificadorXades;
 
 /*
- * El fixture factura-firmada-jar.xml es el XML golden firmado por el jar
+ * El fixture factura-firmada-jar.xml es una factura firmada por el jar
  * heredado (la estructura que el SRI acepta en producción). Si nuestro
  * verificador lo valida al 100%, nuestra canonicalización C14N es
  * compatible con la del SRI — el prerequisito del firmador nativo.
@@ -50,6 +50,6 @@ it('detecta un SignatureValue corrupto', function () {
 it('rechaza documentos sin firma o malformados', function (string $xml) {
     new VerificadorXades()->verificar($xml);
 })->with([
-    'sin firma' => fn (): string => file_get_contents(golden_path('factura/comprobante.xml')),
+    'sin firma' => fn (): string => xml_de_prueba(),
     'malformado' => 'esto no es xml',
 ])->throws(InvalidArgumentException::class);

@@ -20,14 +20,14 @@ beforeEach(function () {
 });
 
 /**
- * Emite la factura golden contra un SRI que rechaza, dejando un registro
+ * Emite la factura de prueba contra un SRI que rechaza, dejando un registro
  * no_autorizado con clave persistida (el escenario real de §5.10).
  */
 function emision_rechazada(): Comprobante
 {
     test()->gateway->rechazarAutorizacion();
 
-    $respuesta = test()->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'));
+    $respuesta = test()->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'));
     $respuesta->assertUnprocessable();
 
     // el siguiente intento del gateway fake vuelve a autorizar
@@ -45,7 +45,7 @@ it('reintenta con la MISMA clave de acceso y completa la autorización (§5.10)'
 
     $respuesta = $this->postJson(
         route('api.v1.comprobantes.reintentar', $registro),
-        golden_payload('factura'), // payload "corregido"
+        payload_emision('factura'), // payload "corregido"
     );
 
     $respuesta->assertSuccessful()
@@ -65,7 +65,7 @@ it('reintenta con la MISMA clave de acceso y completa la autorización (§5.10)'
 it('rechaza reintentar si cambió un componente de la clave (secuencial)', function () {
     $registro = emision_rechazada();
 
-    $payload = golden_payload('factura');
+    $payload = payload_emision('factura');
     $payload['factura']['infoTributaria']['secuencial'] = '000009999';
 
     $this->postJson(route('api.v1.comprobantes.reintentar', $registro), $payload)
@@ -80,7 +80,7 @@ it('responde 409 si el comprobante no está en un estado reintentable', function
         'contribuyente_id' => $this->contribuyente->id,
     ]);
 
-    $this->postJson(route('api.v1.comprobantes.reintentar', $registro), golden_payload('factura'))
+    $this->postJson(route('api.v1.comprobantes.reintentar', $registro), payload_emision('factura'))
         ->assertStatus(409);
 });
 
@@ -89,7 +89,7 @@ it('responde 404 para un comprobante ajeno', function () {
         'estado' => EstadoComprobante::Devuelto,
     ]);
 
-    $this->postJson(route('api.v1.comprobantes.reintentar', $ajeno), golden_payload('factura'))
+    $this->postJson(route('api.v1.comprobantes.reintentar', $ajeno), payload_emision('factura'))
         ->assertNotFound();
 });
 
@@ -98,7 +98,7 @@ it('rechaza un payload de tipo distinto al del registro', function () {
 
     $this->postJson(
         route('api.v1.comprobantes.reintentar', $registro),
-        golden_payload('notaCredito'),
+        payload_emision('notaCredito'),
     )->assertUnprocessable()->assertJsonValidationErrors(['tipo']);
 });
 
@@ -108,7 +108,7 @@ it('reintenta en modo asíncrono transportando la clave original', function () {
 
     $this->postJson(
         route('api.v1.comprobantes.reintentar', [$registro, 'async' => 1]),
-        golden_payload('factura'),
+        payload_emision('factura'),
     )->assertStatus(202)->assertJsonPath('data.estado', 'pendiente');
 
     Queue::assertPushed(
@@ -126,7 +126,7 @@ it('un registro fallido sin clave simplemente recibe una nueva', function () {
 
     $respuesta = $this->postJson(
         route('api.v1.comprobantes.reintentar', $registro),
-        golden_payload('factura'),
+        payload_emision('factura'),
     );
 
     $respuesta->assertSuccessful();

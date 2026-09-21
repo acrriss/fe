@@ -26,19 +26,19 @@ describe('firma XAdES real con sri.jar', function () {
         }
     });
 
-    it('firma el XML golden y devuelve el documento con la firma embebida', function () {
-        $xml = file_get_contents(golden_path('factura/comprobante.xml'));
+    it('firma el XML del comprobante y devuelve el documento con la firma embebida', function () {
+        $xml = xml_de_prueba();
 
         $firmado = new JarXmlSigner()->firmar($xml, certificado_de_prueba());
 
         expect($firmado)->toContain('<ds:Signature')
             ->toContain('<factura id="comprobante"')
             // el contenido original sigue intacto dentro del documento firmado
-            ->toContain('<claveAcceso>'.trim(file_get_contents(golden_path('factura/claveAcceso.txt'))).'</claveAcceso>');
+            ->toContain('<claveAcceso>'.(string) clave_acceso_de_prueba().'</claveAcceso>');
     });
 
     it('reporta con claridad una clave de certificado incorrecta', function () {
-        $xml = file_get_contents(golden_path('factura/comprobante.xml'));
+        $xml = xml_de_prueba();
 
         try {
             new JarXmlSigner()->firmar($xml, certificado_de_prueba(clave: 'clave-equivocada'));
@@ -52,7 +52,7 @@ describe('firma XAdES real con sri.jar', function () {
     });
 
     it('reporta un certificado que no es un p12 válido', function () {
-        $xml = file_get_contents(golden_path('factura/comprobante.xml'));
+        $xml = xml_de_prueba();
         $certificado = CertificadoFirma::desdeBase64(base64_encode('no-soy-un-p12'), 'x');
 
         try {

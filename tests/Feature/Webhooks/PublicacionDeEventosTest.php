@@ -34,7 +34,7 @@ describe('publicación en el ciclo de emisión (§11)', function () {
 
         $respuesta = $this->postJson(
             route('api.v1.comprobantes.emitir'),
-            golden_payload('factura') + ['external_id' => 'venta-1'],
+            payload_emision('factura') + ['external_id' => 'venta-1'],
             ['X-Contribuyente' => $gestionado->uuid],
         );
 
@@ -60,7 +60,7 @@ describe('publicación en el ciclo de emisión (§11)', function () {
         WebhookEndpoint::factory()->deContribuyente($contribuyente)->create();
         $this->gateway->devolverComprobantes();
 
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertUnprocessable();
 
         expect(WebhookEntrega::first()->evento)->toBe('comprobante.devuelto');
@@ -73,7 +73,7 @@ describe('publicación en el ciclo de emisión (§11)', function () {
             ->suscritoA(EventoWebhook::ComprobanteDevuelto)
             ->create();
 
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertSuccessful();
 
         Queue::assertNotPushed(EnviarWebhookJob::class);
@@ -88,7 +88,7 @@ describe('publicación en el ciclo de emisión (§11)', function () {
         new ProcesarComprobanteJob(
             registro: $registro,
             dataClass: FacturaData::class,
-            payloadComprobante: golden_input('factura'),
+            payloadComprobante: payload_comprobante('factura'),
         )->failed(new RuntimeException('SRI caído'));
 
         expect(WebhookEntrega::first()->evento)->toBe('comprobante.fallido')
@@ -98,7 +98,7 @@ describe('publicación en el ciclo de emisión (§11)', function () {
     it('sin endpoints suscritos la emisión no crea entregas', function () {
         actuar_como_contribuyente();
 
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
             ->assertSuccessful();
 
         expect(WebhookEntrega::count())->toBe(0);

@@ -21,7 +21,7 @@ function emitir_con_clave(string $clave, ?array $payload = null)
 {
     return test()->postJson(
         route('api.v1.comprobantes.emitir'),
-        $payload ?? golden_payload('factura'),
+        $payload ?? payload_emision('factura'),
         ['Idempotency-Key' => $clave],
     );
 }
@@ -43,7 +43,7 @@ describe('idempotencia de emisión (§11)', function () {
     it('responde 409 si la clave se reutiliza con otro payload', function () {
         emitir_con_clave('venta-8842')->assertSuccessful();
 
-        $otroPayload = golden_payload('factura');
+        $otroPayload = payload_emision('factura');
         $otroPayload['factura']['infoTributaria']['secuencial'] = '000000099';
 
         emitir_con_clave('venta-8842', $otroPayload)->assertStatus(409);
@@ -75,8 +75,8 @@ describe('idempotencia de emisión (§11)', function () {
     it('la modalidad asíncrona reproduce el mismo 202 (misma emisión)', function () {
         $ruta = route('api.v1.comprobantes.emitir', ['async' => 1]);
 
-        $primera = $this->postJson($ruta, golden_payload('factura'), ['Idempotency-Key' => 'venta-8842']);
-        $segunda = $this->postJson($ruta, golden_payload('factura'), ['Idempotency-Key' => 'venta-8842']);
+        $primera = $this->postJson($ruta, payload_emision('factura'), ['Idempotency-Key' => 'venta-8842']);
+        $segunda = $this->postJson($ruta, payload_emision('factura'), ['Idempotency-Key' => 'venta-8842']);
 
         $primera->assertStatus(202);
         $segunda->assertStatus(202)->assertHeader('Idempotency-Replayed', 'true');
@@ -90,7 +90,7 @@ describe('idempotencia de emisión (§11)', function () {
 
         $this->postJson(
             route('api.v1.comprobantes.emitir', ['async' => 1]),
-            golden_payload('factura'),
+            payload_emision('factura'),
             ['Idempotency-Key' => 'venta-8842'],
         )->assertStatus(409);
     });
@@ -100,7 +100,7 @@ describe('idempotencia de emisión (§11)', function () {
 
         // otro contribuyente con su propio RUC y payload
         $this->contribuyente = actuar_como_contribuyente(atributos: ['ruc' => '0992479248001']);
-        $payload = golden_payload('factura');
+        $payload = payload_emision('factura');
         $payload['factura']['infoTributaria']['ruc'] = '0992479248001';
 
         emitir_con_clave('venta-8842', $payload)->assertSuccessful();
@@ -143,8 +143,8 @@ describe('idempotencia de emisión (§11)', function () {
     });
 
     it('sin cabecera no interviene: dos POST iguales emiten dos veces', function () {
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))->assertSuccessful();
-        $this->postJson(route('api.v1.comprobantes.emitir'), golden_payload('factura'))->assertSuccessful();
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))->assertSuccessful();
+        $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))->assertSuccessful();
 
         expect(Comprobante::count())->toBe(2)
             ->and(ClaveIdempotencia::count())->toBe(0);
@@ -164,8 +164,8 @@ describe('idempotencia de emisión (§11)', function () {
 
         $ruta = route('api.v1.comprobantes.reintentar', $emision->json('id'));
 
-        $primera = $this->postJson($ruta, golden_payload('factura'), ['Idempotency-Key' => 'reintento-1']);
-        $segunda = $this->postJson($ruta, golden_payload('factura'), ['Idempotency-Key' => 'reintento-1']);
+        $primera = $this->postJson($ruta, payload_emision('factura'), ['Idempotency-Key' => 'reintento-1']);
+        $segunda = $this->postJson($ruta, payload_emision('factura'), ['Idempotency-Key' => 'reintento-1']);
 
         $primera->assertSuccessful();
         $segunda->assertSuccessful()->assertHeader('Idempotency-Replayed', 'true');
