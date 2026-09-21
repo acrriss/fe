@@ -54,6 +54,9 @@
                             {{ $comprobante->infoTributaria->agenteRetencion }}
                         </div>
                     @endif
+                    @if ($comprobante->infoTributaria->contribuyenteRimpe)
+                        <div class="mt"><strong>{{ $comprobante->infoTributaria->contribuyenteRimpe }}</strong></div>
+                    @endif
                 </div>
             </td>
             <td class="col">

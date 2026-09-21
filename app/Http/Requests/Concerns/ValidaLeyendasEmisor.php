@@ -2,15 +2,17 @@
 
 namespace App\Http\Requests\Concerns;
 
+use App\Sri\Enums\RegimenRimpe;
 use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\ValueObjects\LeyendasEmisor;
 use Illuminate\Validation\Validator;
 
 /**
- * Campos de designación del emisor (ficha 2.34, Anexo 21 y Tabla 11) tal
- * como los reciben el panel y la API de partner: `agente_retencion_resolucion`
- * y `contribuyente_especial_resolucion`. El formato lo dicta LeyendasEmisor;
- * aquí solo se traduce su rechazo a un error de validación sobre el campo.
+ * Campos de designación del emisor (ficha 2.34, Anexos 21 y 22, Tabla 11)
+ * tal como los reciben el panel y la API de partner:
+ * `agente_retencion_resolucion`, `contribuyente_especial_resolucion` y
+ * `regimen_rimpe`. El formato lo dicta LeyendasEmisor; aquí solo se traduce
+ * su rechazo a un error de validación sobre el campo.
  */
 trait ValidaLeyendasEmisor
 {
@@ -22,6 +24,7 @@ trait ValidaLeyendasEmisor
         return [
             'agente_retencion_resolucion' => ['sometimes', 'nullable', 'string', 'max:20'],
             'contribuyente_especial_resolucion' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'regimen_rimpe' => ['sometimes', 'nullable', 'string', 'max:20'],
         ];
     }
 
@@ -35,6 +38,7 @@ trait ValidaLeyendasEmisor
                 foreach ([
                     'agente_retencion_resolucion' => LeyendasEmisor::resolucionAgenteRetencion(...),
                     'contribuyente_especial_resolucion' => LeyendasEmisor::resolucionContribuyenteEspecial(...),
+                    'regimen_rimpe' => LeyendasEmisor::regimenRimpe(...),
                 ] as $campo => $normalizar) {
                     if (! $this->exists($campo)) {
                         continue;
@@ -54,7 +58,7 @@ trait ValidaLeyendasEmisor
      * Columnas a persistir, ya normalizadas; solo las que vienen en el
      * request (null explícito borra la designación).
      *
-     * @return array<string, string|null>
+     * @return array<string, string|RegimenRimpe|null>
      */
     public function leyendasEmisorValidadas(): array
     {
@@ -69,6 +73,12 @@ trait ValidaLeyendasEmisor
         if ($this->exists('contribuyente_especial_resolucion')) {
             $columnas['contribuyente_especial_resolucion'] = LeyendasEmisor::resolucionContribuyenteEspecial(
                 $this->string('contribuyente_especial_resolucion')->toString(),
+            );
+        }
+
+        if ($this->exists('regimen_rimpe')) {
+            $columnas['regimen_rimpe'] = LeyendasEmisor::regimenRimpe(
+                $this->string('regimen_rimpe')->toString(),
             );
         }
 

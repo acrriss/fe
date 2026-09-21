@@ -8,6 +8,7 @@ const props = defineProps({
     logo_url: { type: String, default: null },
     vinculaciones_pendientes: { type: Array, default: () => [] },
     partner: { type: String, default: null },
+    regimenes_rimpe: { type: Array, default: () => [] },
 });
 
 const aprobarVinculacion = (id) => {
@@ -24,7 +25,10 @@ const datos = useForm({
     dir_matriz: props.contribuyente.dir_matriz,
     agente_retencion_resolucion: props.contribuyente.agente_retencion_resolucion,
     contribuyente_especial_resolucion: props.contribuyente.contribuyente_especial_resolucion,
+    regimen_rimpe: props.contribuyente.regimen_rimpe ?? '',
 });
+
+const leyendaRimpe = () => props.regimenes_rimpe.find((r) => r.valor === datos.regimen_rimpe)?.leyenda;
 
 const formCertificado = useForm({
     certificado: null,
@@ -121,7 +125,7 @@ const guardarLogo = () => logo.post('/panel/configuracion/logo', { onSuccess: ()
                             class="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none" />
                     </div>
 
-                    <!-- Designaciones del SRI (ficha 2.34, Anexo 21): salen como leyenda en cada comprobante -->
+                    <!-- Designaciones del SRI (ficha 2.34, Anexos 21 y 22): salen como leyenda en cada comprobante -->
                     <fieldset class="space-y-4 border-t border-gray-100 pt-4">
                         <legend class="text-sm font-semibold text-gray-900">Designaciones del SRI</legend>
                         <p class="text-xs text-gray-500">
@@ -151,6 +155,21 @@ const guardarLogo = () => logo.post('/panel/configuracion/logo', { onSuccess: ()
                             <p v-if="datos.errors.contribuyente_especial_resolucion" class="mt-1 text-xs text-red-600">
                                 {{ datos.errors.contribuyente_especial_resolucion }}
                             </p>
+                        </div>
+                        <div>
+                            <label for="regimen_rimpe" class="mb-1 block text-sm font-medium text-gray-700">Régimen RIMPE</label>
+                            <select id="regimen_rimpe" v-model="datos.regimen_rimpe"
+                                class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none">
+                                <option value="">No aplica (régimen general)</option>
+                                <option v-for="regimen in regimenes_rimpe" :key="regimen.valor" :value="regimen.valor">
+                                    {{ regimen.etiqueta }}
+                                </option>
+                            </select>
+                            <p class="mt-1 text-xs text-gray-500">
+                                <template v-if="leyendaRimpe()">Leyenda que se imprimirá: <span class="font-mono">{{ leyendaRimpe() }}</span></template>
+                                <template v-else>Solo si el SRI le ha inscrito en el RIMPE.</template>
+                            </p>
+                            <p v-if="datos.errors.regimen_rimpe" class="mt-1 text-xs text-red-600">{{ datos.errors.regimen_rimpe }}</p>
                         </div>
                     </fieldset>
                     <button type="submit" :disabled="datos.processing"

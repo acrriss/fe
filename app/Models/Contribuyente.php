@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Sri\Certificados\CertificadoAbierto;
 use App\Sri\Certificados\LectorPkcs12;
 use App\Sri\Enums\EstadoVinculacion;
+use App\Sri\Enums\RegimenRimpe;
 use App\Sri\Exceptions\CertificadoInvalido;
 use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\ValueObjects\CertificadoFirma;
@@ -30,6 +31,7 @@ use SensitiveParameter;
  * @property string|null $dir_matriz
  * @property string|null $agente_retencion_resolucion nº de resolución, sin ceros a la izquierda (Anexo 21)
  * @property string|null $contribuyente_especial_resolucion nº de resolución (Tabla 11, fila 8)
+ * @property RegimenRimpe|null $regimen_rimpe null = régimen general (Anexo 22)
  * @property string|null $logo_path
  * @property string|null $certificado_p12 base64 del .p12 (cifrado en reposo)
  * @property string|null $certificado_clave (cifrada en reposo)
@@ -154,6 +156,7 @@ class Contribuyente extends Model
         return new LeyendasEmisor(
             agenteRetencion: $this->agente_retencion_resolucion,
             contribuyenteEspecial: $this->contribuyente_especial_resolucion,
+            regimenRimpe: $this->regimen_rimpe,
         );
     }
 
@@ -210,6 +213,7 @@ class Contribuyente extends Model
             'certificado_p12' => 'encrypted',
             'certificado_clave' => 'encrypted',
             'certificado_valido_hasta' => 'datetime',
+            'regimen_rimpe' => RegimenRimpe::class,
         ];
     }
 }

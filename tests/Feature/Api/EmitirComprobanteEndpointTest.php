@@ -86,6 +86,9 @@ describe('endurecimiento (fase 4)', function () {
         'contribuyenteEspecial en el payload' => [function (array &$payload): void {
             $payload['factura']['infoFactura']['contribuyenteEspecial'] = '5368';
         }],
+        'contribuyenteRimpe en el payload' => [function (array &$payload): void {
+            $payload['factura']['infoTributaria']['contribuyenteRimpe'] = 'CONTRIBUYENTE RÉGIMEN RIMPE';
+        }],
         'secuencial inválido' => [function (array &$payload): void {
             $payload['factura']['infoTributaria']['secuencial'] = 'ABC';
         }],
@@ -197,6 +200,7 @@ it('imprime las leyendas configuradas en el contribuyente en el XML emitido', fu
     $this->contribuyente->update([
         'agente_retencion_resolucion' => '6498',
         'contribuyente_especial_resolucion' => '5368',
+        'regimen_rimpe' => 'rimpe',
     ]);
 
     $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
@@ -204,5 +208,6 @@ it('imprime las leyendas configuradas en el contribuyente en el XML emitido', fu
 
     expect(base64_decode($respuesta->json('xmlFirmado')))
         ->toContain('<agenteRetencion>6498</agenteRetencion>')
+        ->toContain('<contribuyenteRimpe>CONTRIBUYENTE RÉGIMEN RIMPE</contribuyenteRimpe>')
         ->toContain('<contribuyenteEspecial>5368</contribuyenteEspecial>');
 });

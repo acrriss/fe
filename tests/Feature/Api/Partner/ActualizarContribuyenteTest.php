@@ -58,15 +58,19 @@ it('configura y borra las designaciones del emisor', function () {
     $this->patchJson(route('api.partner.v1.contribuyentes.actualizar', $gestionado->uuid), [
         'agente_retencion_resolucion' => '00006498', // se guarda sin ceros a la izquierda
         'contribuyente_especial_resolucion' => '5368',
+        'regimen_rimpe' => 'negocio_popular',
     ])->assertSuccessful()
         ->assertJsonPath('data.agenteRetencionResolucion', '6498')
-        ->assertJsonPath('data.contribuyenteEspecialResolucion', '5368');
+        ->assertJsonPath('data.contribuyenteEspecialResolucion', '5368')
+        ->assertJsonPath('data.regimenRimpe', 'negocio_popular');
 
     $this->patchJson(route('api.partner.v1.contribuyentes.actualizar', $gestionado->uuid), [
         'agente_retencion_resolucion' => null,
+        'regimen_rimpe' => null,
     ])->assertSuccessful()
         ->assertJsonPath('data.agenteRetencionResolucion', null)
-        ->assertJsonPath('data.contribuyenteEspecialResolucion', '5368');
+        ->assertJsonPath('data.contribuyenteEspecialResolucion', '5368')
+        ->assertJsonPath('data.regimenRimpe', null);
 });
 
 it('rechaza designaciones con formato inválido: :dataset', function (array $payload, string $campo) {
@@ -80,6 +84,7 @@ it('rechaza designaciones con formato inválido: :dataset', function (array $pay
     'agente de retención con letras' => [['agente_retencion_resolucion' => 'NAC-1'], 'agente_retencion_resolucion'],
     'agente de retención de 9 dígitos' => [['agente_retencion_resolucion' => '123456789'], 'agente_retencion_resolucion'],
     'contribuyente especial muy corto' => [['contribuyente_especial_resolucion' => '12'], 'contribuyente_especial_resolucion'],
+    'régimen desconocido' => [['regimen_rimpe' => 'rise'], 'regimen_rimpe'],
 ]);
 
 it('el aprovisionamiento acepta las designaciones del emisor', function () {

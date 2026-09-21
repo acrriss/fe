@@ -481,6 +481,15 @@ paths:
                     Nº de resolución de Contribuyente Especial (3 a 13 caracteres
                     alfanuméricos). `fe` lo imprime como `<contribuyenteEspecial>` en
                     cada comprobante. Null o vacío = no designado.
+                regimen_rimpe:
+                  type: [string, 'null']
+                  enum: [rimpe, negocio_popular, null]
+                  description: |
+                    Régimen RIMPE del emisor (ficha técnica, Anexo 22). `fe` imprime la
+                    leyenda literal en `<contribuyenteRimpe>` y en el RIDE:
+                    `rimpe` → "CONTRIBUYENTE RÉGIMEN RIMPE";
+                    `negocio_popular` → "CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE".
+                    Null o vacío = régimen general.
       responses:
         '201':
           description: Contribuyente aprovisionado.
@@ -563,6 +572,15 @@ paths:
                     Nº de resolución de Contribuyente Especial (3 a 13 caracteres
                     alfanuméricos). `fe` lo imprime como `<contribuyenteEspecial>` en
                     cada comprobante. Null o vacío = no designado.
+                regimen_rimpe:
+                  type: [string, 'null']
+                  enum: [rimpe, negocio_popular, null]
+                  description: |
+                    Régimen RIMPE del emisor (ficha técnica, Anexo 22). `fe` imprime la
+                    leyenda literal en `<contribuyenteRimpe>` y en el RIDE:
+                    `rimpe` → "CONTRIBUYENTE RÉGIMEN RIMPE";
+                    `negocio_popular` → "CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE".
+                    Null o vacío = régimen general.
       responses:
         '200':
           description: Contribuyente actualizado.
@@ -781,6 +799,10 @@ components:
         contribuyenteEspecialResolucion:
           type: [string, 'null']
           description: Leyenda Contribuyente Especial impresa en cada comprobante.
+        regimenRimpe:
+          type: [string, 'null']
+          enum: [rimpe, negocio_popular, null]
+          description: Régimen RIMPE cuya leyenda se imprime en cada comprobante (Anexo 22).
         certificado:
           type: object
           properties:
@@ -822,9 +844,10 @@ components:
         Importes como texto (`"100.00"`), fechas en `dd/mm/aaaa`. Ver el
         ejemplo del endpoint de emisión para una factura completa.
 
-        **Leyendas del emisor (ficha técnica 2.34, Anexo 21).** Los tags
-        `agenteRetencion` (en `infoTributaria`) y `contribuyenteEspecial`
-        (en el bloque `info*`) los fija la configuración del contribuyente
+        **Leyendas del emisor (ficha técnica 2.34, Anexos 21 y 22).** Los
+        tags `agenteRetencion` y `contribuyenteRimpe` (en `infoTributaria`)
+        y `contribuyenteEspecial` (en el bloque `info*`) los fija la
+        configuración del contribuyente
         —panel o `PATCH /partner/v1/contribuyentes/{id}`— y `fe` los
         inyecta en cada comprobante y en el RIDE. No se envían en el
         payload: si vienen, la emisión responde 422.

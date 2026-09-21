@@ -42,6 +42,11 @@ final class InfoTributariaData extends Data
          * rechaza.
          */
         public ?string $agenteRetencion = null,
+        /**
+         * Leyenda literal del régimen RIMPE (Anexo 22). Misma regla:
+         * la inyecta el pipeline, en el payload se rechaza.
+         */
+        public ?string $contribuyenteRimpe = null,
     ) {}
 
     /**
@@ -55,7 +60,8 @@ final class InfoTributariaData extends Data
     /**
      * Bloque <infoTributaria> en el orden de la ficha del SRI. El codDoc
      * viene del tipo del comprobante y la claveAcceso debe existir ya. Las
-     * leyendas del emisor cierran el bloque (Anexo 21: tras dirMatriz).
+     * leyendas del emisor cierran el bloque (Anexo 21: agenteRetencion tras
+     * dirMatriz; Anexo 22: contribuyenteRimpe tras agenteRetencion).
      *
      * @return array<string, string>
      */
@@ -78,6 +84,7 @@ final class InfoTributariaData extends Data
             'secuencial' => (string) $this->secuencial,
             'dirMatriz' => $this->dirMatriz,
             'agenteRetencion' => $this->agenteRetencion,
+            'contribuyenteRimpe' => $this->contribuyenteRimpe,
         ]);
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Sri\ValueObjects;
 
+use App\Sri\Enums\RegimenRimpe;
 use App\Sri\Exceptions\DatoInvalido;
 
 /**
@@ -15,6 +16,7 @@ use App\Sri\Exceptions\DatoInvalido;
  *   "omitiendo los ceros a la izquierda" (Anexo 21).
  * - `contribuyenteEspecial`: número de la resolución, alfanumérico de 3 a
  *   13 caracteres (tag <contribuyenteEspecial> de cada formato XML).
+ * - `regimenRimpe`: leyenda literal de RegimenRimpe (Anexo 22).
  */
 final readonly class LeyendasEmisor
 {
@@ -25,6 +27,7 @@ final readonly class LeyendasEmisor
     public function __construct(
         public ?string $agenteRetencion = null,
         public ?string $contribuyenteEspecial = null,
+        public ?RegimenRimpe $regimenRimpe = null,
     ) {}
 
     /**
@@ -32,17 +35,28 @@ final readonly class LeyendasEmisor
      *
      * @throws DatoInvalido
      */
-    public static function de(?string $agenteRetencion, ?string $contribuyenteEspecial): self
+    public static function de(?string $agenteRetencion, ?string $contribuyenteEspecial, ?string $regimenRimpe = null): self
     {
         return new self(
             self::resolucionAgenteRetencion($agenteRetencion),
             self::resolucionContribuyenteEspecial($contribuyenteEspecial),
+            self::regimenRimpe($regimenRimpe),
         );
     }
 
     public function vacias(): bool
     {
-        return $this->agenteRetencion === null && $this->contribuyenteEspecial === null;
+        return $this->agenteRetencion === null
+            && $this->contribuyenteEspecial === null
+            && $this->regimenRimpe === null;
+    }
+
+    /**
+     * Leyenda literal para <contribuyenteRimpe>, o null si no está en el régimen.
+     */
+    public function leyendaRimpe(): ?string
+    {
+        return $this->regimenRimpe?->leyenda();
     }
 
     public static function resolucionAgenteRetencion(?string $valor): ?string
@@ -64,6 +78,21 @@ final readonly class LeyendasEmisor
         }
 
         return $sinCeros;
+    }
+
+    public static function regimenRimpe(?string $valor): ?RegimenRimpe
+    {
+        $valor = trim((string) $valor);
+
+        if ($valor === '') {
+            return null;
+        }
+
+        return RegimenRimpe::tryFrom($valor) ?? throw DatoInvalido::porFormato(
+            'regimenRimpe',
+            'uno de: '.implode(', ', array_map(fn (RegimenRimpe $r): string => $r->value, RegimenRimpe::cases())),
+            $valor,
+        );
     }
 
     public static function resolucionContribuyenteEspecial(?string $valor): ?string

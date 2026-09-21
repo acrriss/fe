@@ -4,6 +4,7 @@ use App\Models\Comprobante;
 use App\Sri\Actions\AgregarLeyendasEmisor;
 use App\Sri\Actions\ConstruirXml;
 use App\Sri\Data\ComprobanteData;
+use App\Sri\Enums\RegimenRimpe;
 use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\Pipeline\EmisionEnCurso;
 use App\Sri\Support\ComprobanteXmlParser;
@@ -12,16 +13,19 @@ use App\Sri\ValueObjects\LeyendasEmisor;
 /*
  * Ficha 2.34, Anexo 21: el comprobante de un agente de retención lleva el
  * número de resolución en <agenteRetencion>, dentro de infoTributaria y
- * tras dirMatriz. El contribuyente especial (Tabla 11, fila 8) va en el
- * bloque info* de cada tipo. Ambas son atributos del emisor: las inyecta
- * el pipeline desde su configuración, nunca el payload.
+ * tras dirMatriz. Anexo 22: el RIMPE lleva la leyenda literal en
+ * <contribuyenteRimpe>, tras agenteRetencion. El contribuyente especial
+ * (Tabla 11, fila 8) va en el bloque info* de cada tipo. Todas son
+ * atributos del emisor: las inyecta el pipeline desde su configuración,
+ * nunca el payload.
  */
 const LEYENDAS_PRUEBA = ['agenteRetencion' => '6498', 'contribuyenteEspecial' => '5368'];
 
-function con_leyendas(string $tipo): ComprobanteData
+function con_leyendas(string $tipo, ?RegimenRimpe $regimenRimpe = null): ComprobanteData
 {
     $comprobante = comprobante_de_prueba($tipo);
-    $emision = new EmisionEnCurso($comprobante, certificado_de_prueba(), leyendas: new LeyendasEmisor(...LEYENDAS_PRUEBA));
+    $leyendas = new LeyendasEmisor(...LEYENDAS_PRUEBA, regimenRimpe: $regimenRimpe);
+    $emision = new EmisionEnCurso($comprobante, certificado_de_prueba(), leyendas: $leyendas);
     (new AgregarLeyendasEmisor)($emision, fn (EmisionEnCurso $e): EmisionEnCurso => $e);
 
     return $comprobante;
@@ -69,6 +73,33 @@ it('coloca contribuyenteEspecial junto a obligadoContabilidad en :dataset', func
     'guiaRemision' => ['guiaRemision', 'infoGuiaRemision', ['rucTransportista', 'contribuyenteEspecial', 'fechaIniTransporte']],
 ]);
 
+/*
+ * Anexo 22: la leyenda es texto literal de 27 o 45 caracteres (espacios
+ * incluidos) y va entre <agenteRetencion> y </infoTributaria>. Un emisor
+ * RIMPE que no sea agente de retención la lleva igualmente tras dirMatriz.
+ */
+it('emite la leyenda literal de :dataset tras agenteRetencion', function (RegimenRimpe $regimen, string $leyenda, int $longitud) {
+    $dom = simplexml_load_string(ConstruirXml::render(con_leyendas('factura', $regimen)));
+    $tags = nombres_de_hijos($dom->infoTributaria);
+
+    expect(array_slice($tags, -3))->toBe(['dirMatriz', 'agenteRetencion', 'contribuyenteRimpe'])
+        ->and((string) $dom->infoTributaria->contribuyenteRimpe)->toBe($leyenda)
+        ->and(mb_strlen($leyenda))->toBe($longitud);
+})->with([
+    'RIMPE' => [RegimenRimpe::Rimpe, 'CONTRIBUYENTE RÉGIMEN RIMPE', 27],
+    'negocio popular' => [RegimenRimpe::NegocioPopular, 'CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE', 45],
+]);
+
+it('un RIMPE que no es agente de retención lleva la leyenda justo tras dirMatriz', function () {
+    $comprobante = comprobante_de_prueba('factura');
+    $emision = new EmisionEnCurso($comprobante, certificado_de_prueba(), leyendas: new LeyendasEmisor(regimenRimpe: RegimenRimpe::Rimpe));
+    (new AgregarLeyendasEmisor)($emision, fn (EmisionEnCurso $e): EmisionEnCurso => $e);
+
+    $dom = simplexml_load_string(ConstruirXml::render($comprobante));
+
+    expect(array_slice(nombres_de_hijos($dom->infoTributaria), -2))->toBe(['dirMatriz', 'contribuyenteRimpe']);
+});
+
 it('sin designaciones no emite ningún tag y el XML es el de siempre', function (string $tipo) {
     $comprobante = comprobante_de_prueba($tipo);
     $emision = new EmisionEnCurso($comprobante, certificado_de_prueba());
@@ -78,6 +109,7 @@ it('sin designaciones no emite ningún tag y el XML es el de siempre', function 
 
     expect($xml)->toBe(xml_de_prueba($tipo))
         ->not->toContain('<agenteRetencion')
+        ->not->toContain('<contribuyenteRimpe')
         ->not->toContain('<contribuyenteEspecial');
 })->with('tipos');
 
@@ -89,6 +121,7 @@ it('rechaza :dataset si viene en el payload', function (string $campo, Closure $
         ->toThrow(DatoInvalido::class, "«{$campo}» lo fija la configuración del contribuyente");
 })->with([
     'agenteRetencion' => ['agenteRetencion', fn (ComprobanteData $c) => $c->infoTributaria->agenteRetencion = '1'],
+    'contribuyenteRimpe' => ['contribuyenteRimpe', fn (ComprobanteData $c) => $c->infoTributaria->contribuyenteRimpe = 'CONTRIBUYENTE RÉGIMEN RIMPE'],
     'contribuyenteEspecial' => ['contribuyenteEspecial', fn (ComprobanteData $c) => $c->bloqueInfo()->contribuyenteEspecial = '5368'],
 ]);
 
@@ -96,12 +129,13 @@ it('deja pasar un comprobante sin leyendas', function () {
     AgregarLeyendasEmisor::rechazarSiVieneEnElPayload(comprobante_de_prueba('factura'));
 })->throwsNoExceptions();
 
-it('recupera ambas leyendas al releer el XML de :dataset', function (string $tipo) {
-    $xml = ConstruirXml::render(con_leyendas($tipo));
+it('recupera las leyendas al releer el XML de :dataset', function (string $tipo) {
+    $xml = ConstruirXml::render(con_leyendas($tipo, RegimenRimpe::NegocioPopular));
 
     $releido = (new ComprobanteXmlParser)->parse($xml);
 
     expect($releido->infoTributaria->agenteRetencion)->toBe('6498')
+        ->and($releido->infoTributaria->contribuyenteRimpe)->toBe('CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE')
         ->and($releido->bloqueInfo()->contribuyenteEspecial)->toBe('5368')
         ->and(ConstruirXml::render($releido))->toBe($xml);
 })->with('tipos');
@@ -111,7 +145,7 @@ it('recupera ambas leyendas al releer el XML de :dataset', function (string $tip
  * Retención Resolución No." en la caja del emisor.
  */
 it('muestra las leyendas en la cabecera del RIDE', function () {
-    $factura = con_leyendas('factura');
+    $factura = con_leyendas('factura', RegimenRimpe::Rimpe);
     $registro = Comprobante::factory()->autorizado()->make([
         'clave_acceso' => (string) $factura->infoTributaria->claveAcceso,
     ]);
@@ -126,7 +160,8 @@ it('muestra las leyendas en la cabecera del RIDE', function () {
     expect($html)->toContain('Agente de Retención Resolución No.')
         ->toContain('6498')
         ->toContain('Contribuyente Especial Nro.')
-        ->toContain('5368');
+        ->toContain('5368')
+        ->toContain('CONTRIBUYENTE RÉGIMEN RIMPE');
 });
 
 it('no dibuja leyendas en el RIDE de un emisor sin designaciones', function () {
@@ -143,7 +178,8 @@ it('no dibuja leyendas en el RIDE de un emisor sin designaciones', function () {
     ])->render();
 
     expect($html)->not->toContain('Agente de Retención')
-        ->not->toContain('Contribuyente Especial');
+        ->not->toContain('Contribuyente Especial')
+        ->not->toContain('RIMPE');
 });
 
 /*
@@ -159,11 +195,21 @@ it('normaliza la resolución de agente de retención quitando los ceros a la izq
 });
 
 it('trata la cadena vacía como "no designado"', function () {
-    $leyendas = LeyendasEmisor::de('', null);
+    $leyendas = LeyendasEmisor::de('', null, '');
 
     expect($leyendas->agenteRetencion)->toBeNull()
         ->and($leyendas->contribuyenteEspecial)->toBeNull()
+        ->and($leyendas->regimenRimpe)->toBeNull()
         ->and($leyendas->vacias())->toBeTrue();
+});
+
+it('resuelve el régimen RIMPE por su clave de API', function () {
+    expect(LeyendasEmisor::de(null, null, 'negocio_popular')->leyendaRimpe())
+        ->toBe('CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE');
+});
+
+it('rechaza un régimen RIMPE desconocido', function () {
+    expect(fn () => LeyendasEmisor::de(null, null, 'rise'))->toThrow(DatoInvalido::class, 'regimenRimpe');
 });
 
 it('rechaza una resolución de agente de retención inválida: :dataset', function (string $valor) {

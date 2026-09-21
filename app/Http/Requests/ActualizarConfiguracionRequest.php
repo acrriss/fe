@@ -27,7 +27,7 @@ class ActualizarConfiguracionRequest extends FormRequest
     }
 
     /**
-     * @return array<string, string|null>
+     * @return array<string, mixed>
      */
     public function datosContribuyente(): array
     {

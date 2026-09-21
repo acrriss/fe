@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolverContribuyente;
 use App\Http\Requests\ActualizarConfiguracionRequest;
 use App\Models\Contribuyente;
+use App\Sri\Enums\RegimenRimpe;
 use App\Sri\Exceptions\CertificadoInvalido;
 use App\Sri\Exceptions\DatoInvalido;
 use Illuminate\Http\RedirectResponse;
@@ -33,6 +34,7 @@ class ConfiguracionController extends Controller
                 'dir_matriz' => $contribuyente->dir_matriz,
                 'agente_retencion_resolucion' => $contribuyente->agente_retencion_resolucion,
                 'contribuyente_especial_resolucion' => $contribuyente->contribuyente_especial_resolucion,
+                'regimen_rimpe' => $contribuyente->regimen_rimpe?->value,
                 'tiene_certificado' => $contribuyente->tieneCertificado(),
                 'tiene_logo' => $contribuyente->logo_path !== null,
                 'plan' => $contribuyente->plan?->nombre,
@@ -59,6 +61,10 @@ class ConfiguracionController extends Controller
                     'solicitada_en' => $vinculacion->created_at?->format('d/m/Y'),
                 ]),
             'partner' => $contribuyente->partner?->nombre,
+            'regimenes_rimpe' => array_map(
+                fn (RegimenRimpe $regimen): array => ['valor' => $regimen->value, 'etiqueta' => $regimen->etiqueta(), 'leyenda' => $regimen->leyenda()],
+                RegimenRimpe::cases(),
+            ),
         ]);
     }
 

@@ -10,8 +10,8 @@ use Closure;
 
 /**
  * Vuelca en el comprobante las designaciones del emisor que la ficha obliga
- * a imprimir como leyenda (Anexo 21: agente de retención; Tabla 11 fila 8:
- * contribuyente especial).
+ * a imprimir como leyenda (Anexo 21: agente de retención; Anexo 22: régimen
+ * RIMPE; Tabla 11 fila 8: contribuyente especial).
  *
  * Como con el RUC del proveedor, van como etapa del pipeline y no en el
  * DTO que arma el cliente: son un atributo del contribuyente configurado
@@ -40,6 +40,10 @@ final class AgregarLeyendasEmisor
             throw self::loFijaLaConfiguracion('agenteRetencion');
         }
 
+        if ($comprobante->infoTributaria->contribuyenteRimpe !== null) {
+            throw self::loFijaLaConfiguracion('contribuyenteRimpe');
+        }
+
         if ($comprobante->bloqueInfo()->contribuyenteEspecial !== null) {
             throw self::loFijaLaConfiguracion('contribuyenteEspecial');
         }
@@ -48,6 +52,7 @@ final class AgregarLeyendasEmisor
     public static function agregar(ComprobanteData $comprobante, LeyendasEmisor $leyendas): void
     {
         $comprobante->infoTributaria->agenteRetencion = $leyendas->agenteRetencion;
+        $comprobante->infoTributaria->contribuyenteRimpe = $leyendas->leyendaRimpe();
         $comprobante->bloqueInfo()->contribuyenteEspecial = $leyendas->contribuyenteEspecial;
     }
 

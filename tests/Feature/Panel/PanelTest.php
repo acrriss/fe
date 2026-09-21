@@ -4,6 +4,7 @@ use App\Models\Comprobante;
 use App\Models\Contribuyente;
 use App\Models\Plan;
 use App\Models\User;
+use App\Sri\Enums\RegimenRimpe;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -145,16 +146,28 @@ describe('configuración', function () {
             'razon_social' => 'Razón Nueva S.A.',
             'agente_retencion_resolucion' => '0006498',
             'contribuyente_especial_resolucion' => '5368',
+            'regimen_rimpe' => 'rimpe',
         ])->assertRedirect(route('panel.configuracion'));
 
         expect($contribuyente->refresh()->agente_retencion_resolucion)->toBe('6498')
-            ->and($contribuyente->contribuyente_especial_resolucion)->toBe('5368');
+            ->and($contribuyente->contribuyente_especial_resolucion)->toBe('5368')
+            ->and($contribuyente->regimen_rimpe)->toBe(RegimenRimpe::Rimpe);
 
         $this->get(route('panel.configuracion'))->assertInertia(
             fn (Assert $page) => $page
                 ->where('contribuyente.agente_retencion_resolucion', '6498')
-                ->where('contribuyente.contribuyente_especial_resolucion', '5368'),
+                ->where('contribuyente.contribuyente_especial_resolucion', '5368')
+                ->where('contribuyente.regimen_rimpe', 'rimpe')
+                ->has('regimenes_rimpe', 2),
         );
+
+        // el select manda cadena vacía para "no aplica"
+        $this->put(route('panel.configuracion.update'), [
+            'razon_social' => 'Razón Nueva S.A.',
+            'regimen_rimpe' => '',
+        ])->assertRedirect(route('panel.configuracion'));
+
+        expect($contribuyente->refresh()->regimen_rimpe)->toBeNull();
     });
 
     it('rechaza una resolución de agente de retención con formato inválido', function () {

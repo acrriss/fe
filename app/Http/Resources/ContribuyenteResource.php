@@ -26,9 +26,10 @@ class ContribuyenteResource extends JsonResource
             'razonSocial' => $this->razon_social,
             'nombreComercial' => $this->nombre_comercial,
             'dirMatriz' => $this->dir_matriz,
-            // designaciones del SRI que salen como leyenda en cada comprobante (ficha 2.34, Anexo 21)
+            // designaciones del SRI que salen como leyenda en cada comprobante (ficha 2.34, Anexos 21 y 22)
             'agenteRetencionResolucion' => $this->agente_retencion_resolucion,
             'contribuyenteEspecialResolucion' => $this->contribuyente_especial_resolucion,
+            'regimenRimpe' => $this->regimen_rimpe?->value,
             'certificado' => [
                 'configurado' => $this->tieneCertificado(),
                 'titular' => $this->certificado_titular,

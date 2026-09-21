@@ -1407,7 +1407,7 @@ payload.** El cliente nunca duplica leyendas del emisor en el JSON (422).
 | Anexo | Requisito | Dónde va | Estado |
 |---|---|---|---|
 | 21 | `<agenteRetencion>` nº resolución (≤8 dígitos, sin ceros a la izq.) + "Contribuyente Especial" en RIDE | `infoTributaria` tras `dirMatriz`; `contribuyenteEspecial` en el bloque info* | ✅ 2026-09-20 |
-| 22 | `<contribuyenteRimpe>` leyenda literal RIMPE / Negocio Popular | `infoTributaria` tras `agenteRetencion` | ⏳ |
+| 22 | `<contribuyenteRimpe>` leyenda literal RIMPE / Negocio Popular | `infoTributaria` tras `agenteRetencion` | ✅ 2026-09-20 |
 | 23 | `<codigoAuxiliar>` Tabla 31 (materiales de construcción) | `detalle` tras `codigoPrincipal` | ⏳ (cierra también 25 §1) |
 | 24 | `campoAdicional nombre="Gran Contribuyente"` | `infoAdicional` (factura, NC, ND) | ⏳ |
 | 25 | §1 `codigoAuxiliar` H492001/H492002 · §2 `<placa>` Tabla 33 | `detalle` · `infoFactura` tras `moneda` | ⏳ |
@@ -1506,3 +1506,58 @@ Infraestructura compartida por los anexos 21, 22 y 24, ya montada:
   plantilla de impresión "Agente de Retención Resolución No. X" y
   "Contribuyente Especial Nro. X" leyendo de `fe_ajustes` (la norma habla
   del comprobante, no solo del XML).
+
+### ✅ Registro §14 — Anexo 22: RIMPE (2026-09-20)
+
+Montado sobre la infraestructura del Anexo 21, sin piezas nuevas de
+arquitectura:
+
+- **`RegimenRimpe`** (enum): valor = clave de API/BD (`rimpe`,
+  `negocio_popular`); `leyenda()` devuelve el texto literal de la ficha
+  ("CONTRIBUYENTE RÉGIMEN RIMPE", 27 caracteres; "CONTRIBUYENTE NEGOCIO
+  POPULAR - RÉGIMEN RIMPE", 45). Los tests fijan la longitud exacta para
+  que nadie "corrija" un espacio o una tilde.
+- Columna `regimen_rimpe` (cast al enum, null = régimen general);
+  `LeyendasEmisor::regimenRimpe` + `leyendaRimpe()`;
+  `InfoTributariaData::contribuyenteRimpe` cierra el bloque tras
+  `agenteRetencion` (o tras `dirMatriz` si el emisor no es agente de
+  retención); rechazo en payload; RIDE: leyenda en negrita al pie de la
+  caja del emisor (ejemplos 3 y 5 del anexo).
+- Panel: select "Régimen RIMPE" con la leyenda resultante bajo el campo;
+  el select manda `''` para "no aplica" y `fe` lo guarda como null.
+- API de partner: `regimen_rimpe` en aprovisionar/actualizar y
+  `regimenRimpe` en el resource; OpenAPI actualizado.
+
+#### Recomendaciones para `../pos` — Anexo 22
+
+**Consumo de API**
+
+- Mismo `PATCH /api/partner/v1/contribuyentes/{uuid}` del Anexo 21, con
+  un campo más: `regimen_rimpe` = `"rimpe"` | `"negocio_popular"` |
+  `null`. La respuesta lo devuelve como `data.regimenRimpe`.
+- 422 con `errors.regimen_rimpe` si llega otro valor (p. ej. `"rise"`,
+  régimen ya derogado). No enviar la leyenda, solo la clave.
+- Test negativo con `Http::fake`: el payload de emisión no contiene
+  `infoTributaria.contribuyenteRimpe`; si el POS lo manda, 422 con
+  `errors.comprobante` = "El campo «contribuyenteRimpe» lo fija la
+  configuración del contribuyente…".
+
+**UI**
+
+- `fe_ajustes.regimen_rimpe` (string 20, nullable) y en
+  `FeGuardarAjustesRequest`: `['nullable', Rule::in(['rimpe',
+  'negocio_popular'])]`.
+- En la sección "Designaciones del SRI" de `ajustes.blade.php`, un
+  select "Régimen RIMPE" con tres opciones: "No aplica (régimen general)"
+  (valor vacío → enviar `null`), "RIMPE (emprendedor)", "RIMPE negocio
+  popular". Bajo el select, mostrar la leyenda que se imprimirá según la
+  opción elegida, para que el negocio la reconozca del RUC que le entregó
+  el SRI.
+- Ticket propio del POS (si lo hay): imprimir la leyenda literal al pie
+  de los datos del emisor, en mayúsculas y sin abreviar —el texto es
+  requisito, no decoración—; leerla de `fe_ajustes` con el mismo mapa
+  clave → leyenda que usa `fe`.
+- Los negocios populares están exentos de facturar en muchas ventas (solo
+  emiten a pedido del cliente o sobre ciertos montos): si el POS ya
+  permite marcar ventas como no facturables, conviene recordarlo en la
+  ayuda del select; no es tarea de `fe`.
