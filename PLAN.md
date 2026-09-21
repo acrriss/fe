@@ -532,8 +532,10 @@ autorizó al legado. Ya hay comprobantes reales autorizados por el sistema
 nuevo (§12, §13). Si algún día hace falta un oráculo externo, el correcto
 son los .xsd de la ficha validando el XML generado, no un snapshot.
 
-`legacy/` (16 MB) queda sin puente con el código; decisión pendiente sobre
-si sale de `main` a un tag de referencia.
+`legacy/` (212 archivos, 16 MB) salió del árbol en el commit siguiente, sin
+tag: el último commit que lo contiene es `b99aff6` (`git log -- legacy/`
+lo localiza). La carpeta puede seguir en disco porque guarda certificados y
+credenciales reales no versionados; `.gitignore` la ignora entera.
 
 ---
 

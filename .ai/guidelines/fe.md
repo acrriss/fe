@@ -83,7 +83,6 @@ controladores.
   #[SensitiveParameter].
 - Jobs que transporten datos sensibles implementan ShouldBeEncrypted.
 - Secretos en BD siempre con cast `encrypted`.
-- `legacy/` es referencia de solo lectura: nunca modificarlo ni desplegarlo.
 
 # API
 

@@ -28,13 +28,6 @@ boost.json
 .claude
 ficha-tecnica.pdf
 
-# --- Legado (referencia, nunca desplegar) ---
-# secretos del proyecto legacy: certificados de firma y credenciales
-legacy/.env
-legacy/public/sv.p12
-legacy/public/p12/
-legacy/.idea/
-legacy/error_log
-legacy/public/error_log
-
-# vendor del generador de fixtures
+# El código del legado salió del árbol (último commit que lo tuvo: b99aff6);
+# la carpeta puede seguir en disco con certificados y credenciales reales
+legacy/

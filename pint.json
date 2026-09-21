@@ -1,7 +1,4 @@
 {
     "preset": "laravel",
-    "exclude": [
-        "legacy",
-        "tools"
-    ]
+    "exclude": []
 }
