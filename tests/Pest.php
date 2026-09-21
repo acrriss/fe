@@ -19,10 +19,12 @@ use Tests\TestCase;
 |--------------------------------------------------------------------------
 |
 | Los tests de Feature usan el TestCase de Laravel (app booteada); los de
-| Unit son PHPUnit puro. Los fixtures golden-master viven en fixtures/golden
-| y se acceden con el helper golden_path().
+| Unit son PHPUnit puro. Los payloads de comprobantes de prueba viven en
+| tests/Payloads.php (un builder por tipo).
 |
 */
+
+require_once __DIR__.'/Payloads.php';
 
 pest()->extend(TestCase::class)
     ->use(LazilyRefreshDatabase::class)
@@ -93,9 +95,9 @@ function actuar_como_contribuyente(bool $conCertificado = true, array $atributos
         $factory = $factory->conCertificado();
     }
 
-    // por defecto, el RUC de los fixtures golden: así los payloads de los
-    // tests coinciden con el contribuyente autenticado
-    $contribuyente = $factory->create($atributos + ['ruc' => '0922596788001']);
+    // por defecto, el RUC de los payloads de prueba: así coinciden con el
+    // contribuyente autenticado
+    $contribuyente = $factory->create($atributos + ['ruc' => RUC_PRUEBA]);
 
     Sanctum::actingAs(
         User::factory()->create(['contribuyente_id' => $contribuyente->id]),
@@ -119,13 +121,13 @@ function actuar_como_partner(array $atributos = []): Partner
 
 /**
  * Contribuyente gestionado por el partner (con certificado y, por defecto,
- * el RUC de los fixtures golden, como actuar_como_contribuyente()).
+ * el RUC de los payloads de prueba, como actuar_como_contribuyente()).
  */
 function contribuyente_gestionado(Partner $partner, array $atributos = []): Contribuyente
 {
     return Contribuyente::factory()
         ->conCertificado()
-        ->create($atributos + ['ruc' => '0922596788001', 'partner_id' => $partner->id]);
+        ->create($atributos + ['ruc' => RUC_PRUEBA, 'partner_id' => $partner->id]);
 }
 
 /**
