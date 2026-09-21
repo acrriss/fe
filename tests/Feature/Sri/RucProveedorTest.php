@@ -9,7 +9,6 @@ use App\Sri\Data\Factura\FacturaData;
 use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\Pipeline\EmisionEnCurso;
 use App\Sri\Support\ComprobanteXmlParser;
-use App\Sri\ValueObjects\ClaveAcceso;
 
 /**
  * Resolución NAC-DGERCGC26-00000027, Art. 5: el comprobante lleva el RUC
@@ -17,12 +16,10 @@ use App\Sri\ValueObjects\ClaveAcceso;
  */
 const RUC_PROVEEDOR = '0993205451001';
 
-function factura_golden(): FacturaData
+function factura_de_prueba(): FacturaData
 {
-    $factura = FacturaData::from(golden_input('factura'));
-    $factura->infoTributaria->claveAcceso = ClaveAcceso::fromString(
-        trim((string) file_get_contents(golden_path('factura/claveAcceso.txt'))),
-    );
+    $factura = FacturaData::from(payload_factura());
+    $factura->infoTributaria->claveAcceso = clave_acceso_de_prueba('factura');
 
     return $factura;
 }
@@ -38,7 +35,7 @@ function emitir_etapa(FacturaData $factura): FacturaData
 it('emite el campo con el nombre literal que fija la ficha técnica', function () {
     config(['sri.ruc_proveedor' => RUC_PROVEEDOR]);
 
-    $xml = ConstruirXml::render(emitir_etapa(factura_golden()));
+    $xml = ConstruirXml::render(emitir_etapa(factura_de_prueba()));
 
     expect($xml)->toContain('<campoAdicional nombre="RUC Proveedor">'.RUC_PROVEEDOR.'</campoAdicional>');
 });
@@ -46,21 +43,21 @@ it('emite el campo con el nombre literal que fija la ficha técnica', function (
 it('coloca infoAdicional como último elemento del comprobante', function () {
     config(['sri.ruc_proveedor' => RUC_PROVEEDOR]);
 
-    $xml = ConstruirXml::render(emitir_etapa(factura_golden()));
+    $xml = ConstruirXml::render(emitir_etapa(factura_de_prueba()));
     $documento = simplexml_load_string($xml);
     $hijos = array_map(fn ($hijo): string => $hijo->getName(), iterator_to_array($documento->children()));
 
     expect(end($hijos))->toBe('infoAdicional');
 });
 
-it('sin RUC configurado no añade nada y el XML sigue siendo el golden', function () {
+it('sin RUC configurado no añade nada y el XML no lleva infoAdicional', function () {
     config(['sri.ruc_proveedor' => '']);
 
-    $factura = emitir_etapa(factura_golden());
+    $factura = emitir_etapa(factura_de_prueba());
 
     expect($factura->infoAdicional)->toBe([])
-        ->and(ConstruirXml::render($factura))
-        ->toBe(file_get_contents(golden_path('factura/comprobante.xml')));
+        ->and(ConstruirXml::render($factura))->not->toContain('<infoAdicional')
+        ->and(ConstruirXml::render($factura))->toBe(xml_de_prueba('factura'));
 });
 
 /*
@@ -70,7 +67,7 @@ it('sin RUC configurado no añade nada y el XML sigue siendo el golden', functio
  * `infoAdicional` es texto libre y no valida su contenido.
  */
 it('rechaza el RUC de proveedor que venga en el payload', function () {
-    $factura = factura_golden();
+    $factura = factura_de_prueba();
     $factura->infoAdicional = [new CampoAdicionalData('RUC Proveedor', '9999999999999')];
 
     expect(fn () => AgregarRucProveedor::rechazarSiVieneEnElPayload($factura))
@@ -78,7 +75,7 @@ it('rechaza el RUC de proveedor que venga en el payload', function () {
 });
 
 it('deja pasar los demás campos adicionales del emisor', function () {
-    $factura = factura_golden();
+    $factura = factura_de_prueba();
     $factura->infoAdicional = [new CampoAdicionalData('Email', 'cliente@ejemplo.test')];
 
     AgregarRucProveedor::rechazarSiVieneEnElPayload($factura);
@@ -87,7 +84,7 @@ it('deja pasar los demás campos adicionales del emisor', function () {
 it('conserva los campos adicionales del emisor y añade el suyo al final', function () {
     config(['sri.ruc_proveedor' => RUC_PROVEEDOR]);
 
-    $factura = factura_golden();
+    $factura = factura_de_prueba();
     $factura->infoAdicional = [new CampoAdicionalData('Email', 'cliente@ejemplo.test')];
     emitir_etapa($factura);
 
@@ -98,7 +95,7 @@ it('conserva los campos adicionales del emisor y añade el suyo al final', funct
 it('falla claramente si no cabe otro campo adicional', function () {
     config(['sri.ruc_proveedor' => RUC_PROVEEDOR]);
 
-    $factura = factura_golden();
+    $factura = factura_de_prueba();
     $factura->infoAdicional = array_map(
         fn (int $i): CampoAdicionalData => new CampoAdicionalData("Campo {$i}", (string) $i),
         range(1, ComprobanteData::MAXIMO_CAMPOS_ADICIONALES),
@@ -116,7 +113,7 @@ it('falla claramente si no cabe otro campo adicional', function () {
 it('recupera nombre y valor al leer el XML de vuelta', function () {
     config(['sri.ruc_proveedor' => RUC_PROVEEDOR]);
 
-    $factura = factura_golden();
+    $factura = factura_de_prueba();
     $factura->infoAdicional = [new CampoAdicionalData('Email', 'cliente@ejemplo.test')];
     $xml = ConstruirXml::render(emitir_etapa($factura));
 
@@ -137,7 +134,7 @@ it('recupera nombre y valor al leer el XML de vuelta', function () {
 it('muestra la información adicional en el RIDE', function () {
     config(['sri.ruc_proveedor' => RUC_PROVEEDOR]);
 
-    $factura = factura_golden();
+    $factura = factura_de_prueba();
     $factura->infoAdicional = [new CampoAdicionalData('Email', 'cliente@ejemplo.test')];
     emitir_etapa($factura);
 
@@ -161,7 +158,7 @@ it('muestra la información adicional en el RIDE', function () {
 it('no dibuja el bloque de información adicional si no hay campos', function () {
     config(['sri.ruc_proveedor' => '']);
 
-    $factura = emitir_etapa(factura_golden());
+    $factura = emitir_etapa(factura_de_prueba());
     $registro = Comprobante::factory()->autorizado()->make([
         'clave_acceso' => (string) $factura->infoTributaria->claveAcceso,
     ]);

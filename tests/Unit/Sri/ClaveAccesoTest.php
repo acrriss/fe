@@ -9,40 +9,80 @@ use App\Sri\ValueObjects\Ruc;
 use App\Sri\ValueObjects\Secuencial;
 use Carbon\CarbonImmutable;
 
-it('reproduce la clave de acceso golden de la factura del legado', function () {
-    $esperada = trim(file_get_contents(golden_path('factura/claveAcceso.txt')));
+/**
+ * Módulo 11 tal como lo describe la ficha técnica (§5.2): pesos 2..7 de
+ * derecha a izquierda, 11 - (suma % 11); 11 → 0, 10 → 1. Implementación
+ * independiente de la del dominio, para contrastarla.
+ */
+function modulo11_segun_la_ficha(string $cadena): int
+{
+    $peso = 2;
+    $suma = 0;
 
-    $clave = ClaveAcceso::generar(
-        fechaEmision: CarbonImmutable::createFromFormat('d/m/Y', '07/12/2022'),
+    for ($i = strlen($cadena) - 1; $i >= 0; $i--) {
+        $suma += (int) $cadena[$i] * $peso;
+        $peso = $peso === 7 ? 2 : $peso + 1;
+    }
+
+    $verificador = 11 - ($suma % 11);
+
+    return match ($verificador) {
+        11 => 0,
+        10 => 1,
+        default => $verificador,
+    };
+}
+
+function clave_de_ejemplo(): ClaveAcceso
+{
+    return ClaveAcceso::generar(
+        fechaEmision: CarbonImmutable::createFromFormat('d/m/Y', '10/07/2026'),
         tipoComprobante: TipoComprobante::Factura,
         ruc: Ruc::fromString('0922596788001'),
         ambiente: Ambiente::Pruebas,
         establecimiento: '001',
         puntoEmision: '001',
-        secuencial: Secuencial::fromString('000004303'),
-        codigoNumerico: CodigoNumerico::fromString('22568496'), // el hardcodeado del legado
+        secuencial: Secuencial::fromString('000000001'),
+        codigoNumerico: CodigoNumerico::fromString('12345678'),
     );
+}
 
-    expect($clave->value)->toBe($esperada)->toHaveLength(49);
+it('compone los 49 dígitos según la Tabla 1 de la ficha (§5.2)', function () {
+    $clave = clave_de_ejemplo()->value;
+
+    expect($clave)->toHaveLength(49)
+        ->and(substr($clave, 0, 8))->toBe('10072026')       // fecha ddmmaaaa
+        ->and(substr($clave, 8, 2))->toBe('01')             // tipo de comprobante (Tabla 3)
+        ->and(substr($clave, 10, 13))->toBe('0922596788001') // RUC
+        ->and(substr($clave, 23, 1))->toBe('1')             // ambiente (Tabla 4)
+        ->and(substr($clave, 24, 6))->toBe('001001')        // serie estab + ptoEmi
+        ->and(substr($clave, 30, 9))->toBe('000000001')     // secuencial
+        ->and(substr($clave, 39, 8))->toBe('12345678')      // código numérico
+        ->and(substr($clave, 47, 1))->toBe('1')             // tipo de emisión (Tabla 2)
+        ->and((int) $clave[48])->toBe(modulo11_segun_la_ficha(substr($clave, 0, 48)));
 });
 
-it('reproduce todos los vectores golden del módulo 11', function () {
-    $vectores = json_decode(file_get_contents(golden_path('claveAcceso-vectors.json')), true);
-
-    foreach ($vectores as $vector) {
-        expect(ClaveAcceso::digitoVerificador($vector['cadena']))
-            ->toBe($vector['verificadorLegado'], "caso {$vector['caso']}");
-    }
+it('reproduce el ejemplo de módulo 11 de la ficha (§5.2)', function () {
+    expect(ClaveAcceso::digitoVerificador('41261533'))->toBe(6);
 });
+
+it('resuelve los casos borde del módulo 11: :dataset', function (string $cadena, int $esperado) {
+    expect(ClaveAcceso::digitoVerificador($cadena))->toBe($esperado)
+        ->and(modulo11_segun_la_ficha($cadena))->toBe($esperado);
+})->with([
+    'resto 11 → 0' => ['071220220109225967880011001001000000001225684961', 0],
+    'resto 10 → 1' => ['071220220109225967880011001001000000010225684961', 1],
+    'resto ordinario' => ['071220220109225967880011001001000000000225684961', 5],
+]);
 
 it('acepta una clave válida con fromString', function () {
-    $valida = trim(file_get_contents(golden_path('factura/claveAcceso.txt')));
+    $valida = clave_de_ejemplo()->value;
 
     expect(ClaveAcceso::fromString($valida)->value)->toBe($valida);
 });
 
 it('rechaza una clave con dígito verificador incorrecto', function () {
-    $valida = trim(file_get_contents(golden_path('factura/claveAcceso.txt')));
+    $valida = clave_de_ejemplo()->value;
     $corrupta = substr($valida, 0, 48).((int) $valida[48] === 9 ? '0' : (string) ((int) $valida[48] + 1));
 
     ClaveAcceso::fromString($corrupta);
@@ -58,7 +98,7 @@ it('rechaza claves con longitud o caracteres inválidos', function (string $valo
 
 it('valida el formato de establecimiento y punto de emisión', function () {
     ClaveAcceso::generar(
-        fechaEmision: CarbonImmutable::createFromFormat('d/m/Y', '07/12/2022'),
+        fechaEmision: CarbonImmutable::createFromFormat('d/m/Y', '10/07/2026'),
         tipoComprobante: TipoComprobante::Factura,
         ruc: Ruc::fromString('0922596788001'),
         ambiente: Ambiente::Pruebas,
