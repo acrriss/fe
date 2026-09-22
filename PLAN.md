@@ -1850,3 +1850,105 @@ auditoría meses después. Así llevábamos años con los Anexos 21-25.
 
 - Nada que cambiar. El error es de integración: debe verse en los logs y
   en el detalle del comprobante fallido, no en la pantalla de venta.
+
+## 15. Implementación en el POS de los Anexos 21–26
+
+Las recomendaciones de §14 llevadas a `../pos`. Cuatro fases (decidido
+2026-09-22: se hacen las cuatro aunque todavía no haya un negocio de
+construcción ni de transporte). Los Anexos 21, 22 y 24 van juntos: en el
+POS son cuatro campos del mismo formulario con el mismo espejado, y
+separarlos obligaría a tocar los mismos cinco archivos tres veces.
+
+El POS no tiene Pint ni PHPStan: la puerta de calidad es su suite PHPUnit
+(estilo clásico `test_...`, no Pest).
+
+### ✅ Fase A — Designaciones del emisor (Anexos 21, 22 y 24) (2026-09-22)
+
+- Migración `fe_ajustes`: `agente_retencion_resolucion`,
+  `contribuyente_especial_resolucion`, `regimen_rimpe`,
+  `gran_contribuyente_resolucion`.
+- `FeGuardarAjustesRequest`: reglas de forma (longitud, `Rule::in` del
+  régimen desde la constante `REGIMENES_RIMPE`, que también alimenta el
+  select). **El formato fino no se duplica**: lo valida `fe`, que es quien
+  construye el XML, y devuelve 422 por campo.
+- `FacturacionElectronicaController`: constante `CAMPOS_DESIGNACION` +
+  `designacionesSri()` (vacío → null) y `camposEspejados()`. Este último
+  sustituye los `if` campo a campo que ya había para razón social y
+  dirección: con nueve campos eran nueve condicionales calcados.
+- Las designaciones viajan también en el **aprovisionamiento**, no solo en
+  la actualización: un negocio que las configura al activar la FE no
+  necesita un segundo guardado para que lleguen.
+- Vista: sección "Designaciones del SRI" en el formulario del
+  contribuyente, con los tres inputs y el select de régimen.
+- Tests (`FeDesignacionesSriTest`, 10): guardar, vaciar a null, régimen
+  desconocido, longitud, espejado al cambiar, espejado del borrado como
+  null, **no espejar si nada cambió**, envío al aprovisionar, el payload de
+  emisión sin leyendas, y el formulario mostrándolas.
+
+**Decisión: no se tocan las plantillas de recibo.** La recomendación de
+§14 (Anexos 21 y 22) decía imprimir las leyendas también en el ticket
+propio del POS si existía. Al mirarlo: son 10+ plantillas genéricas de
+UltimatePOS (classic, slim, elegant, detailed…), compartidas con
+instalaciones de cualquier país y sin ninguna noción de FE. El comprobante
+fiscal es el RIDE que genera `fe`, y ahí las leyendas ya salen. Modificar
+diez plantillas upstream para duplicar un requisito que ya se cumple es
+mal negocio; se revisa si un negocio entrega el ticket del POS como si
+fuera el comprobante.
+
+### ✅ Fase B — Código del ítem (Anexos 23 y 25 §1) (2026-09-22)
+
+- Migración `products.fe_codigo_auxiliar` (25, nullable). **Columna propia,
+  no un `product_custom_field*`**: esos los usan los negocios con etiquetas
+  configurables y sin semántica fija, así que apropiarse de uno rompería
+  instalaciones existentes.
+- `ComprobanteMapper::codigoDeActividadRegulada()`: añade el tag solo si el
+  producto trae código, y **deriva el nombre del `$campoCodigo` que el
+  mapper ya recibía** (`codigoPrincipal` → `codigoAuxiliar`,
+  `codigoInterno` → `codigoAdicional`), sin parámetro nuevo.
+- `FacturacionClient::catalogoCodigosAuxiliares()`: pide el catálogo
+  **sin token** (el endpoint es público) y con `If-None-Match`.
+  `CatalogoCodigosAuxiliares` lo cachea 24 h, revalida con ETag y degrada
+  en dos escalones: copia cacheada → semilla local. El formulario de
+  producto no puede caerse porque `fe` no responda, y como el campo admite
+  texto libre, el peor caso es que falte una opción del desplegable.
+- Formulario de producto (`create`/`edit`): partial
+  `product.partials.fe_codigo_sri` con un `<optgroup>` por grupo del
+  catálogo y opción "Otro (código propio)…" que descubre el input libre.
+  Solo aparece si el negocio tiene la FE activa: para los demás es ruido.
+- `ProductController`: el campo entra en los `$form_fields` de `store` y
+  `update`, y `codigosSriParaFormulario()` resuelve las opciones.
+- Tests (`FeCodigoAuxiliarTest`, 9): código en factura, códigos de
+  transporte, producto sin código, código en blanco, **nota de crédito con
+  `codigoAdicional`**, catálogo desde el servicio, caída del servicio →
+  semilla, no repetir la petición mientras la copia siga vigente, y
+  persistencia del campo.
+
+### ✅ Fase C — Transporte comercial (Anexo 25) (2026-09-22)
+
+- Migración: `fe_ajustes.rol_transporte` (20, nullable) y
+  `transactions.fe_placa` (8, nullable).
+- **El rol es de tres estados**, como se corrigió en §14: `FeAjuste`
+  expone `ROLES_TRANSPORTE`, `exigePlaca()` (solo la operadora) y
+  `codigoTransporte()` (`H492001` / `H492002`), así la Tabla 32 vive en un
+  único sitio.
+- `PlacaDeVenta`, al estilo de `EmisionPorVenta`: `aplicaEn()` decide si se
+  pinta el campo, `guardar()` persiste en mayúsculas y vacío → null.
+  **No valida el formato**: lo hace `fe` con la Tabla 33 y duplicarlo aquí
+  lo dejaría desincronizado.
+- La placa **sí se persiste**, a diferencia de la decisión de emitir (que
+  solo viaja por el evento): el comprobante se construye después, en el
+  job, y hace falta al reintentar.
+- `FacturaMapper`: `validarPlaca()` corta con `VentaNoFacturable` si el
+  negocio es operadora y la venta no la trae —el aviso le llega al cajero
+  con la venta delante, no como comprobante fallido horas después— y
+  `infoFactura.placa` viaja tal cual se tecleó.
+- UI: selector de rol en los ajustes, explicando qué implica cada uno;
+  campo "Placa del vehículo" en la pantalla de venta (crear y editar),
+  visible solo para la operadora.
+- **`createSellTransaction()` no se toca**: es upstream de UltimatePOS y
+  lleva su propia lista de campos. La placa se guarda desde el controlador
+  justo después, como ya hace la FE con lo suyo.
+- Tests (`FePlacaTransporteTest`, 10): placa de la operadora, envío sin
+  normalizar, corte sin placa, socio sin placa, negocio sin rol, códigos
+  de cada rol, guardado en mayúsculas y borrado, no guardar si no es
+  operadora, y el rol en los ajustes con su validación.

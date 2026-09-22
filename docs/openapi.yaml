@@ -988,18 +988,141 @@ components:
         comprobante.
       required: [infoTributaria]
       properties:
-        infoTributaria:
+        infoTributaria: { $ref: '#/components/schemas/InfoTributaria' }
+        infoFactura: { $ref: '#/components/schemas/InfoFactura' }
+        infoNotaCredito: { $ref: '#/components/schemas/InfoNotaCredito' }
+        detalles:
           type: object
-          required: [ambiente, tipoEmision, razonSocial, ruc, estab, ptoEmi, secuencial, dirMatriz]
+          description: Wrapper del SRI; `detalle` admite un objeto o una lista.
           properties:
-            ambiente: { type: string, enum: ['1', '2'], description: '1 = pruebas, 2 = producción.' }
-            tipoEmision: { type: string, enum: ['1'], description: 'Normal.' }
-            razonSocial: { type: string }
-            ruc: { type: string, description: 'Debe coincidir con el contribuyente autenticado.' }
-            estab: { type: string, description: '3 dígitos.' }
-            ptoEmi: { type: string, description: '3 dígitos.' }
-            secuencial: { type: string, description: '9 dígitos, único por serie.' }
-            dirMatriz: { type: string }
+            detalle:
+              oneOf:
+                - { $ref: '#/components/schemas/Detalle' }
+                - { type: array, items: { $ref: '#/components/schemas/Detalle' } }
+        infoAdicional:
+          type: object
+          properties:
+            campoAdicional:
+              oneOf:
+                - { $ref: '#/components/schemas/CampoAdicional' }
+                - { type: array, items: { $ref: '#/components/schemas/CampoAdicional' } }
+    InfoTributaria:
+      type: object
+      additionalProperties: false
+      required: [ambiente, tipoEmision, razonSocial, ruc, estab, ptoEmi, secuencial, dirMatriz]
+      properties:
+        ambiente: { type: string, enum: ['1', '2'], description: '1 = pruebas, 2 = producción.' }
+        tipoEmision: { type: string, enum: ['1'], description: 'Normal.' }
+        razonSocial: { type: string }
+        nombreComercial: { type: string }
+        ruc: { type: string, description: 'Debe coincidir con el contribuyente autenticado.' }
+        estab: { type: string, description: '3 dígitos.' }
+        ptoEmi: { type: string, description: '3 dígitos.' }
+        secuencial: { type: string, description: '9 dígitos, único por serie.' }
+        dirMatriz: { type: string }
+        claveAcceso: { type: string, description: 'Se genera en el servidor; solo se reutiliza en reintentos.' }
+        codDoc: { type: string, description: 'Se acepta y se descarta: siempre se deriva del tipo.' }
+        agenteRetencion: { type: string, readOnly: true, description: 'Lo fija la configuración del contribuyente (Anexo 21); enviarlo da 422.' }
+        contribuyenteRimpe: { type: string, readOnly: true, description: 'Lo fija la configuración del contribuyente (Anexo 22); enviarlo da 422.' }
+    InfoFactura:
+      type: object
+      additionalProperties: false
+      required: [fechaEmision, obligadoContabilidad, tipoIdentificacionComprador, razonSocialComprador, identificacionComprador, totalSinImpuestos, totalDescuento, totalConImpuestos, importeTotal, moneda]
+      properties:
+        fechaEmision: { type: string, description: 'dd/mm/aaaa.' }
+        dirEstablecimiento: { type: string }
+        obligadoContabilidad: { type: string, enum: ['SI', 'NO'] }
+        tipoIdentificacionComprador: { type: string, enum: ['04', '05', '06', '07', '08'] }
+        razonSocialComprador: { type: string }
+        identificacionComprador: { type: string }
+        totalSinImpuestos: { type: string }
+        totalDescuento: { type: string }
+        totalConImpuestos:
+          type: object
+          properties:
+            totalImpuesto:
+              oneOf:
+                - { $ref: '#/components/schemas/TotalImpuesto' }
+                - { type: array, items: { $ref: '#/components/schemas/TotalImpuesto' } }
+        propina: { type: string }
+        importeTotal: { type: string }
+        moneda: { type: string, example: DOLAR }
+        placa: { type: string, description: 'Anexo 25 §2; obligatoria en las facturas de operadoras de transporte comercial.' }
+        contribuyenteEspecial: { type: string, readOnly: true, description: 'Lo fija la configuración del contribuyente; enviarlo da 422.' }
+    InfoNotaCredito:
+      type: object
+      additionalProperties: false
+      required: [fechaEmision, tipoIdentificacionComprador, razonSocialComprador, identificacionComprador, codDocModificado, numDocModificado, fechaEmisionDocSustento, totalSinImpuestos, valorModificacion, totalConImpuestos, motivo]
+      properties:
+        fechaEmision: { type: string, description: 'dd/mm/aaaa.' }
+        dirEstablecimiento: { type: string }
+        obligadoContabilidad: { type: string, enum: ['SI', 'NO'] }
+        tipoIdentificacionComprador: { type: string }
+        razonSocialComprador: { type: string }
+        identificacionComprador: { type: string }
+        codDocModificado: { type: string, description: 'Tipo del documento que se modifica (01 = factura).' }
+        numDocModificado: { type: string, example: 001-001-000000001 }
+        fechaEmisionDocSustento: { type: string, description: 'dd/mm/aaaa.' }
+        totalSinImpuestos: { type: string }
+        valorModificacion: { type: string }
+        moneda: { type: string, example: DOLAR }
+        totalConImpuestos:
+          type: object
+          properties:
+            totalImpuesto:
+              oneOf:
+                - { $ref: '#/components/schemas/TotalImpuesto' }
+                - { type: array, items: { $ref: '#/components/schemas/TotalImpuesto' } }
+        motivo: { type: string }
+        contribuyenteEspecial: { type: string, readOnly: true, description: 'Lo fija la configuración del contribuyente; enviarlo da 422.' }
+    Detalle:
+      type: object
+      additionalProperties: false
+      required: [descripcion, cantidad, precioUnitario, descuento, precioTotalSinImpuesto, impuestos]
+      properties:
+        codigoPrincipal: { type: string, maxLength: 25, description: 'Código del ítem en factura y liquidación de compra.' }
+        codigoInterno: { type: string, maxLength: 25, description: 'Su equivalente en la nota de crédito.' }
+        codigoAuxiliar: { type: string, maxLength: 25, description: 'Segundo código en factura y liquidación; ver GET /catalogos/codigos-auxiliares.' }
+        codigoAdicional: { type: string, maxLength: 25, description: 'Su equivalente en la nota de crédito.' }
+        descripcion: { type: string, maxLength: 300 }
+        cantidad: { type: string }
+        precioUnitario: { type: string }
+        descuento: { type: string }
+        precioTotalSinImpuesto: { type: string }
+        impuestos:
+          type: object
+          properties:
+            impuesto:
+              oneOf:
+                - { $ref: '#/components/schemas/Impuesto' }
+                - { type: array, items: { $ref: '#/components/schemas/Impuesto' } }
+    Impuesto:
+      type: object
+      additionalProperties: false
+      required: [codigo, codigoPorcentaje, tarifa, baseImponible, valor]
+      properties:
+        codigo: { type: string, example: '2' }
+        codigoPorcentaje: { type: string, example: '4' }
+        tarifa: { type: string, example: '15.00' }
+        baseImponible: { type: string }
+        valor: { type: string }
+    TotalImpuesto:
+      type: object
+      additionalProperties: false
+      required: [codigo, codigoPorcentaje, baseImponible, valor]
+      properties:
+        codigo: { type: string }
+        codigoPorcentaje: { type: string }
+        baseImponible: { type: string }
+        valor: { type: string }
+        tarifa: { type: string }
+    CampoAdicional:
+      type: object
+      additionalProperties: false
+      required: [nombre, valor]
+      properties:
+        nombre: { type: string }
+        valor: { type: string }
     Comprobante:
       type: object
       properties:
