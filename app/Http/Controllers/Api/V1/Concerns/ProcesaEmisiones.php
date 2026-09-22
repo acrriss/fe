@@ -35,6 +35,8 @@ trait ProcesaEmisiones
             /** @var array<string, mixed> $payloadComprobante */
             $payloadComprobante = (array) $request->validated('comprobante');
 
+            // La clave viaja al job para que emita con LA MISMA que ya se
+            // respondió al cliente; el job la valida contra el payload.
             ProcesarComprobanteJob::dispatch(
                 $registro,
                 $comprobante::class,

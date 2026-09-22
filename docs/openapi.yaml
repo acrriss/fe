@@ -21,8 +21,11 @@ info:
     **Modalidades de emisión**
     - *Síncrona* (por defecto): la respuesta llega cuando el SRI resuelve
       (puede tardar varios segundos). Recomendada para pruebas y bajo volumen.
-    - *Asíncrona* (`?async=1`): responde `202` de inmediato con un `id`;
-      el estado se consulta con `GET /comprobantes/{id}`.
+    - *Asíncrona* (`?async=1`): responde `202` de inmediato con un `id` y
+      con la `claveAcceso` **ya generada**; el estado se consulta con
+      `GET /comprobantes/{id}`. La clave no depende del SRI, así que quien
+      emite puede imprimir el comprobante para su cliente sin esperar la
+      autorización.
 
     **Integración de partners/plataformas**
 
@@ -296,7 +299,10 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/EmisionSincrona' }
         '202':
-          description: Emisión asíncrona encolada.
+          description: >
+            Emisión asíncrona encolada. La respuesta ya incluye la
+            `claveAcceso` definitiva: la emisión se procesará con esa misma
+            clave.
           content:
             application/json:
               schema:
@@ -1138,7 +1144,11 @@ components:
         secuencial: { type: string }
         claveAcceso:
           type: [string, 'null']
-          description: 49 dígitos; es también el número de autorización.
+          description: >
+            49 dígitos; en el esquema offline es también el número de
+            autorización. Se calcula al registrar la emisión —antes de
+            encolarla y antes de enviar nada al SRI—, así que está presente
+            desde el primer momento.
         externalId:
           type: [string, 'null']
           description: Id del comprobante en el sistema origen, si se envió al emitir.

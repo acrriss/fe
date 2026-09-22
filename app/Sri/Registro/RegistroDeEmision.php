@@ -10,6 +10,7 @@ use App\Sri\Enums\EstadoComprobante;
 use App\Sri\Enums\EventoWebhook;
 use App\Sri\Exceptions\EmisionFallida;
 use App\Sri\Pipeline\EmisionEnCurso;
+use App\Sri\ValueObjects\ClaveAcceso;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -20,11 +21,16 @@ use Illuminate\Support\Facades\Storage;
 class RegistroDeEmision
 {
     /**
+     * La clave de acceso se recibe ya calculada y se persiste aquí, no al
+     * completar el pipeline: así el 202 de la emisión asíncrona ya la
+     * lleva, y el job la reutiliza en vez de sortear otra.
+     *
      * @param  array<array-key, mixed>|null  $metadata
      */
     public function crear(
         ComprobanteData $comprobante,
         Contribuyente $contribuyente,
+        ClaveAcceso $claveAcceso,
         ?string $externalId = null,
         ?array $metadata = null,
     ): Comprobante {
@@ -32,6 +38,7 @@ class RegistroDeEmision
             'contribuyente_id' => $contribuyente->id,
             'tipo' => $comprobante::tipo(),
             'estado' => EstadoComprobante::Pendiente,
+            'clave_acceso' => $claveAcceso->value,
             'ambiente' => $comprobante->infoTributaria->ambiente,
             'ruc' => (string) $comprobante->infoTributaria->ruc,
             'razon_social' => $comprobante->infoTributaria->razonSocial,

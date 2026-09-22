@@ -33,6 +33,23 @@ function registro_pendiente(): Comprobante
         ->create();
 }
 
+/**
+ * El job que la emisión asíncrona acaba de encolar, para ejecutarlo a mano
+ * (Queue::fake() debe estar activo).
+ */
+function procesar_job_encolado(): ProcesarComprobanteJob
+{
+    $encolados = [];
+
+    Queue::assertPushed(ProcesarComprobanteJob::class, function (ProcesarComprobanteJob $job) use (&$encolados): bool {
+        $encolados[] = $job;
+
+        return true;
+    });
+
+    return $encolados[0];
+}
+
 describe('emisión asíncrona', function () {
     it('encola el job y responde 202 con el id para consultar', function () {
         actuar_como_contribuyente();
@@ -176,5 +193,89 @@ describe('persistencia del flujo síncrono', function () {
 
         expect($registro->estado)->toBe(EstadoComprobante::Devuelto)
             ->and($registro->mensajes)->not->toBeEmpty();
+    });
+});
+
+/*
+ * §16: el POS imprime el ticket al cobrar, mucho antes de que el SRI
+ * resuelva. La clave de acceso no depende del SRI —solo de datos que el
+ * payload ya trae—, así que se calcula y se entrega al encolar.
+ */
+describe('la clave de acceso se entrega al encolar', function () {
+    it('el 202 ya trae la clave, y queda persistida en el registro', function () {
+        actuar_como_contribuyente();
+        Queue::fake();
+
+        $respuesta = $this->postJson(
+            route('api.v1.comprobantes.emitir', ['async' => 1]),
+            payload_emision('factura'),
+        );
+
+        $clave = $respuesta->assertStatus(202)->json('data.claveAcceso');
+
+        expect($clave)->toMatch('/^\d{49}$/');
+
+        $registro = Comprobante::where('uuid', $respuesta->json('data.id'))->first();
+        expect($registro->clave_acceso)->toBe($clave);
+    });
+
+    it('el job emite con LA MISMA clave que se entregó', function (string $tipo) {
+        actuar_como_contribuyente();
+        Queue::fake();
+
+        $respuesta = $this->postJson(
+            route('api.v1.comprobantes.emitir', ['async' => 1]),
+            payload_emision($tipo),
+        );
+
+        $clave = $respuesta->assertStatus(202)->json('data.claveAcceso');
+
+        procesar_job_encolado()->handle(app(EmitirComprobante::class), app(RegistroDeEmision::class));
+
+        $registro = Comprobante::where('uuid', $respuesta->json('data.id'))->first()->refresh();
+
+        expect($registro->estado)->toBe(EstadoComprobante::Autorizado)
+            ->and($registro->clave_acceso)->toBe($clave)
+            // lo que el cliente imprimió es lo que viaja en el XML firmado
+            ->and(Storage::get($registro->xml_path))->toContain("<claveAcceso>{$clave}</claveAcceso>");
+    })->with(['factura', 'notaCredito', 'notaDebito', 'comprobanteRetencion', 'guiaRemision', 'liquidacionCompra']);
+
+    /*
+     * Antes, el job se despachaba sin clave y la sorteaba él: un reintento
+     * técnico (timeout del SRI que quizá sí llegó) generaba un código
+     * numérico nuevo y, con él, DOS claves distintas para el mismo
+     * secuencial.
+     */
+    it('un reintento del job no cambia la clave', function () {
+        actuar_como_contribuyente();
+        Queue::fake();
+
+        $respuesta = $this->postJson(
+            route('api.v1.comprobantes.emitir', ['async' => 1]),
+            payload_emision('factura'),
+        );
+
+        $clave = $respuesta->json('data.claveAcceso');
+        $job = procesar_job_encolado();
+
+        expect($job->claveAcceso)->toBe($clave);
+
+        $job->handle(app(EmitirComprobante::class), app(RegistroDeEmision::class));
+        $primera = Comprobante::where('uuid', $respuesta->json('data.id'))->first()->clave_acceso;
+
+        $job->handle(app(EmitirComprobante::class), app(RegistroDeEmision::class));
+        $segunda = Comprobante::where('uuid', $respuesta->json('data.id'))->first()->clave_acceso;
+
+        expect($primera)->toBe($clave)->and($segunda)->toBe($clave);
+    });
+
+    it('el flujo síncrono también nace con la clave persistida', function () {
+        actuar_como_contribuyente();
+
+        $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'));
+
+        $registro = Comprobante::where('uuid', $respuesta->json('id'))->first();
+
+        expect($registro->clave_acceso)->toBe($respuesta->json('claveAcceso'));
     });
 });

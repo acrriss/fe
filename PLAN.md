@@ -1997,5 +1997,207 @@ que un integrador puede deducir qué enviar.
 
 Las cuatro fases cerradas. Commits en `../pos`: `3d0eeda` (A), `65bf422` y
 `38a55ea` (B), `e88effd` (C) y el de esta fase; en `fe`, `092db11`.
-Pendiente operativo: correr las migraciones del POS (`fe_ajustes`,
-`products`, `fe_ajustes` + `transactions`).
+Migraciones del POS corridas el 2026-09-22 (`fe_ajustes`,
+`products`, `transactions`).
+
+---
+
+## 16. El ticket del POS como RIDE (TM-U220B)
+
+§15 cerró con una decisión explícita: *no se tocan las plantillas de
+recibo*, porque son 10+ plantillas genéricas de UltimatePOS y el
+comprobante fiscal es el RIDE que genera `fe`. Y con una condición para
+revisarla: *«se revisa si un negocio entrega el ticket del POS como si
+fuera el comprobante»*.
+
+Es el caso. El diseño `tmu220b` **no vino con UltimatePOS**: es propio, y
+es el ticket que el cliente se lleva. §16 revisa aquella decisión **solo
+para esa plantilla**; las de upstream siguen intactas.
+
+**Objetivo (2026-09-22):** que el cliente reciba en el momento del cobro
+un ticket cuyos datos coincidan exactamente con los que verá si consulta
+el comprobante en el portal del SRI.
+
+Referencia: dos tickets reales de emisores grandes del Ecuador
+(Procafecol/Juan Valdez y Fybeca), que marcan el estándar de facto de lo
+que un ticket-RIDE imprime.
+
+### El obstáculo
+
+El ticket se imprime al cobrar; la clave de acceso llegaba mucho después.
+
+1. `fe` emite en dos modalidades y el POS usa la asíncrona
+   (`FacturacionClient.php:67` → `POST /v1/comprobantes?async=1`). En esa
+   rama, `ProcesaEmisiones` encola el job y responde 202 con
+   `ComprobanteResource` — pero el registro se creó en
+   `RegistroDeEmision::crear()`, que **no escribe `clave_acceso`**: solo la
+   escriben `completar()` y `fallar()`, al final del pipeline. El 202 sale
+   con `claveAcceso: null`.
+2. En el POS, `EmitirFacturaElectronica` es `ShouldQueue` y la fila de
+   `fe_comprobantes` nace *dentro* del job. Al imprimir no existe ni la
+   fila.
+
+La clave, sin embargo, **no depende de nada externo**: `GenerarClaveAcceso`
+la calcula con `fechaEmision`, `codDoc`, RUC, ambiente, estab, ptoEmi,
+secuencial y un código numérico aleatorio. Ni red, ni certificado, ni SRI.
+Se genera dentro del pipeline por orden de las etapas, no por necesidad.
+
+### Decisiones tomadas (2026-09-22)
+
+**1. La clave de acceso se genera antes de encolar, no dentro del job.**
+`ProcesarComprobanteJob` **ya acepta** una clave preexistente
+(`ProcesarComprobanteJob.php:45`), porque es lo que necesitan los
+reintentos de §5.10, y `GenerarClaveAcceso` valida que su prefijo
+corresponda al comprobante. Se reutiliza esa maquinaria para el primer
+envío: no se inventa ningún concepto.
+
+*Efecto secundario que vale por sí solo:* hoy el job se despacha con
+`claveAcceso: null` y tiene `$tries = 3`. Un fallo técnico **después** de
+que el SRI recibió el documento haría que el reintento sortee un código
+numérico nuevo → clave distinta para el mismo secuencial. Fijarla al crear
+el registro lo cierra.
+
+**2. La emisión del POS pasa a ser síncrona, con respaldo en cola.** Con
+`?async=1`, `fe` responde en cuanto genera la clave: no espera al SRI. Eso
+convierte la llamada en cuestión de milisegundos y hace viable emitir
+dentro de la petición de venta. Verificado antes de decidirlo:
+
+- `SellCreatedOrModified::dispatch()` ocurre **después** del `DB::commit()`
+  (`SellPosController.php:672-674`): no se sostiene ninguna transacción
+  abierta durante la llamada HTTP.
+- Y **antes** de `receiptContent()` (~línea 708): el ticket ya ve el
+  comprobante. En el camino `is_save_and_print` la impresión es una
+  petición aparte, así que también llega a tiempo.
+- `FePuntoEmision::siguienteSecuencial()` ya reserva con `lockForUpdate`.
+- `FacturacionClient` ya manda `Idempotency-Key`: si el intento en línea
+  expiró pero llegó, el reintento en cola recibe la misma respuesta.
+
+**3. Los totales del ticket son los que viajaron en el XML.** Hoy el ticket
+imprime `$receipt_details->taxes` y `->total`, que agrupa por los impuestos
+del POS; el XML lleva el desglose que arma `FacturaMapper` por tarifa del
+SRI. El importe total ya cuadra (`validarCuadre` lo valida contra
+`final_total`), pero el desglose puede presentarse distinto — y el objetivo
+de §16 es justamente que ticket y portal del SRI muestren el mismo número.
+Se persiste el desglose emitido y el ticket imprime ese.
+
+**4. Si `fe` no responde a tiempo, el ticket lo dice.** Sale con todas las
+leyendas del emisor y los datos del cliente, y en lugar del bloque de
+autorización una línea «COMPROBANTE EN PROCESO DE EMISIÓN — se enviará a su
+correo electrónico». La emisión sigue en cola y la reimpresión posterior
+trae el RIDE completo. Descartado bloquear la impresión: dejar al cliente
+esperando por un fallo de red es lo contrario del objetivo.
+
+**5. En el esquema offline, el número de autorización es la clave de
+acceso.** El ticket de Fybeca lo rotula literalmente
+«Autorizacion/Clave de acceso/Esquema Offline». Con la clave ya hay RIDE
+válido al cobrar; la fecha real de autorización (que llega por webhook) es
+un extra para las reimpresiones, no un bloqueante.
+
+**6. Sin código de barras.** La TM-U220B es de impacto y no lo reproduce.
+
+### Fases
+
+**Fase 1 — `fe`: la clave de acceso en la respuesta inmediata.**
+Extraer la generación a un estático de `GenerarClaveAcceso` (mismo patrón
+que `AgregarLeyendasEmisor::agregar()`, para que la regla viva en un solo
+sitio); generarla antes de `RegistroDeEmision::crear()` y persistirla ahí,
+para las dos modalidades; la rama async la pasa al job por el parámetro que
+ya existe. `docs/openapi.yaml`: el 202 pasa a garantizar `claveAcceso`.
+El POS no necesita ningún cambio para empezar a guardarla —
+`EmiteComprobanteElectronico.php:150` ya la lee de la respuesta.
+
+**Fase 2 — `pos`: emisión en línea con respaldo.**
+`EmitirFacturaElectronica` deja de ser `ShouldQueue` y despacha con
+`dispatchSync` y timeout corto; ante cualquier fallo, `dispatch()` normal.
+Migración: `numero_autorizacion` y `autorizado_en` en `fe_comprobantes`,
+guardados en los tres puntos que hoy los descartan (webhook,
+`SincronizaEstadoRemoto`, job), y el desglose emitido para la decisión 3.
+
+**Fase 3 — `pos`: los datos del RIDE en un solo objeto.**
+`DatosSriDelTicket` reúne emisor, designaciones, comprobante, totales y
+placa, y responde también *qué falta* (sin FE activa / en proceso / no
+emitido). Se engancha con **una línea** en `TransactionUtil::getReceiptDetails`
+(`$output['sri'] = …`), que es upstream: así queda disponible también para
+la nota de crédito de `SellReturnController`.
+
+**Fase 4 — `pos`: el ticket.**
+Partial propio `sale_pos/receipts/partials/fe_sri.blade.php`, incluido
+desde `tmu220b`. Los 49 dígitos de la clave parten en dos líneas de 40
+columnas. Cierra con la línea de verificación: consultar el comprobante en
+`srienlinea.sri.gob.ec` con cédula/RUC y la clave de acceso.
+
+**Fase 5 — tests.**
+En `fe`: el 202 trae una clave válida de 49 dígitos; es la misma que queda
+autorizada; un reintento del job no la cambia.
+En `pos`: `fe` lento → aviso en el ticket y job en cola; respuesta normal →
+ticket con clave; sin FE activa → el partial no imprime nada; nota de
+crédito; con placa; con las cuatro designaciones.
+
+### Notas registradas (no se implementan aquí)
+
+**`<pagos>` falta en `fe`, y la ficha lo exige.** La ficha marca
+`<pagos><pago><formaPago>` como *Obligatorio* en factura (junto a `<total>`,
+y `<plazo>`/`<unidadTiempo>` cuando corresponda; `formaPago` conforme a la
+Tabla 24). `fe` **tiene** `PagoData` y lo usa en `InfoNotaDebitoData` y
+`InfoLiquidacionCompraData`, pero `InfoFacturaData` no lo declara, y
+`FacturaMapper` (POS) no lo envía. Toca de lleno el objetivo de §16: el
+ticket imprimiría «Forma de pago: TARJETA DE DÉBITO» y el documento del SRI
+no tendría forma de pago alguna — exactamente la discrepancia que §16
+quiere eliminar.
+*Cómo implementarlo:* en `fe`, añadir `pagos` a `InfoFacturaData`
+reutilizando `PagoData` y su normalización de wrapper
+(`Payload::lista(data_get($properties, 'pagos.pago'))`), emitido entre
+`<moneda>` y `<valorRetIva>`; documentarlo en `docs/openapi.yaml` (el
+guardia de claves desconocidas de §14 hace que enviarlo antes de eso
+devuelva 422). En el POS, mapear los `payment_lines` de la venta a los
+códigos de la Tabla 24 en `FacturaMapper`, con un valor por defecto
+configurable por método de pago del POS.
+
+**La ruta ESC/POS no pasa por el blade.** Con
+`receipt_printer_type = 'printer'` (`SellPosController.php:841`) el POS no
+renderiza plantilla: devuelve `$receipt_details` en JSON y lo formatea el
+navegador contra la configuración de la impresora. El partial del SRI nunca
+se ejecuta, así que ese ticket saldría sin clave de acceso.
+*Cómo implementarlo:* `DatosSriDelTicket` ya deja los datos en
+`$receipt_details->sri`, que viaja en ese JSON; falta que el formateador
+del navegador los pinte. Mientras tanto, el negocio que use `tmu220b` debe
+imprimir por navegador, no por `printer`.
+
+### ✅ Fase 1 — La clave de acceso en la respuesta inmediata (2026-09-22)
+
+- `GenerarClaveAcceso::para()`: la generación sale de `__invoke` a un
+  estático (mismo patrón que `AgregarLeyendasEmisor::agregar()`), con las
+  dos reglas juntas —respetar una clave previa validando su prefijo, o
+  generar una nueva—. La etapa del pipeline queda de tres líneas.
+- `RegistroDeEmision::crear()` recibe la clave y la persiste al nacer el
+  registro, no al completarlo. Un único llamador, así que el parámetro va
+  obligatorio: un registro ya no existe sin su clave.
+- `EmitirComprobanteController` la calcula antes de crear el registro y la
+  pasa a `procesarEmision()`.
+- **`ProcesaEmisiones` no cambió**: ya pasaba `$claveAcceso?->value` al job
+  y ya devolvía `ComprobanteResource`, que ya exponía `claveAcceso`. La
+  maquinaria de §5.10 sirvió tal cual para el primer envío.
+- `docs/openapi.yaml`: la introducción, la respuesta `202` y el campo
+  `claveAcceso` del esquema `Comprobante` dicen que la clave existe desde
+  el registro y que el 202 la trae.
+
+Tests (`ComprobanteAsincronoTest`, 9 nuevos): el 202 trae la clave y queda
+persistida; **el job emite con LA MISMA clave, comprobado contra el
+`<claveAcceso>` del XML firmado, en los seis tipos de comprobante**; un
+reintento del job no la cambia; el flujo síncrono también nace con ella.
+
+Verificado que 8 de los 9 fallan si se quita la persistencia (el noveno es
+el del flujo síncrono, donde `completar()` ya la escribía al final).
+
+`composer quality` verde: Pint, PHPStan nivel max sin errores, 552 tests.
+
+**El POS no necesitó ningún cambio**: `EmiteComprobanteElectronico.php:150`
+ya leía `claveAcceso` de la respuesta y la guardaba.
+
+### Estado de §16
+
+Fase 1 cerrada. Pendientes las fases 2-5, todas en `../pos`. Descartados en
+la revisión:
+el código de barras de la clave (la TM-U220B no lo reproduce; se revisa si
+se adopta un diseño térmico) y la marca «ORIGINAL ADQUIRIENTE» que imprime
+Fybeca (la ficha no la exige y el POS no tiene el concepto de copia).
