@@ -1952,3 +1952,50 @@ fuera el comprobante.
   normalizar, corte sin placa, socio sin placa, negocio sin rol, códigos
   de cada rol, guardado en mayúsculas y borrado, no guardar si no es
   operadora, y el rol en los ajustes con su validación.
+
+### ✅ Fase D — Endurecimiento del contrato (2026-09-22)
+
+El 422 por clave desconocida ya se trataba bien (`esDefinitivo()` no
+reintenta, `resolverRechazoDefinitivo()` lo guarda como `rechazada_api` con
+los mensajes, que `FacturacionException::mensajes()` saca de `errors.*`).
+Lo que faltaba era que se viera y que no pudiera ocurrir.
+
+- **`Log::warning` en el rechazo definitivo** (`EmiteComprobanteElectronico`)
+  con `transaction_id`, tipo, código HTTP y mensajes. El registro del
+  comprobante lo mira el negocio; el log lo mira quien mantiene la
+  integración, que es de quien depende arreglar una errata en un mapper.
+  No se clasifica por el texto del mensaje —distinguir "dato del cliente"
+  de "bug nuestro" por substring sería frágil—: se registra todo rechazo
+  definitivo.
+- **`ContratoConElServicioTest`**: construye el payload real de una factura
+  con `FacturaMapper` y comprueba, contra los esquemas de
+  `../fe/docs/openapi.yaml`, que cada bloque solo usa claves documentadas y
+  que no falta ninguna obligatoria. Si el repo del servicio no está a mano,
+  `markTestSkipped` (no es un defecto del POS que no esté clonado).
+  **Verificado que falla de verdad**: con una clave inventada en el mapper,
+  el test la señala por nombre.
+
+#### En `fe`: el contrato documentado, atado a los DTOs
+
+El test anterior destapó que `docs/openapi.yaml` solo describía
+`infoTributaria`, y sin los campos nuevos. Desde que una clave desconocida
+responde 422, ese esquema dejó de ser orientativo: es la única lista de la
+que un integrador puede deducir qué enviar.
+
+- Esquemas nuevos: `InfoTributaria`, `InfoFactura`, `InfoNotaCredito`,
+  `Detalle`, `Impuesto`, `TotalImpuesto`, `CampoAdicional`, todos con
+  `additionalProperties: false` —que es la guardia dicha en el lenguaje del
+  esquema— y los campos del emisor marcados `readOnly` con la nota de que
+  enviarlos da 422.
+- `ContratoOpenApiTest` compara cada esquema con las propiedades del DTO
+  **por reflexión**: si alguien añade un campo al DTO y no al YAML, el
+  campo existe pero nadie sabe que existe; si lo quita del DTO y no del
+  YAML, quien lo envíe recibe un 422 documentado como válido. Ahora
+  cualquiera de las dos cosas rompe la suite.
+
+### Estado de §15
+
+Las cuatro fases cerradas. Commits en `../pos`: `3d0eeda` (A), `65bf422` y
+`38a55ea` (B), `e88effd` (C) y el de esta fase; en `fe`, `092db11`.
+Pendiente operativo: correr las migraciones del POS (`fe_ajustes`,
+`products`, `fe_ajustes` + `transactions`).
