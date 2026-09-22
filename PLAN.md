@@ -2283,10 +2283,50 @@ reimpresión mostrará el nombre nuevo y el SRI el viejo. Se persistió el
 desglose de totales (Fase 2) pero no el bloque del comprador; si aparece el
 caso, es otra columna en `fe_comprobantes`.
 
+### ✅ Fase 4 — El ticket (2026-09-22, `../pos`)
+
+Cinco parciales propios en `sale_pos/receipts/partials/fe/` —`emisor`,
+`documento`, `comprador`, `totales` y `verificacion`—, incluidos desde
+`tmu220b`. El plan hablaba de uno solo, pero los bloques van a sitios
+distintos del ticket (cabecera, tras el encabezado, zona del cliente,
+resumen de impuestos y pie) y un único archivo habría exigido inventar un
+mecanismo de secciones. Cada uno se autoprotege con `@if($sri)`, así que
+las inclusiones son de una línea. **Las plantillas de upstream no se
+tocaron.**
+
+`$sri` se resuelve una sola vez al abrir el ticket y los parciales lo
+heredan por ámbito.
+
+**Dos decisiones que salieron de mirar el ticket renderizado, no del plan:**
+
+1. **El resumen de impuestos del POS cede el sitio al del XML.** Era el
+   punto exacto que la decisión 3 quería proteger: el del POS agrupa por
+   los impuestos propios, no por las tarifas del SRI. El resto del bloque
+   de totales (descuentos, pagos, vueltos) se queda como estaba.
+2. **El bloque de cliente del POS se suprime cuando hay datos del SRI.**
+   No es solo duplicación: una venta sin cédula va al SRI como «CONSUMIDOR
+   FINAL» aunque el POS conozca el nombre del contacto, así que el ticket
+   estaría **contradiciendo** al documento que pretende ayudar a comparar.
+   Queda la identidad del XML más el teléfono del contacto —que no es
+   identidad y no puede contradecir nada—, igual que lo imprime Procafecol.
+
+Tests (`TicketRideTest`, 9): se renderiza la plantilla de verdad y se
+afirma sobre el texto impreso. Clave partida en dos líneas de 40 que
+reconstruyen el original (y la clave entera NO aparece de corrido);
+identificación del documento; las cuatro leyendas; comprador y totales del
+XML; que el nombre del contacto no aparece contradiciendo al documento; la
+línea de verificación; el aviso de «en proceso» sin invitar a verificar
+algo que aún no existe; la placa solo en operadoras; y —importante— que un
+negocio **sin** facturación electrónica sigue imprimiendo su ticket de
+siempre.
+
+Suite del POS completa en verde: **1681 tests**.
+
 ### Estado de §16
 
-Fases 1, 2 y 3 cerradas. Pendientes las fases 4 y 5, ambas en `../pos`.
-Descartados en la revisión:
+Fases 1 a 4 cerradas. Queda la Fase 5 (tests), que se fue haciendo dentro
+de cada fase: lo pendiente es revisarla como conjunto y probar en una
+impresora real. Descartados en la revisión:
 el código de barras de la clave (la TM-U220B no lo reproduce; se revisa si
 se adopta un diseño térmico) y la marca «ORIGINAL ADQUIRIENTE» que imprime
 Fybeca (la ficha no la exige y el POS no tiene el concepto de copia).
