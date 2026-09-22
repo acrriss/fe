@@ -2240,9 +2240,52 @@ autorización; el timeout en línea es menor que el de la cola.
 
 Suite del POS completa en verde: **1661 tests**.
 
+### ✅ Fase 3 — Los datos del RIDE en un solo objeto (2026-09-22, `../pos`)
+
+`DatosSriDelTicket::para(?Transaction): ?self` reúne emisor, designaciones,
+documento, comprador, totales y placa. Devuelve null cuando no hay nada que
+imprimir (negocio sin FE, o venta despachada solo con su ticket) y expone
+`enProceso()` cuando hay comprobante pero todavía no clave de acceso.
+
+Enganchado con **una sola línea** en `TransactionUtil::getReceiptDetails`
+(`$output['sri'] = …`), que es código upstream. Así queda disponible también
+para la nota de crédito de `SellReturnController`, que llama al mismo método.
+
+**El comprador NO sale del contacto del POS.** Es el hallazgo de la fase:
+en una venta de mostrador el XML lleva «CONSUMIDOR FINAL / 9999999999999»
+(`ComprobanteMapper::comprador()`), mientras que `$receipt_details->customer_name`
+diría «Consumidor Final» o «Walk-In Customer» y el tax number iría vacío. No
+es deriva ocasional: pasaría en **cada** venta de mostrador, que es la
+mayoría. Por eso `comprador()` y `direccionLocation()` pasan a públicos
+estáticos y el ticket usa exactamente la misma derivación que el XML.
+
+- `FeAjuste::LEYENDAS_RIMPE` + `leyendaRimpe()`: los literales exactos del
+  Anexo 22, que deben coincidir con los que el enum `RegimenRimpe` de `fe`
+  pone en el XML. Duplicados a propósito —el ticket lo imprime el POS— y
+  fijados por un test que compara la cadena completa.
+- `claveAccesoEnLineas(40)` parte los 49 dígitos en el servicio, no en la
+  plantilla: el navegador no debe elegir dónde cortar.
+- `subtotalesPorTarifa()` arma «Subtotal 15%» / «IVA 15%» desde el desglose
+  guardado en la Fase 2, no desde los impuestos del POS.
+
+Tests (`DatosSriDelTicketTest`, 11): los dos casos de «nada que imprimir»;
+número, clave, ambiente y obligado a contabilidad; la clave partida en dos
+líneas que reconstruyen el original; el aviso de «en proceso» con las
+leyendas igualmente presentes; solo las designaciones configuradas, con el
+literal RIMPE exacto; consumidor final y comprador identificado; los
+totales del XML; la placa solo si el negocio es operadora; y el objeto
+llegando de verdad dentro de `getReceiptDetails`.
+
+Suite del POS completa en verde: **1672 tests**.
+
+**Limitación anotada:** si el contacto se renombra después de emitido, una
+reimpresión mostrará el nombre nuevo y el SRI el viejo. Se persistió el
+desglose de totales (Fase 2) pero no el bloque del comprador; si aparece el
+caso, es otra columna en `fe_comprobantes`.
+
 ### Estado de §16
 
-Fases 1 y 2 cerradas. Pendientes las fases 3-5, todas en `../pos`.
+Fases 1, 2 y 3 cerradas. Pendientes las fases 4 y 5, ambas en `../pos`.
 Descartados en la revisión:
 el código de barras de la clave (la TM-U220B no lo reproduce; se revisa si
 se adopta un diseño térmico) y la marca «ORIGINAL ADQUIRIENTE» que imprime
