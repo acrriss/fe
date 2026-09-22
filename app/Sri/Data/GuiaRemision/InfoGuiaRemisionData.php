@@ -3,6 +3,7 @@
 namespace App\Sri\Data\GuiaRemision;
 
 use App\Sri\Data\BloqueInfoData;
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
 use App\Sri\Support\ValidadorIdentificacion;
@@ -15,6 +16,8 @@ use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
  */
 final class InfoGuiaRemisionData extends BloqueInfoData
 {
+    use RechazaClavesDesconocidas;
+
     public function __construct(
         public string $dirPartida,
         public string $razonSocialTransportista,
@@ -45,7 +48,7 @@ final class InfoGuiaRemisionData extends BloqueInfoData
             'rucTransportista',
         );
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     /**

@@ -978,6 +978,14 @@ components:
         separadores y ese cero, y responde 422 si no encaja. Es dato de la
         transacción: lo envía el emisor en cada factura. No confundir con
         el `placa` de la guía de remisión, que es texto libre.
+        **Claves desconocidas (desde 2026-09-22).** Cada bloque admite
+        exactamente las claves que documenta este esquema: una clave que no
+        reconozca —una errata como `codigoAusiliar`, o un campo del SRI que
+        el servicio aún no soporte— responde **422** nombrándola y listando
+        las admitidas, en vez de descartarse en silencio y autorizar un
+        comprobante incompleto. Única excepción: `infoTributaria.codDoc`,
+        que se acepta y se descarta porque siempre se deriva del tipo del
+        comprobante.
       required: [infoTributaria]
       properties:
         infoTributaria:

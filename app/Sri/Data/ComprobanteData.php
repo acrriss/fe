@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data;
 
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\Support\Payload;
@@ -15,6 +16,8 @@ use Spatie\LaravelData\Data;
  */
 abstract class ComprobanteData extends Data
 {
+    use RechazaClavesDesconocidas;
+
     abstract public static function tipo(): TipoComprobante;
 
     /**

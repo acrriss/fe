@@ -5,6 +5,7 @@ namespace App\Sri\Data\GuiaRemision;
 use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\InfoTributariaData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Support\Payload;
@@ -13,6 +14,8 @@ use Spatie\LaravelData\Attributes\DataCollectionOf;
 
 final class GuiaRemisionData extends ComprobanteData
 {
+    use RechazaClavesDesconocidas;
+
     /**
      * @param  array<int, DestinatarioData>  $destinatarios
      */
@@ -41,7 +44,7 @@ final class GuiaRemisionData extends ComprobanteData
 
         $properties['destinatarios'] = Payload::lista(data_get($properties, 'destinatarios.destinatario'));
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     /**

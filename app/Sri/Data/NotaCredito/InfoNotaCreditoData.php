@@ -3,6 +3,7 @@
 namespace App\Sri\Data\NotaCredito;
 
 use App\Sri\Data\BloqueInfoData;
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Enums\TipoIdentificacion;
@@ -19,6 +20,8 @@ use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
  */
 final class InfoNotaCreditoData extends BloqueInfoData
 {
+    use RechazaClavesDesconocidas;
+
     /**
      * @param  array<int, TotalImpuestoData>  $totalConImpuestos
      */
@@ -58,7 +61,7 @@ final class InfoNotaCreditoData extends BloqueInfoData
             data_get($properties, 'totalConImpuestos.totalImpuesto'),
         );
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     /**

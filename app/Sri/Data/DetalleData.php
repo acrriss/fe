@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data;
 
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Support\Payload;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Data;
@@ -21,6 +22,8 @@ use Spatie\LaravelData\Data;
  */
 final class DetalleData extends Data
 {
+    use RechazaClavesDesconocidas;
+
     /**
      * @param  array<int, ImpuestoData>  $impuestos
      */
@@ -46,7 +49,7 @@ final class DetalleData extends Data
     {
         $properties['impuestos'] = Payload::lista(data_get($properties, 'impuestos.impuesto'));
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     /**

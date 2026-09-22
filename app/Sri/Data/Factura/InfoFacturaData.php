@@ -4,6 +4,7 @@ namespace App\Sri\Data\Factura;
 
 use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\Casts\ValueObjectCast;
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
@@ -19,6 +20,8 @@ use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
  */
 final class InfoFacturaData extends BloqueInfoData
 {
+    use RechazaClavesDesconocidas;
+
     /**
      * @param  array<int, TotalImpuestoData>  $totalConImpuestos
      */
@@ -63,7 +66,7 @@ final class InfoFacturaData extends BloqueInfoData
             data_get($properties, 'totalConImpuestos.totalImpuesto'),
         );
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     /**

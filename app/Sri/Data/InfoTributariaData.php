@@ -3,6 +3,7 @@
 namespace App\Sri\Data;
 
 use App\Sri\Data\Casts\ValueObjectCast;
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Enums\Ambiente;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Enums\TipoEmision;
@@ -22,6 +23,30 @@ use Spatie\LaravelData\Data;
  */
 final class InfoTributariaData extends Data
 {
+    use RechazaClavesDesconocidas;
+
+    /**
+     * El `codDoc` se admite y se descarta: viene en el formato del SRI y
+     * muchos integradores lo envían, pero siempre se deriva del tipo del
+     * comprobante (ficha §5, TipoComprobante). Aceptarlo en silencio es
+     * deliberado; inventarse otro campo, no.
+     *
+     * @return list<string>
+     */
+    protected static function clavesIgnoradas(): array
+    {
+        return ['codDoc'];
+    }
+
+    /**
+     * @param  array<string, mixed>  $properties
+     * @return array<string, mixed>
+     */
+    public static function prepareForPipeline(array $properties): array
+    {
+        return self::soloClavesConocidas($properties);
+    }
+
     public function __construct(
         public Ambiente $ambiente,
         public TipoEmision $tipoEmision,

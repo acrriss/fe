@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\Retencion;
 
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Enums\TipoComprobante;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\WithCast;
@@ -14,6 +15,17 @@ use Spatie\LaravelData\Data;
  */
 final class ImpuestoRetencionData extends Data
 {
+    use RechazaClavesDesconocidas;
+
+    /**
+     * @param  array<string, mixed>  $properties
+     * @return array<string, mixed>
+     */
+    public static function prepareForPipeline(array $properties): array
+    {
+        return self::soloClavesConocidas($properties);
+    }
+
     public function __construct(
         public string $codigo,
         public string $codigoRetencion,

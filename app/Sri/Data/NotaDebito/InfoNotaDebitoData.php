@@ -3,6 +3,7 @@
 namespace App\Sri\Data\NotaDebito;
 
 use App\Sri\Data\BloqueInfoData;
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\ImpuestoData;
 use App\Sri\Data\PagoData;
 use App\Sri\Enums\TipoComprobante;
@@ -20,6 +21,8 @@ use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
  */
 final class InfoNotaDebitoData extends BloqueInfoData
 {
+    use RechazaClavesDesconocidas;
+
     /**
      * @param  array<int, ImpuestoData>  $impuestos
      * @param  array<int, PagoData>  $pagos
@@ -59,7 +62,7 @@ final class InfoNotaDebitoData extends BloqueInfoData
         $properties['impuestos'] = Payload::lista(data_get($properties, 'impuestos.impuesto'));
         $properties['pagos'] = Payload::lista(data_get($properties, 'pagos.pago'));
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     /**

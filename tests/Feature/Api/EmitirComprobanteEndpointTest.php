@@ -247,3 +247,20 @@ it('responde 422 ante una placa que no cumple la Tabla 33', function () {
         ->assertUnprocessable()
         ->assertJsonValidationErrors('comprobante');
 });
+
+/*
+ * Guardia contra el descarte silencioso (§14): una clave que el esquema no
+ * reconoce se responde como 422 accionable, no se ignora.
+ */
+it('responde 422 nombrando la clave desconocida en vez de descartarla', function () {
+    $payload = payload_emision('factura');
+    $payload['factura']['detalles']['detalle'][0]['codigoAusiliar'] = 'F010101';
+
+    $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), $payload)
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('comprobante');
+
+    expect($respuesta->json('errors.comprobante.0'))
+        ->toContain('no reconoce la clave «codigoAusiliar»')
+        ->toContain('codigoAuxiliar');
+});

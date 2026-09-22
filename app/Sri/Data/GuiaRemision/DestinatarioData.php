@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data\GuiaRemision;
 
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Support\Payload;
 use App\Sri\Support\ValidadorIdentificacion;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
@@ -13,6 +14,8 @@ use Spatie\LaravelData\Data;
  */
 final class DestinatarioData extends Data
 {
+    use RechazaClavesDesconocidas;
+
     /**
      * @param  array<int, DetalleGuiaData>  $detalles
      */
@@ -44,7 +47,7 @@ final class DestinatarioData extends Data
 
         $properties['detalles'] = Payload::lista(data_get($properties, 'detalles.detalle'));
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     /**

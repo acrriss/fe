@@ -5,6 +5,7 @@ namespace App\Sri\Data\Retencion;
 use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\InfoTributariaData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Support\Payload;
@@ -13,6 +14,8 @@ use Spatie\LaravelData\Attributes\DataCollectionOf;
 
 final class ComprobanteRetencionData extends ComprobanteData
 {
+    use RechazaClavesDesconocidas;
+
     /**
      * @param  array<int, ImpuestoRetencionData>  $impuestos
      */
@@ -41,7 +44,7 @@ final class ComprobanteRetencionData extends ComprobanteData
 
         $properties['impuestos'] = Payload::lista(data_get($properties, 'impuestos.impuesto'));
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     public function fechaEmision(): CarbonImmutable

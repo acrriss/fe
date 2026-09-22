@@ -3,6 +3,7 @@
 namespace App\Sri\Data\Retencion;
 
 use App\Sri\Data\BloqueInfoData;
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
 use App\Sri\Support\ValidadorIdentificacion;
@@ -15,6 +16,8 @@ use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
  */
 final class InfoCompRetencionData extends BloqueInfoData
 {
+    use RechazaClavesDesconocidas;
+
     public function __construct(
         #[WithCast(DateTimeInterfaceCast::class, format: 'd/m/Y')]
         public CarbonImmutable $fechaEmision,
@@ -38,7 +41,7 @@ final class InfoCompRetencionData extends BloqueInfoData
             'identificacionSujetoRetenido',
         );
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     /**

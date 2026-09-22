@@ -5,6 +5,7 @@ namespace App\Sri\Data\Factura;
 use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\DetalleData;
 use App\Sri\Data\InfoTributariaData;
 use App\Sri\Enums\TipoComprobante;
@@ -14,6 +15,8 @@ use Spatie\LaravelData\Attributes\DataCollectionOf;
 
 final class FacturaData extends ComprobanteData
 {
+    use RechazaClavesDesconocidas;
+
     /**
      * @param  array<int, DetalleData>  $detalles
      */
@@ -42,7 +45,7 @@ final class FacturaData extends ComprobanteData
 
         $properties['detalles'] = Payload::lista(data_get($properties, 'detalles.detalle'));
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     public function fechaEmision(): CarbonImmutable

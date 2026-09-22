@@ -1412,7 +1412,7 @@ payload.** El cliente nunca duplica leyendas del emisor en el JSON (422).
 | 24 | `campoAdicional nombre="Gran Contribuyente"` | `infoAdicional` (factura, liquidación, NC, ND) | ✅ 2026-09-22 |
 | 25 | §1 `codigoAuxiliar` H492001/H492002 · §2 `<placa>` Tabla 33 | `detalle` · `infoFactura` tras `moneda` | ✅ 2026-09-22 |
 | 26 | `campoAdicional nombre="RUC Proveedor"` | `infoAdicional` | ✅ §13 |
-| — | Guardia: 422 ante claves desconocidas en `infoTributaria`/`infoFactura`/`detalle` | Form Request | ⏳ |
+| — | Guardia: 422 ante claves desconocidas en todo el payload | DTOs (`prepareForPipeline`) | ✅ 2026-09-22 |
 
 Cada anexo cierra con: código + tests en `fe`, `docs/openapi.yaml`, y un
 bloque "Recomendaciones para `../pos`" (Consumo de API · UI) escrito con el
@@ -1796,3 +1796,57 @@ viaja en el payload.
   luego obligan a anular la factura.
 - Mostrar la placa en el ticket y en el detalle de la venta, para que el
   cajero verifique antes de emitir.
+
+### ✅ Registro §14 — Guardia contra el descarte silencioso (2026-09-22)
+
+Cierra la §14 atacando el problema de fondo que destapó la revisión: **la
+API descartaba en silencio cualquier clave que el DTO no declarase**.
+laravel-data las ignora, así que un `codigoAusiliar` mal tecleado —o un
+campo del SRI aún no soportado— desaparecía sin aviso y el comprobante se
+autorizaba incompleto; el integrador creía cumplir y el fallo salía en una
+auditoría meses después. Así llevábamos años con los Anexos 21-25.
+
+- Trait `RechazaClavesDesconocidas` en `app/Sri/Data/Concerns/`: compara
+  las claves del payload contra las propiedades públicas del DTO (por
+  reflexión, así que no hay lista que mantener) y lanza `DatoInvalido` con
+  las desconocidas **y las admitidas**, para distinguir errata de campo no
+  soportado. El nombre del bloque se deriva de la clase (`InfoFacturaData`
+  → «infoFactura»).
+- **Enganche**: al final de `prepareForPipeline` de cada DTO, cuando los
+  wrappers `{detalles: {detalle: X}}` ya están normalizados. La recursión
+  sale gratis —laravel-data invoca el de cada DTO anidado—, así que cubre
+  todo el árbol (raíz, info*, detalle, impuesto, totalImpuesto, pago,
+  motivo, destinatario, campoAdicional) sin duplicar el conocimiento de
+  los wrappers en un walker aparte.
+- **Excepción explícita**: `infoTributaria.codDoc` se acepta y se descarta
+  (`clavesIgnoradas()`), porque viene en el formato del SRI, muchos
+  integradores lo envían y la ficha manda derivarlo del tipo. Sin esta
+  excepción la guardia habría roto a todo el que lo manda.
+- Verificado que no rompe lo existente: el payload real del POS encaja
+  exactamente con los DTOs, y hay test de que el XML que genera el sistema
+  se relee con la guardia activa (el RIDE se produce releyendo el XML
+  almacenado; un falso positivo habría roto la descarga de RIDE de
+  comprobantes ya emitidos).
+- **Cambio de contrato**: documentado en `docs/openapi.yaml` con su fecha.
+
+#### Recomendaciones para `../pos` — guardia
+
+**Consumo de API**
+
+- Un 422 con «no reconoce la clave» es **un error del integrador, no del
+  usuario**: registrarlo con nivel `error` y tratarlo como definitivo (no
+  reintentar), igual que el resto de 4xx en `FacturacionException`.
+- El mensaje lista las claves admitidas del bloque: pegarlo tal cual en el
+  log ahorra abrir la documentación.
+- **Test de contrato en el POS**: comparar el conjunto de claves que emite
+  cada mapper contra el esquema de `docs/openapi.yaml` (descargable en
+  `/docs/openapi.yaml`), para que un campo mal escrito falle en el CI del
+  POS y no en producción.
+- Al añadir campos nuevos al payload (p. ej. `placa`, `codigoAuxiliar`),
+  ya no hace falta desplegar a ciegas: si `fe` no lo soporta todavía, lo
+  dice.
+
+**UI**
+
+- Nada que cambiar. El error es de integración: debe verse en los logs y
+  en el detalle del comprobante fallido, no en la pantalla de venta.

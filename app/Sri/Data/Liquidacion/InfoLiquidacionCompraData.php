@@ -3,6 +3,7 @@
 namespace App\Sri\Data\Liquidacion;
 
 use App\Sri\Data\BloqueInfoData;
+use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\PagoData;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoIdentificacion;
@@ -19,6 +20,8 @@ use Spatie\LaravelData\Casts\DateTimeInterfaceCast;
  */
 final class InfoLiquidacionCompraData extends BloqueInfoData
 {
+    use RechazaClavesDesconocidas;
+
     /**
      * @param  array<int, TotalImpuestoData>  $totalConImpuestos
      * @param  array<int, PagoData>  $pagos
@@ -57,7 +60,7 @@ final class InfoLiquidacionCompraData extends BloqueInfoData
         $properties['totalConImpuestos'] = Payload::lista(data_get($properties, 'totalConImpuestos.totalImpuesto'));
         $properties['pagos'] = Payload::lista(data_get($properties, 'pagos.pago'));
 
-        return $properties;
+        return self::soloClavesConocidas($properties);
     }
 
     /**
