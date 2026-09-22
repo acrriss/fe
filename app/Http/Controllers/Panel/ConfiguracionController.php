@@ -35,6 +35,7 @@ class ConfiguracionController extends Controller
                 'agente_retencion_resolucion' => $contribuyente->agente_retencion_resolucion,
                 'contribuyente_especial_resolucion' => $contribuyente->contribuyente_especial_resolucion,
                 'regimen_rimpe' => $contribuyente->regimen_rimpe?->value,
+                'gran_contribuyente_resolucion' => $contribuyente->gran_contribuyente_resolucion,
                 'tiene_certificado' => $contribuyente->tieneCertificado(),
                 'tiene_logo' => $contribuyente->logo_path !== null,
                 'plan' => $contribuyente->plan?->nombre,

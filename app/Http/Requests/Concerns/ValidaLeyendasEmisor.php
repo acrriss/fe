@@ -8,10 +8,10 @@ use App\Sri\ValueObjects\LeyendasEmisor;
 use Illuminate\Validation\Validator;
 
 /**
- * Campos de designación del emisor (ficha 2.34, Anexos 21 y 22, Tabla 11)
- * tal como los reciben el panel y la API de partner:
- * `agente_retencion_resolucion`, `contribuyente_especial_resolucion` y
- * `regimen_rimpe`. El formato lo dicta LeyendasEmisor; aquí solo se traduce
+ * Campos de designación del emisor (ficha 2.34, Anexos 21, 22 y 24, y
+ * Tabla 11) tal como los reciben el panel y la API de partner:
+ * `agente_retencion_resolucion`, `contribuyente_especial_resolucion`,
+ * `regimen_rimpe` y `gran_contribuyente_resolucion`. El formato lo dicta LeyendasEmisor; aquí solo se traduce
  * su rechazo a un error de validación sobre el campo.
  */
 trait ValidaLeyendasEmisor
@@ -25,6 +25,7 @@ trait ValidaLeyendasEmisor
             'agente_retencion_resolucion' => ['sometimes', 'nullable', 'string', 'max:20'],
             'contribuyente_especial_resolucion' => ['sometimes', 'nullable', 'string', 'max:20'],
             'regimen_rimpe' => ['sometimes', 'nullable', 'string', 'max:20'],
+            'gran_contribuyente_resolucion' => ['sometimes', 'nullable', 'string', 'max:300'],
         ];
     }
 
@@ -39,6 +40,7 @@ trait ValidaLeyendasEmisor
                     'agente_retencion_resolucion' => LeyendasEmisor::resolucionAgenteRetencion(...),
                     'contribuyente_especial_resolucion' => LeyendasEmisor::resolucionContribuyenteEspecial(...),
                     'regimen_rimpe' => LeyendasEmisor::regimenRimpe(...),
+                    'gran_contribuyente_resolucion' => LeyendasEmisor::resolucionGranContribuyente(...),
                 ] as $campo => $normalizar) {
                     if (! $this->exists($campo)) {
                         continue;
@@ -79,6 +81,12 @@ trait ValidaLeyendasEmisor
         if ($this->exists('regimen_rimpe')) {
             $columnas['regimen_rimpe'] = LeyendasEmisor::regimenRimpe(
                 $this->string('regimen_rimpe')->toString(),
+            );
+        }
+
+        if ($this->exists('gran_contribuyente_resolucion')) {
+            $columnas['gran_contribuyente_resolucion'] = LeyendasEmisor::resolucionGranContribuyente(
+                $this->string('gran_contribuyente_resolucion')->toString(),
             );
         }
 

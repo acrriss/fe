@@ -1409,7 +1409,7 @@ payload.** El cliente nunca duplica leyendas del emisor en el JSON (422).
 | 21 | `<agenteRetencion>` nº resolución (≤8 dígitos, sin ceros a la izq.) + "Contribuyente Especial" en RIDE | `infoTributaria` tras `dirMatriz`; `contribuyenteEspecial` en el bloque info* | ✅ 2026-09-20 |
 | 22 | `<contribuyenteRimpe>` leyenda literal RIMPE / Negocio Popular | `infoTributaria` tras `agenteRetencion` | ✅ 2026-09-20 |
 | 23 | `<codigoAuxiliar>` Tabla 31 (materiales de construcción) | `detalle` tras `codigoPrincipal` | ✅ 2026-09-20 (cierra también 25 §1) |
-| 24 | `campoAdicional nombre="Gran Contribuyente"` | `infoAdicional` (factura, NC, ND) | ⏳ |
+| 24 | `campoAdicional nombre="Gran Contribuyente"` | `infoAdicional` (factura, liquidación, NC, ND) | ✅ 2026-09-22 |
 | 25 | §1 `codigoAuxiliar` H492001/H492002 · §2 `<placa>` Tabla 33 | `detalle` · `infoFactura` tras `moneda` | §1 ✅ 2026-09-20 · §2 ⏳ |
 | 26 | `campoAdicional nombre="RUC Proveedor"` | `infoAdicional` | ✅ §13 |
 | — | Guardia: 422 ante claves desconocidas en `infoTributaria`/`infoFactura`/`detalle` | Form Request | ⏳ |
@@ -1684,3 +1684,58 @@ En su lugar, el catálogo como **dato**: `GET /api/v1/catalogos` y
 - En la pantalla de ajustes de FE, un enlace "Ver catálogo del SRI" que
   abra la lista vigente, para que el negocio contraste con lo que le pide
   su contador.
+
+### ✅ Registro §14 — Anexo 24: Gran Contribuyente (2026-09-22)
+
+Último de la familia "dato del emisor": misma etapa
+`AgregarLeyendasEmisor`, pero el destino es `infoAdicional`, no un tag
+propio.
+
+- **Formato resuelto con el Ejemplo 1 del anexo** (pág. 132): la
+  especificación dice que el atributo `nombre` lleva «la leyenda "Gran
+  Contribuyente" y el número de resolución», lo que se leía como que
+  ambos van en el atributo. El ejemplo lo aclara:
+  `<campoAdicional nombre="Gran Contribuyente">NAC-GCFOIOC21-00000868-E</campoAdicional>`
+  — nombre = leyenda, contenido = resolución. Idéntico a "RUC Proveedor".
+- **Alcance por tipo**: el anexo lo exige en «comprobantes de venta, notas
+  de crédito y notas de débito». Se emite en factura, **liquidación de
+  compra** (es comprobante de venta, Reglamento de Comprobantes de Venta
+  art. 1), nota de crédito y nota de débito; **no** en retención ni guía
+  de remisión. Corrige el boceto inicial de §14, que decía "solo factura,
+  NC y ND".
+- Columna `gran_contribuyente_resolucion` (300, el tope del campo
+  adicional); formato alfanumérico con guiones (el ejemplo los lleva).
+- **Refactor de paso**: el "añadir campo adicional si no está, con el tope
+  de 15 del esquema" vivía dentro de `AgregarRucProveedor`. Se subió a
+  `ComprobanteData::agregarCampoAdicional()` / `tieneCampoAdicional()`,
+  que ahora usan las dos etapas; el segundo caso lo habría duplicado.
+- Orden resultante en `infoAdicional`: los campos del emisor, luego
+  "Gran Contribuyente", luego "RUC Proveedor" (hay test).
+- RIDE: sale solo, por el bloque de información adicional que ya existía.
+
+#### Recomendaciones para `../pos` — Anexo 24
+
+**Consumo de API**
+
+- Un campo más en el mismo `PATCH /api/partner/v1/contribuyentes/{uuid}`:
+  `gran_contribuyente_resolucion` (string ≤300 o `null`). Respuesta:
+  `data.granContribuyenteResolucion`.
+- 422 con `errors.gran_contribuyente_resolucion` si trae símbolos
+  distintos de guion (p. ej. `NAC/2021`).
+- **Cuidado con el presupuesto de campos adicionales**: el esquema admite
+  15 por comprobante y `fe` ocupa hasta 2 (`Gran Contribuyente` y
+  `RUC Proveedor`). Si el POS añade Teléfono/Email/Dirección del cliente,
+  cuente con **13** como máximo; pasarse devuelve 422 con el mensaje "No
+  cabe el campo «…»".
+- El POS **no** debe enviar un `campoAdicional` llamado `Gran
+  Contribuyente`: se rechaza con 422, igual que `RUC Proveedor`.
+
+**UI**
+
+- `fe_ajustes.gran_contribuyente_resolucion` (string 300, nullable), en la
+  misma sección "Designaciones del SRI", con placeholder
+  `NAC-GCFOIOC21-00000868-E` y la nota de que aparece en la información
+  adicional de facturas, liquidaciones y notas de crédito y débito.
+- No hace falta tocar la plantilla del ticket: a diferencia de las
+  leyendas de los Anexos 21 y 22, esta viaja en información adicional y
+  el RIDE la imprime sola.

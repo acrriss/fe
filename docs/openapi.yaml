@@ -571,6 +571,15 @@ paths:
                     `rimpe` → "CONTRIBUYENTE RÉGIMEN RIMPE";
                     `negocio_popular` → "CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE".
                     Null o vacío = régimen general.
+                gran_contribuyente_resolucion:
+                  type: [string, 'null']
+                  maxLength: 300
+                  description: |
+                    Nº de resolución que califica al emisor como Gran Contribuyente
+                    (ficha técnica, Anexo 24; p. ej. `NAC-GCFOIOC21-00000868-E`). `fe` lo
+                    emite como `<campoAdicional nombre="Gran Contribuyente">` en facturas,
+                    liquidaciones de compra y notas de crédito y débito. Null o vacío = no
+                    calificado.
       responses:
         '201':
           description: Contribuyente aprovisionado.
@@ -662,6 +671,15 @@ paths:
                     `rimpe` → "CONTRIBUYENTE RÉGIMEN RIMPE";
                     `negocio_popular` → "CONTRIBUYENTE NEGOCIO POPULAR - RÉGIMEN RIMPE".
                     Null o vacío = régimen general.
+                gran_contribuyente_resolucion:
+                  type: [string, 'null']
+                  maxLength: 300
+                  description: |
+                    Nº de resolución que califica al emisor como Gran Contribuyente
+                    (ficha técnica, Anexo 24; p. ej. `NAC-GCFOIOC21-00000868-E`). `fe` lo
+                    emite como `<campoAdicional nombre="Gran Contribuyente">` en facturas,
+                    liquidaciones de compra y notas de crédito y débito. Null o vacío = no
+                    calificado.
       responses:
         '200':
           description: Contribuyente actualizado.
@@ -884,6 +902,9 @@ components:
           type: [string, 'null']
           enum: [rimpe, negocio_popular, null]
           description: Régimen RIMPE cuya leyenda se imprime en cada comprobante (Anexo 22).
+        granContribuyenteResolucion:
+          type: [string, 'null']
+          description: Resolución de Gran Contribuyente emitida como campo adicional (Anexo 24).
         certificado:
           type: object
           properties:
@@ -925,10 +946,11 @@ components:
         Importes como texto (`"100.00"`), fechas en `dd/mm/aaaa`. Ver el
         ejemplo del endpoint de emisión para una factura completa.
 
-        **Leyendas del emisor (ficha técnica 2.34, Anexos 21 y 22).** Los
-        tags `agenteRetencion` y `contribuyenteRimpe` (en `infoTributaria`)
-        y `contribuyenteEspecial` (en el bloque `info*`) los fija la
-        configuración del contribuyente
+        **Leyendas del emisor (ficha técnica 2.34, Anexos 21, 22 y 24).**
+        Los tags `agenteRetencion` y `contribuyenteRimpe` (en
+        `infoTributaria`), `contribuyenteEspecial` (en el bloque `info*`) y
+        el campo adicional `Gran Contribuyente` los fija la configuración
+        del contribuyente
         —panel o `PATCH /partner/v1/contribuyentes/{id}`— y `fe` los
         inyecta en cada comprobante y en el RIDE. No se envían en el
         payload: si vienen, la emisión responde 422.

@@ -59,10 +59,12 @@ it('configura y borra las designaciones del emisor', function () {
         'agente_retencion_resolucion' => '00006498', // se guarda sin ceros a la izquierda
         'contribuyente_especial_resolucion' => '5368',
         'regimen_rimpe' => 'negocio_popular',
+        'gran_contribuyente_resolucion' => 'NAC-GCFOIOC21-00000868-E',
     ])->assertSuccessful()
         ->assertJsonPath('data.agenteRetencionResolucion', '6498')
         ->assertJsonPath('data.contribuyenteEspecialResolucion', '5368')
-        ->assertJsonPath('data.regimenRimpe', 'negocio_popular');
+        ->assertJsonPath('data.regimenRimpe', 'negocio_popular')
+        ->assertJsonPath('data.granContribuyenteResolucion', 'NAC-GCFOIOC21-00000868-E');
 
     $this->patchJson(route('api.partner.v1.contribuyentes.actualizar', $gestionado->uuid), [
         'agente_retencion_resolucion' => null,
@@ -85,6 +87,7 @@ it('rechaza designaciones con formato inválido: :dataset', function (array $pay
     'agente de retención de 9 dígitos' => [['agente_retencion_resolucion' => '123456789'], 'agente_retencion_resolucion'],
     'contribuyente especial muy corto' => [['contribuyente_especial_resolucion' => '12'], 'contribuyente_especial_resolucion'],
     'régimen desconocido' => [['regimen_rimpe' => 'rise'], 'regimen_rimpe'],
+    'resolución de gran contribuyente con símbolos' => [['gran_contribuyente_resolucion' => 'NAC/2021'], 'gran_contribuyente_resolucion'],
 ]);
 
 it('el aprovisionamiento acepta las designaciones del emisor', function () {

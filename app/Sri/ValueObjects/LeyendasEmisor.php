@@ -17,6 +17,8 @@ use App\Sri\Exceptions\DatoInvalido;
  * - `contribuyenteEspecial`: número de la resolución, alfanumérico de 3 a
  *   13 caracteres (tag <contribuyenteEspecial> de cada formato XML).
  * - `regimenRimpe`: leyenda literal de RegimenRimpe (Anexo 22).
+ * - `granContribuyente`: número de la resolución de calificación, que va
+ *   como campo adicional (Anexo 24), no como tag propio.
  */
 final readonly class LeyendasEmisor
 {
@@ -28,6 +30,7 @@ final readonly class LeyendasEmisor
         public ?string $agenteRetencion = null,
         public ?string $contribuyenteEspecial = null,
         public ?RegimenRimpe $regimenRimpe = null,
+        public ?string $granContribuyente = null,
     ) {}
 
     /**
@@ -35,12 +38,17 @@ final readonly class LeyendasEmisor
      *
      * @throws DatoInvalido
      */
-    public static function de(?string $agenteRetencion, ?string $contribuyenteEspecial, ?string $regimenRimpe = null): self
-    {
+    public static function de(
+        ?string $agenteRetencion,
+        ?string $contribuyenteEspecial,
+        ?string $regimenRimpe = null,
+        ?string $granContribuyente = null,
+    ): self {
         return new self(
             self::resolucionAgenteRetencion($agenteRetencion),
             self::resolucionContribuyenteEspecial($contribuyenteEspecial),
             self::regimenRimpe($regimenRimpe),
+            self::resolucionGranContribuyente($granContribuyente),
         );
     }
 
@@ -48,7 +56,8 @@ final readonly class LeyendasEmisor
     {
         return $this->agenteRetencion === null
             && $this->contribuyenteEspecial === null
-            && $this->regimenRimpe === null;
+            && $this->regimenRimpe === null
+            && $this->granContribuyente === null;
     }
 
     /**
@@ -78,6 +87,30 @@ final readonly class LeyendasEmisor
         }
 
         return $sinCeros;
+    }
+
+    /**
+     * Resolución de calificación como Gran Contribuyente. La ficha solo la
+     * acota a 300 caracteres alfanuméricos (el tope del campo adicional);
+     * el ejemplo es «NAC-GCFOIOC21-00000868-E», así que se admiten guiones.
+     */
+    public static function resolucionGranContribuyente(?string $valor): ?string
+    {
+        $valor = trim((string) $valor);
+
+        if ($valor === '') {
+            return null;
+        }
+
+        if (preg_match('/^[A-Za-z0-9\-]{3,300}$/', $valor) !== 1) {
+            throw DatoInvalido::porFormato(
+                'granContribuyente',
+                'el número de la resolución (alfanumérico con guiones, de 3 a 300 caracteres)',
+                $valor,
+            );
+        }
+
+        return $valor;
     }
 
     public static function regimenRimpe(?string $valor): ?RegimenRimpe

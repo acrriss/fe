@@ -2,6 +2,7 @@
 
 use App\Models\Comprobante;
 use App\Sri\Actions\AgregarLeyendasEmisor;
+use App\Sri\Actions\AgregarRucProveedor;
 use App\Sri\Actions\ConstruirXml;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Enums\RegimenRimpe;
@@ -20,11 +21,12 @@ use App\Sri\ValueObjects\LeyendasEmisor;
  * nunca el payload.
  */
 const LEYENDAS_PRUEBA = ['agenteRetencion' => '6498', 'contribuyenteEspecial' => '5368'];
+const RESOLUCION_GRAN_CONTRIBUYENTE = 'NAC-GCFOIOC21-00000868-E';
 
-function con_leyendas(string $tipo, ?RegimenRimpe $regimenRimpe = null): ComprobanteData
+function con_leyendas(string $tipo, ?RegimenRimpe $regimenRimpe = null, ?string $granContribuyente = null): ComprobanteData
 {
     $comprobante = comprobante_de_prueba($tipo);
-    $leyendas = new LeyendasEmisor(...LEYENDAS_PRUEBA, regimenRimpe: $regimenRimpe);
+    $leyendas = new LeyendasEmisor(...LEYENDAS_PRUEBA, regimenRimpe: $regimenRimpe, granContribuyente: $granContribuyente);
     $emision = new EmisionEnCurso($comprobante, certificado_de_prueba(), leyendas: $leyendas);
     (new AgregarLeyendasEmisor)($emision, fn (EmisionEnCurso $e): EmisionEnCurso => $e);
 
@@ -122,6 +124,7 @@ it('rechaza :dataset si viene en el payload', function (string $campo, Closure $
 })->with([
     'agenteRetencion' => ['agenteRetencion', fn (ComprobanteData $c) => $c->infoTributaria->agenteRetencion = '1'],
     'contribuyenteRimpe' => ['contribuyenteRimpe', fn (ComprobanteData $c) => $c->infoTributaria->contribuyenteRimpe = 'CONTRIBUYENTE RÉGIMEN RIMPE'],
+    'Gran Contribuyente' => ['Gran Contribuyente', fn (ComprobanteData $c) => $c->agregarCampoAdicional('Gran Contribuyente', 'NAC-1')],
     'contribuyenteEspecial' => ['contribuyenteEspecial', fn (ComprobanteData $c) => $c->bloqueInfo()->contribuyenteEspecial = '5368'],
 ]);
 
@@ -219,3 +222,63 @@ it('rechaza una resolución de agente de retención inválida: :dataset', functi
 it('rechaza una resolución de contribuyente especial inválida: :dataset', function (string $valor) {
     expect(fn () => LeyendasEmisor::de(null, $valor))->toThrow(DatoInvalido::class, 'contribuyenteEspecial');
 })->with(['muy corta' => '12', 'con guion' => 'NAC-1', 'catorce caracteres' => '12345678901234']);
+
+/*
+ * Anexo 24: la leyenda "Gran Contribuyente" y el número de resolución van
+ * como campo adicional (nombre = leyenda, contenido = resolución), no como
+ * tag propio. El anexo lo exige en «comprobantes de venta, notas de crédito
+ * y notas de débito»: quedan fuera la retención y la guía de remisión.
+ */
+it('añade el campo adicional Gran Contribuyente en :dataset', function (string $tipo) {
+    $comprobante = con_leyendas($tipo, granContribuyente: RESOLUCION_GRAN_CONTRIBUYENTE);
+
+    expect(ConstruirXml::render($comprobante))
+        ->toContain('<campoAdicional nombre="Gran Contribuyente">'.RESOLUCION_GRAN_CONTRIBUYENTE.'</campoAdicional>');
+})->with(['factura', 'liquidacionCompra', 'notaCredito', 'notaDebito']);
+
+it('no lo añade en :dataset, que el anexo no menciona', function (string $tipo) {
+    $comprobante = con_leyendas($tipo, granContribuyente: RESOLUCION_GRAN_CONTRIBUYENTE);
+
+    expect(ConstruirXml::render($comprobante))->not->toContain('Gran Contribuyente')
+        ->and($comprobante->tieneCampoAdicional('Gran Contribuyente'))->toBeFalse();
+})->with(['comprobanteRetencion', 'guiaRemision']);
+
+it('convive con los campos adicionales del emisor y con el RUC del proveedor', function () {
+    config(['sri.ruc_proveedor' => '0993205451001']);
+
+    $factura = comprobante_de_prueba('factura');
+    $factura->agregarCampoAdicional('Email', 'cliente@ejemplo.test');
+
+    $emision = new EmisionEnCurso($factura, certificado_de_prueba(), leyendas: new LeyendasEmisor(granContribuyente: RESOLUCION_GRAN_CONTRIBUYENTE));
+    (new AgregarLeyendasEmisor)($emision, fn (EmisionEnCurso $e): EmisionEnCurso => $e);
+    (new AgregarRucProveedor)($emision, fn (EmisionEnCurso $e): EmisionEnCurso => $e);
+
+    expect(array_map(fn ($campo): string => $campo->nombre, $factura->infoAdicional))
+        ->toBe(['Email', 'Gran Contribuyente', 'RUC Proveedor']);
+});
+
+it('se muestra en la información adicional del RIDE', function () {
+    $factura = con_leyendas('factura', granContribuyente: RESOLUCION_GRAN_CONTRIBUYENTE);
+    $registro = Comprobante::factory()->autorizado()->make([
+        'clave_acceso' => (string) $factura->infoTributaria->claveAcceso,
+    ]);
+
+    $html = view('ride.factura', [
+        'registro' => $registro,
+        'comprobante' => $factura,
+        'logo' => null,
+        'codigoBarras' => null,
+    ])->render();
+
+    expect($html)->toContain('INFORMACIÓN ADICIONAL')
+        ->toContain('Gran Contribuyente')
+        ->toContain(RESOLUCION_GRAN_CONTRIBUYENTE);
+});
+
+it('acepta la resolución con guiones y rechaza la que trae símbolos', function () {
+    expect(LeyendasEmisor::de(null, null, null, RESOLUCION_GRAN_CONTRIBUYENTE)->granContribuyente)
+        ->toBe(RESOLUCION_GRAN_CONTRIBUYENTE);
+
+    expect(fn () => LeyendasEmisor::de(null, null, null, 'NAC/2021'))
+        ->toThrow(DatoInvalido::class, 'granContribuyente');
+});

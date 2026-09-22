@@ -89,6 +89,9 @@ describe('endurecimiento (fase 4)', function () {
         'contribuyenteRimpe en el payload' => [function (array &$payload): void {
             $payload['factura']['infoTributaria']['contribuyenteRimpe'] = 'CONTRIBUYENTE RÉGIMEN RIMPE';
         }],
+        'campo adicional Gran Contribuyente en el payload' => [function (array &$payload): void {
+            $payload['factura']['infoAdicional'] = ['campoAdicional' => [['nombre' => 'Gran Contribuyente', 'valor' => 'NAC-1']]];
+        }],
         'secuencial inválido' => [function (array &$payload): void {
             $payload['factura']['infoTributaria']['secuencial'] = 'ABC';
         }],
@@ -201,6 +204,7 @@ it('imprime las leyendas configuradas en el contribuyente en el XML emitido', fu
         'agente_retencion_resolucion' => '6498',
         'contribuyente_especial_resolucion' => '5368',
         'regimen_rimpe' => 'rimpe',
+        'gran_contribuyente_resolucion' => 'NAC-GCFOIOC21-00000868-E',
     ]);
 
     $respuesta = $this->postJson(route('api.v1.comprobantes.emitir'), payload_emision('factura'))
@@ -209,7 +213,8 @@ it('imprime las leyendas configuradas en el contribuyente en el XML emitido', fu
     expect(base64_decode($respuesta->json('xmlFirmado')))
         ->toContain('<agenteRetencion>6498</agenteRetencion>')
         ->toContain('<contribuyenteRimpe>CONTRIBUYENTE RÉGIMEN RIMPE</contribuyenteRimpe>')
-        ->toContain('<contribuyenteEspecial>5368</contribuyenteEspecial>');
+        ->toContain('<contribuyenteEspecial>5368</contribuyenteEspecial>')
+        ->toContain('<campoAdicional nombre="Gran Contribuyente">NAC-GCFOIOC21-00000868-E</campoAdicional>');
 });
 
 /*

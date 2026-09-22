@@ -3,6 +3,7 @@
 namespace App\Sri\Data;
 
 use App\Sri\Enums\TipoComprobante;
+use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\Support\Payload;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Data;
@@ -71,6 +72,40 @@ abstract class ComprobanteData extends Data
         );
 
         return $properties;
+    }
+
+    /**
+     * Añade un campo a `infoAdicional` si no está ya (idempotente: el mismo
+     * comprobante puede pasar dos veces por el pipeline).
+     *
+     * @throws DatoInvalido si el comprobante ya agotó los campos del esquema
+     */
+    public function agregarCampoAdicional(string $nombre, string $valor): void
+    {
+        if ($this->tieneCampoAdicional($nombre)) {
+            return;
+        }
+
+        if (count($this->infoAdicional) >= self::MAXIMO_CAMPOS_ADICIONALES) {
+            throw new DatoInvalido(
+                "No cabe el campo «{$nombre}»: el comprobante ya usa los "
+                .self::MAXIMO_CAMPOS_ADICIONALES
+                .' campos adicionales que admite el esquema del SRI.',
+            );
+        }
+
+        $this->infoAdicional[] = new CampoAdicionalData($nombre, $valor);
+    }
+
+    public function tieneCampoAdicional(string $nombre): bool
+    {
+        foreach ($this->infoAdicional as $campo) {
+            if ($campo->nombre === $nombre) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

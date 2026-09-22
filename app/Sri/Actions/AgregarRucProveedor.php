@@ -2,7 +2,6 @@
 
 namespace App\Sri\Actions;
 
-use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\Pipeline\EmisionEnCurso;
@@ -44,37 +43,17 @@ final class AgregarRucProveedor
      */
     public static function rechazarSiVieneEnElPayload(ComprobanteData $comprobante): void
     {
-        foreach ($comprobante->infoAdicional as $campo) {
-            if ($campo->nombre === self::NOMBRE_CAMPO) {
-                throw new DatoInvalido(
-                    'El campo adicional «'.self::NOMBRE_CAMPO.'» lo fija el servicio de '
-                    .'facturación electrónica: no debe enviarse en el comprobante.',
-                );
-            }
+        if ($comprobante->tieneCampoAdicional(self::NOMBRE_CAMPO)) {
+            throw new DatoInvalido(
+                'El campo adicional «'.self::NOMBRE_CAMPO.'» lo fija el servicio de '
+                .'facturación electrónica: no debe enviarse en el comprobante.',
+            );
         }
     }
 
-    /**
-     * Idempotente por si el mismo comprobante pasa dos veces por el
-     * pipeline; el caso del payload lo ataja rechazarSiVieneEnElPayload().
-     */
     public static function agregar(ComprobanteData $comprobante, string $ruc): void
     {
-        foreach ($comprobante->infoAdicional as $campo) {
-            if ($campo->nombre === self::NOMBRE_CAMPO) {
-                return;
-            }
-        }
-
-        if (count($comprobante->infoAdicional) >= ComprobanteData::MAXIMO_CAMPOS_ADICIONALES) {
-            throw new DatoInvalido(
-                'No cabe el RUC del proveedor del sistema: el comprobante ya usa los '
-                .ComprobanteData::MAXIMO_CAMPOS_ADICIONALES
-                .' campos adicionales que admite el esquema del SRI.',
-            );
-        }
-
-        $comprobante->infoAdicional[] = new CampoAdicionalData(self::NOMBRE_CAMPO, $ruc);
+        $comprobante->agregarCampoAdicional(self::NOMBRE_CAMPO, $ruc);
     }
 
     private static function rucConfigurado(): ?string

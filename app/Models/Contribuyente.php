@@ -32,6 +32,7 @@ use SensitiveParameter;
  * @property string|null $agente_retencion_resolucion nº de resolución, sin ceros a la izquierda (Anexo 21)
  * @property string|null $contribuyente_especial_resolucion nº de resolución (Tabla 11, fila 8)
  * @property RegimenRimpe|null $regimen_rimpe null = régimen general (Anexo 22)
+ * @property string|null $gran_contribuyente_resolucion nº de resolución de calificación (Anexo 24)
  * @property string|null $logo_path
  * @property string|null $certificado_p12 base64 del .p12 (cifrado en reposo)
  * @property string|null $certificado_clave (cifrada en reposo)
@@ -157,6 +158,7 @@ class Contribuyente extends Model
             agenteRetencion: $this->agente_retencion_resolucion,
             contribuyenteEspecial: $this->contribuyente_especial_resolucion,
             regimenRimpe: $this->regimen_rimpe,
+            granContribuyente: $this->gran_contribuyente_resolucion,
         );
     }
 

@@ -147,17 +147,20 @@ describe('configuración', function () {
             'agente_retencion_resolucion' => '0006498',
             'contribuyente_especial_resolucion' => '5368',
             'regimen_rimpe' => 'rimpe',
+            'gran_contribuyente_resolucion' => 'NAC-GCFOIOC21-00000868-E',
         ])->assertRedirect(route('panel.configuracion'));
 
         expect($contribuyente->refresh()->agente_retencion_resolucion)->toBe('6498')
             ->and($contribuyente->contribuyente_especial_resolucion)->toBe('5368')
-            ->and($contribuyente->regimen_rimpe)->toBe(RegimenRimpe::Rimpe);
+            ->and($contribuyente->regimen_rimpe)->toBe(RegimenRimpe::Rimpe)
+            ->and($contribuyente->gran_contribuyente_resolucion)->toBe('NAC-GCFOIOC21-00000868-E');
 
         $this->get(route('panel.configuracion'))->assertInertia(
             fn (Assert $page) => $page
                 ->where('contribuyente.agente_retencion_resolucion', '6498')
                 ->where('contribuyente.contribuyente_especial_resolucion', '5368')
                 ->where('contribuyente.regimen_rimpe', 'rimpe')
+                ->where('contribuyente.gran_contribuyente_resolucion', 'NAC-GCFOIOC21-00000868-E')
                 ->has('regimenes_rimpe', 2),
         );
 
