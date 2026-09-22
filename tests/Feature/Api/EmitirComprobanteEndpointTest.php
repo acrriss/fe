@@ -228,3 +228,22 @@ it('emite el codigoAuxiliar de cada ítem tal como llega en el payload', functio
     expect(base64_decode($respuesta->json('xmlFirmado')))
         ->toContain('<codigoAuxiliar>F010101</codigoAuxiliar>');
 });
+
+/*
+ * Ficha 2.34, Anexo 25 §2: la placa viaja en el payload y el servicio la
+ * normaliza al formato de la Tabla 33 antes de firmar.
+ */
+it('emite la placa normalizada de la factura de transporte comercial', function () {
+    $respuesta = $this->postJson(
+        route('api.v1.comprobantes.emitir'),
+        ['factura' => payload_factura(codigoAuxiliar: 'H492001', placa: 'abc-123')],
+    )->assertSuccessful();
+
+    expect(base64_decode($respuesta->json('xmlFirmado')))->toContain('<placa>ABC0123</placa>');
+});
+
+it('responde 422 ante una placa que no cumple la Tabla 33', function () {
+    $this->postJson(route('api.v1.comprobantes.emitir'), ['factura' => payload_factura(placa: 'AB023C')])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('comprobante');
+});

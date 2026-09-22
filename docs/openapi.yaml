@@ -968,6 +968,16 @@ components:
         Las dos tablas completas se sirven en
         `GET /catalogos/codigos-auxiliares`: consúmalas desde ahí en vez de
         transcribirlas.
+
+        **Placa del vehículo (ficha técnica 2.34, Anexo 25 §2).**
+        `infoFactura.placa` es obligatoria en las facturas que las
+        operadoras de transporte comercial —excepto taxis— emiten a sus
+        clientes. Formato de la Tabla 33: tres letras y cuatro dígitos sin
+        espacios (`ABC1234`); si la placa tiene solo tres dígitos se
+        rellena con un cero (`ABC0123`). El servicio normaliza mayúsculas,
+        separadores y ese cero, y responde 422 si no encaja. Es dato de la
+        transacción: lo envía el emisor en cada factura. No confundir con
+        el `placa` de la guía de remisión, que es texto libre.
       required: [infoTributaria]
       properties:
         infoTributaria:

@@ -1410,7 +1410,7 @@ payload.** El cliente nunca duplica leyendas del emisor en el JSON (422).
 | 22 | `<contribuyenteRimpe>` leyenda literal RIMPE / Negocio Popular | `infoTributaria` tras `agenteRetencion` | ✅ 2026-09-20 |
 | 23 | `<codigoAuxiliar>` Tabla 31 (materiales de construcción) | `detalle` tras `codigoPrincipal` | ✅ 2026-09-20 (cierra también 25 §1) |
 | 24 | `campoAdicional nombre="Gran Contribuyente"` | `infoAdicional` (factura, liquidación, NC, ND) | ✅ 2026-09-22 |
-| 25 | §1 `codigoAuxiliar` H492001/H492002 · §2 `<placa>` Tabla 33 | `detalle` · `infoFactura` tras `moneda` | §1 ✅ 2026-09-20 · §2 ⏳ |
+| 25 | §1 `codigoAuxiliar` H492001/H492002 · §2 `<placa>` Tabla 33 | `detalle` · `infoFactura` tras `moneda` | ✅ 2026-09-22 |
 | 26 | `campoAdicional nombre="RUC Proveedor"` | `infoAdicional` | ✅ §13 |
 | — | Guardia: 422 ante claves desconocidas en `infoTributaria`/`infoFactura`/`detalle` | Form Request | ⏳ |
 
@@ -1739,3 +1739,54 @@ propio.
 - No hace falta tocar la plantilla del ticket: a diferencia de las
   leyendas de los Anexos 21 y 22, esta viaja en información adicional y
   el RIDE la imprime sola.
+
+### ✅ Registro §14 — Anexo 25 §2: placa del vehículo (2026-09-22)
+
+Segundo de los dos requisitos realmente nuevos de la ficha 2.34 (el otro
+es el 26, ya en producción). **Dato de la transacción**, como el Anexo 23:
+viaja en el payload.
+
+- `Placa` (value object, como `Ruc`/`Secuencial`): normaliza a mayúsculas,
+  quita espacios y guiones y **rellena con el cero** de la Tabla 33 cuando
+  la placa trae tres dígitos (`abc-123` → `ABC0123`). Esa regla la aplica
+  el servicio: es formato del SRI, no algo que el integrador deba recordar.
+- `InfoFacturaData::placa` (opcional, con `ValueObjectCast`), emitida tras
+  `moneda`. La ficha la ubica «entre los tags moneda y formas de pago»;
+  nuestro formato de factura no emite `pagos`, así que cierra el bloque.
+- Validación estricta `^[A-Z]{3}[0-9]{4}$` tras normalizar, con 422 y un
+  mensaje que cita el formato. **Decisión revisable**: la Tabla 33 solo
+  contempla tres letras + cuatro dígitos, pero si aparece un operador real
+  con una placa fuera de ese patrón (vehículos especiales, diplomáticos)
+  el estricto le impide emitir; se relaja en cuanto haya un caso.
+- Solo en factura: el anexo habla de las facturas que la operadora emite a
+  sus clientes. La `placa` de la guía de remisión es otro campo, con otro
+  formato (texto libre ≤20), y no se toca — hay test que lo fija.
+
+#### Recomendaciones para `../pos` — Anexo 25 §2
+
+**Consumo de API**
+
+- `FacturaMapper` incluye `infoFactura.placa` cuando la venta la tiene.
+  **No hace falta normalizar en el POS**: `fe` pasa a mayúsculas, quita
+  separadores y añade el cero de relleno. Enviarla tal como la teclearon.
+- 422 con `errors.comprobante` si no encaja en la Tabla 33; el mensaje
+  cita el formato esperado, se puede mostrar tal cual al cajero.
+- Si el negocio está marcado como operadora de transporte y la venta no
+  trae placa, cortar antes con `VentaNoFacturable` ("falta la placa del
+  vehículo") en vez de dejar que `fe` responda 422: el mensaje llega al
+  cajero en el momento de la venta y no en el job.
+
+**UI**
+
+- `fe_ajustes.es_operadora_transporte` (booleano): activa el campo
+  obligatorio y el preseleccionado de `H492001` como código auxiliar
+  (Anexo 23) en los productos de servicio de transporte.
+- Con el flag activo, campo "Placa del vehículo" en la pantalla de venta
+  (columna `fe_placa` en `transactions`), con `text-transform: uppercase`,
+  `maxlength` 8 y ayuda "ABC1234". Autocompletar con las últimas placas
+  usadas por ese cliente: en una operadora, el mismo vehículo se repite.
+- Si el POS gestiona una flota, mejor un selector de vehículos
+  (`fe_vehiculos`: placa + alias) que un campo libre: evita erratas que
+  luego obligan a anular la factura.
+- Mostrar la placa en el ticket y en el detalle de la venta, para que el
+  cajero verifique antes de emitir.

@@ -3,10 +3,12 @@
 namespace App\Sri\Data\Factura;
 
 use App\Sri\Data\BloqueInfoData;
+use App\Sri\Data\Casts\ValueObjectCast;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
 use App\Sri\Support\ValidadorIdentificacion;
+use App\Sri\ValueObjects\Placa;
 use Carbon\CarbonImmutable;
 use Spatie\LaravelData\Attributes\DataCollectionOf;
 use Spatie\LaravelData\Attributes\WithCast;
@@ -35,6 +37,14 @@ final class InfoFacturaData extends BloqueInfoData
         public string $moneda,
         public ?string $dirEstablecimiento = null,
         public ?string $propina = null,
+        /**
+         * Placa del vehículo, obligatoria en las facturas de las operadoras
+         * de transporte comercial excepto taxis (Anexo 25 §2). Dato de la
+         * transacción: lo manda el cliente, a diferencia de las leyendas
+         * del emisor.
+         */
+        #[WithCast(ValueObjectCast::class, Placa::class)]
+        public ?Placa $placa = null,
     ) {}
 
     /**
@@ -80,6 +90,8 @@ final class InfoFacturaData extends BloqueInfoData
             'propina' => $this->propina,
             'importeTotal' => $this->importeTotal,
             'moneda' => $this->moneda,
+            // la ficha la ubica entre <moneda> y <pagos> (Anexo 25 §2)
+            'placa' => $this->placa?->value,
         ]);
     }
 }
