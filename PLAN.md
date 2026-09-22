@@ -1771,17 +1771,23 @@ viaja en el payload.
   separadores y añade el cero de relleno. Enviarla tal como la teclearon.
 - 422 con `errors.comprobante` si no encaja en la Tabla 33; el mensaje
   cita el formato esperado, se puede mostrar tal cual al cajero.
-- Si el negocio está marcado como operadora de transporte y la venta no
-  trae placa, cortar antes con `VentaNoFacturable` ("falta la placa del
-  vehículo") en vez de dejar que `fe` responda 422: el mensaje llega al
+- Si el negocio tiene rol *operadora* y la venta no trae placa, cortar
+  antes con `VentaNoFacturable` ("falta la placa del vehículo") en vez de dejar que `fe` responda 422: el mensaje llega al
   cajero en el momento de la venta y no en el job.
 
 **UI**
 
-- `fe_ajustes.es_operadora_transporte` (booleano): activa el campo
-  obligatorio y el preseleccionado de `H492001` como código auxiliar
-  (Anexo 23) en los productos de servicio de transporte.
-- Con el flag activo, campo "Placa del vehículo" en la pantalla de venta
+- `fe_ajustes.rol_transporte`: **tres estados**, no un booleano —
+  *no aplica* · *operadora* · *socio o accionista*. La Tabla 32 distingue
+  los dos roles y no tienen las mismas obligaciones: la operadora factura
+  a su cliente con `H492001` **y placa**; el socio o accionista factura a
+  su operadora con `H492002` **sin placa** (la ficha exige la placa solo
+  en «las facturas emitidas por parte de las operadoras … a los
+  clientes»). Con un booleano, al socio se le pediría una placa que no
+  necesita o no vería su código.
+- El rol elegido preselecciona el código auxiliar correspondiente en los
+  productos de servicio de transporte (enlaza con el Anexo 23).
+- Solo en el rol *operadora*, campo "Placa del vehículo" en la pantalla de venta
   (columna `fe_placa` en `transactions`), con `text-transform: uppercase`,
   `maxlength` 8 y ayuda "ABC1234". Autocompletar con las últimas placas
   usadas por ese cliente: en una operadora, el mismo vehículo se repite.
