@@ -2194,10 +2194,56 @@ el del flujo síncrono, donde `completar()` ya la escribía al final).
 **El POS no necesitó ningún cambio**: `EmiteComprobanteElectronico.php:150`
 ya leía `claveAcceso` de la respuesta y la guardaba.
 
+### ✅ Fase 2 — Emisión en línea con respaldo (2026-09-22, `../pos`)
+
+- Migración `fe_comprobantes`: `numero_autorizacion`, `autorizado_en` y
+  `totales`.
+- `FeComprobante::autorizacionDesde()`: traduce el bloque `autorizacion` de
+  la representación del servicio. Lo comparten los **tres** caminos por los
+  que esa representación llega —respuesta de la emisión, reconciliación y
+  webhook—, que antes la descartaban. Cada campo cae al valor ya guardado:
+  su ausencia significa «sin novedad», nunca «se perdió la autorización».
+- `EmiteComprobanteElectronico::totalesEmitidos()`: guarda el desglose tal
+  como viajó en el XML. **No se recalcula al imprimir**: el producto, su
+  impuesto o la propia venta pueden cambiar después de emitido, y entonces
+  el ticket dejaría de coincidir con el documento del SRI.
+- `EmisionInmediata` + los dos listeners dejan de ser `ShouldQueue`.
+- `facturacion.timeout_en_linea` (4 s, frente a los 15 de la cola): en la
+  caja hay un cliente esperando.
+
+**La nota de crédito también emite en línea.** El plan solo nombraba la
+factura, pero el cliente de una devolución se lleva su ticket igual, el
+mecanismo es el mismo `EmisionInmediata::despachar()`, y dejarla asíncrona
+la condenaba a imprimir «en proceso» siempre.
+
+**Tres cosas que aparecieron al implementar:**
+
+1. `dispatch_sync` de un job `ShouldQueue` **no** ejecuta directamente:
+   pasa por la cola en la conexión `sync` (`Dispatcher.php:95-99`). Por eso
+   `Queue::fake()` se lo traga y los tests afirman con
+   `Bus::assertDispatchedSync`.
+2. El `dispatch()` de respaldo necesitaba **su propio** try/catch: con la
+   cola en `sync` vuelve a ejecutar el trabajo ahí mismo, y su excepción
+   habría subido hasta una venta que ya estaba cobrada. Lo encontró el test
+   del servicio caído.
+3. Verificado que `BusFake::assertDispatched` y `assertNotDispatched`
+   cubren también los despachos síncronos (líneas 131 y 192): las
+   aserciones que ya existían sobre el listener siguen valiendo, no se
+   debilitaron en silencio.
+
+Tests (`EmisionEnLineaTest`, 9): el job se despacha en sincrónico; los
+listeners ya no son `ShouldQueue`; la venta sale con su clave de acceso;
+se guarda el desglose del XML; con el servicio caído la venta se cobra
+igual, redirige limpio y el comprobante no queda ante el SRI; el fallo se
+registra y se reencola; webhook y reconciliación guardan número y fecha de
+autorización; el timeout en línea es menor que el de la cola.
+
+Suite del POS completa en verde: **1661 tests**.
+
 ### Estado de §16
 
-Fase 1 cerrada. Pendientes las fases 2-5, todas en `../pos`. Descartados en
-la revisión:
+Fases 1 y 2 cerradas. Pendientes las fases 3-5, todas en `../pos`.
+Descartados en la revisión:
 el código de barras de la clave (la TM-U220B no lo reproduce; se revisa si
 se adopta un diseño térmico) y la marca «ORIGINAL ADQUIRIENTE» que imprime
 Fybeca (la ficha no la exige y el POS no tiene el concepto de copia).
