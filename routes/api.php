@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Partner\V1\EnlaceCertificadoController;
 use App\Http\Controllers\Api\Partner\V1\ListarContribuyentesController;
 use App\Http\Controllers\Api\Partner\V1\VinculacionesController;
 use App\Http\Controllers\Api\Partner\V1\WebhooksController as PartnerWebhooksController;
+use App\Http\Controllers\Api\V1\CatalogosController;
 use App\Http\Controllers\Api\V1\ConsultarComprobanteController;
 use App\Http\Controllers\Api\V1\DescargarRideController;
 use App\Http\Controllers\Api\V1\DescargarXmlController;
@@ -23,6 +24,15 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     Route::post('tokens', EmitirTokenController::class)
         ->name('api.v1.tokens.emitir');
+
+    // Tablas de la ficha técnica: norma publicada, igual para todos, sin
+    // datos de nadie. Público y cacheable (ETag), para que el integrador lo
+    // consulte al abrir sus formularios.
+    Route::get('catalogos', [CatalogosController::class, 'index'])
+        ->name('api.v1.catalogos.index');
+
+    Route::get('catalogos/codigos-auxiliares', [CatalogosController::class, 'codigosAuxiliares'])
+        ->name('api.v1.catalogos.codigos-auxiliares');
 
     // Plano de emisión: acepta tokens de usuario directo y de partner
     // (este último actúa on-behalf con la cabecera X-Contribuyente, §11).

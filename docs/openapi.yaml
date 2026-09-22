@@ -105,6 +105,87 @@ paths:
                   token: { type: string }
         '422':
           description: Credenciales incorrectas.
+  /catalogos:
+    get:
+      summary: Catálogos disponibles de la ficha técnica
+      security: []
+      responses:
+        '200':
+          description: Lista de catálogos con su URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        clave: { type: string }
+                        nombre: { type: string }
+                        url: { type: string, format: uri }
+  /catalogos/codigos-auxiliares:
+    get:
+      summary: Códigos del segundo código del ítem por actividad regulada
+      security: []
+      description: |
+        Tablas 31 y 32 de la ficha técnica (Anexos 23 y 25 §1): los códigos
+        que el SRI exige en el segundo código de cada ítem cuando la venta
+        pertenece a una actividad regulada — materiales de construcción y
+        transporte comercial excepto taxis.
+
+        Público y cacheable: son datos de una norma publicada, iguales para
+        todos. Se sirve con `ETag`; revalide con `If-None-Match` y recibirá
+        `304` mientras no cambie. Consúmalo para construir su selector de
+        producto en vez de transcribir la tabla.
+
+        **El servicio no valida el contenido del campo**: es el código
+        auxiliar de uso general del emisor (barras, SKU…) y la obligación
+        es por ítem, algo que solo el emisor sabe. Este catálogo es la
+        referencia para clasificar sus productos, no una lista cerrada.
+
+        `tagXml` dice en qué etiqueta va el código según el tipo de
+        comprobante: la nota de crédito llama `codigoAdicional` a lo que la
+        factura y la liquidación llaman `codigoAuxiliar`.
+      responses:
+        '200':
+          description: Catálogo vigente.
+          headers:
+            ETag:
+              schema: { type: string }
+              description: Para revalidar con If-None-Match.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ficha: { type: string, description: 'Versión de la ficha técnica de la que se transcribió (p. ej. 2.34).' }
+                  version: { type: string, format: date, description: 'Cambia cuando cambia el contenido del catálogo.' }
+                  grupos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        clave: { type: string, enum: [materiales_construccion, transporte_comercial] }
+                        nombre: { type: string }
+                        anexo: { type: integer }
+                        tabla: { type: integer }
+                        baseLegal: { type: [string, 'null'], description: 'Resolución que lo establece, si la ficha la cita.' }
+                        obligatorioDesde: { type: [string, 'null'], format: date }
+                        tagXml:
+                          type: object
+                          additionalProperties: { type: string }
+                          description: 'Tipo de comprobante → etiqueta XML donde va el código.'
+                        codigos:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              codigo: { type: string, maxLength: 25 }
+                              descripcion: { type: string }
+        '304':
+          description: El catálogo no cambió desde el ETag enviado.
   /contribuyente/certificado:
     put:
       summary: Cargar o reemplazar el certificado de firma del contribuyente
@@ -856,22 +937,15 @@ components:
         Cada `detalle` admite un segundo código de hasta 25 caracteres
         alfanuméricos: `codigoAuxiliar` en factura y liquidación de compra,
         `codigoAdicional` en nota de crédito (el nombre lo fija el formato
-        XML de cada tipo). Ahí van, de forma exacta, los códigos que el SRI
-        exige por actividad regulada; `fe` no valida su contenido:
+        XML de cada tipo). Es el código auxiliar de uso general del emisor
+        (barras, SKU…) y, cuando la venta pertenece a una actividad
+        regulada, es donde van los códigos que exige el SRI: materiales de
+        construcción (Tabla 31) y transporte comercial excepto taxis
+        (Tabla 32). `fe` no valida su contenido.
 
-        - *Materiales de construcción* (Anexo 23, Tabla 31; Resolución
-          NAC-DGERCGC24-00000013): `F010101` varilla laminada corrugada AS42
-          de 8, 10 y 12 mm · `F010201` arcilla · `F010202` arena · `F010203`
-          cal · `F010204` caliza · `F010205` pétreos · `F010301` hormigón
-          premezclado · `F010401` cemento y sus derivados · `F010402` residuo
-          cemento · `F010501` chatarra ferrosa · `F010601` morteros ·
-          `F010701` clinker · `F010702` puzolana · `F010703` yeso · `F010801`
-          adoquín · `F010802` bloques · `F010803` ladrillos · `F010804`
-          productos de hormigón prefabricado.
-        - *Transporte comercial, excepto taxis* (Anexo 25 §1, Tabla 32;
-          obligatorio desde el 01-11-2025): `H492001` factura de la
-          operadora a su cliente · `H492002` factura del socio o accionista
-          a la operadora.
+        Las dos tablas completas se sirven en
+        `GET /catalogos/codigos-auxiliares`: consúmalas desde ahí en vez de
+        transcribirlas.
       required: [infoTributaria]
       properties:
         infoTributaria:

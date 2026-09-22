@@ -1617,3 +1617,70 @@ códigos.
 - Importador de productos: columna opcional `fe_codigo_auxiliar`.
 - En el listado de productos, filtro "con código SRI" para revisar
   qué parte del catálogo está clasificada.
+
+### ✅ Registro §14 — Catálogo de códigos auxiliares (2026-09-22)
+
+Respuesta a "¿validamos los códigos de la Tabla 31 como los únicos
+permitidos?". **No**, y la razón vale para cualquier tabla futura:
+
+- `codigoAuxiliar` **no es un campo de estos anexos**: es el código
+  auxiliar de uso general del emisor (barras, SKU). Los ejemplos de la
+  ficha en todos los formatos XML son `1234D56789-A`, `SER003`, `001`,
+  `0011`. Los Anexos 23 y 25 §1 lo sobrecargan, no lo reservan. Cerrarlo
+  rompería a todo cliente que lo use para su código de barras.
+- Y más de fondo: **`fe` no puede saber cuándo la regla aplica**. La
+  obligación es por ítem ("cada ítem que corresponda a la actividad"), no
+  por emisor —una ferretería vende cemento y herramientas—, así que una
+  validación no distingue "faltó el código" de "no aplica", y no detecta
+  el caso que importa (ítem regulado sin código).
+
+En su lugar, el catálogo como **dato**: `GET /api/v1/catalogos` y
+`GET /api/v1/catalogos/codigos-auxiliares`.
+
+- `App\Sri\Catalogos\CodigosAuxiliares`: fuente única de las Tablas 31
+  (18 códigos) y 32 (2), con anexo, tabla, base legal, fecha de
+  obligatoriedad y **`tagXml` por tipo de comprobante** — el dato que
+  evita la trampa del Anexo 23 (la NC llama `codigoAdicional` a lo que la
+  factura llama `codigoAuxiliar`).
+- **Público y cacheable**: son datos de una norma publicada, sin nada del
+  contribuyente; el POS puede cargarlo antes de tener credenciales. `ETag`
+  + `max-age=86400`; revalidar con `If-None-Match` devuelve 304.
+- OpenAPI deja de transcribir la tabla a mano (duplicación que ya podía
+  divergir) y remite al endpoint.
+- **Hallazgo**: la ficha no cita resolución para los códigos de transporte
+  (§1); la `NAC-DGERCGC26-00000024` respalda solo el §2 (placa). El
+  catálogo devuelve `baseLegal: null` ahí en vez de inventarla.
+- De paso: `DocsTest` ahora **parsea** el YAML del spec. Se editaba a mano
+  y ningún test detectaba que dejara de ser válido —se rompió al añadir
+  este endpoint (coma sin comillas en un mapa inline) y la suite seguía en
+  verde—; el visor de docs habría quedado en blanco en producción.
+
+#### Recomendaciones para `../pos` — catálogo
+
+**Consumo de API**
+
+- `FacturacionClient::catalogoCodigosAuxiliares()` → `GET
+  /api/v1/catalogos/codigos-auxiliares`, **sin token** (no pasar el
+  Bearer: el endpoint es público y así funciona en el alta, antes de
+  configurar credenciales).
+- Cachear con `Cache::remember(..., now()->addDay())` guardando también el
+  `ETag`; revalidar con `If-None-Match` y tratar `304` como "sigue
+  válido". Si la petición falla, **servir la copia cacheada**: el
+  formulario de producto no debe depender de que `fe` esté disponible.
+- Sembrar la caché con una copia local del JSON para el primer arranque
+  sin red.
+- No hardcodear los 20 códigos en el POS: el objetivo del endpoint es que
+  ampliar la tabla no obligue a desplegar cada integrador.
+
+**UI**
+
+- El select "Código SRI de actividad regulada" del formulario de producto
+  se construye desde el catálogo: un `<optgroup>` por `grupo.nombre`, las
+  opciones con `codigo — descripcion`, más "Otro…" con input libre (el
+  campo admite cualquier código auxiliar propio).
+- Mostrar `obligatorioDesde` como nota bajo el grupo cuando exista
+  ("obligatorio desde el 01/11/2025") y `baseLegal` como referencia
+  cuando la ficha la cite.
+- En la pantalla de ajustes de FE, un enlace "Ver catálogo del SRI" que
+  abra la lista vigente, para que el negocio contraste con lo que le pide
+  su contador.
