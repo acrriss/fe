@@ -2432,6 +2432,33 @@ código son los valores por defecto que siembra
 `BusinessUtil::newBusinessDefaultResources()` (`BusinessUtil.php:77`), en
 inglés: un negocio nuevo vuelve a nacer con ellos.
 
+#### El aviso del tope que sobrevivía a la venta (2026-09-23)
+
+Tras cobrar, el aviso rojo del tope de consumidor final se quedaba en
+pantalla sobre un formulario ya vacío. La factura nunca estuvo en riesgo:
+los dos puntos donde ese aviso bloquea (`pos-finalize` y el
+`submitHandler`) devuelven `false` antes de enviar nada, así que una venta
+que se creó y se autorizó nunca lo tuvo delante.
+
+Causa: `reset_pos_form()` limpia en varios pasos y `set_default_customer()`
+dispara el `change` del cliente cuando las líneas y el total de la venta
+recién cobrada siguen en el DOM. Arreglado con el mismo criterio que ya
+usaba el botón de finalizar —sin líneas no hay factura que validar— más
+una revalidación al final del reset.
+
+Además, el aviso había quedado empujado bajo la casilla de emisión y el
+campo de placa, lejos del selector de cliente donde el cajero tiene que
+actuar. **Segunda vez que un bloque nuevo desplaza a un texto de ayuda de
+su ancla** (la primera fue el cuadro del remitente de correo en la Fase D
+de §15). Hay test del **orden** de los tres elementos en el HTML.
+
+**Lección operativa, que costó una ronda entera:** `../pos` sirve los
+assets como `js/pos.js?v={{ $asset_v }}`, con `asset_version` fijo en
+`config/constants.php`. **Editar un `.js` sin subir ese número no llega al
+navegador.** El síntoma engaña porque los cambios en Blade sí se ven al
+instante: parte del arreglo aparece y parte no. Anotado también en la
+memoria del proyecto.
+
 #### Fuera de §16: el desfase horario de Carbon 3 (2026-09-23)
 
 Apareció mirando el ticket —una venta de las 12:00 se imprimía a las
