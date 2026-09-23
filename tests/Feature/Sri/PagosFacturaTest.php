@@ -81,9 +81,29 @@ it('escribe plazo y unidadTiempo solo cuando vienen', function () {
         ->and($sinPlazo)->not->toContain('<plazo>')->not->toContain('<unidadTiempo>');
 });
 
-it('omite el bloque entero cuando la factura no trae pagos', function () {
-    expect(xml_con_pagos(null))->not->toContain('<pagos>');
-});
+/*
+ * La ficha lo marca *Obligatorio* en factura, así que el servicio lo exige:
+ * emitir sin formas de pago produciría un comprobante que no cumple el
+ * formato. Se aceptó opcional solo mientras el integrador se ponía al día.
+ */
+it('rechaza una factura sin formas de pago («:dataset»)', function (mixed $pagos) {
+    $payload = payload_factura();
+
+    if ($pagos === null) {
+        unset($payload['infoFactura']['pagos']);
+    } else {
+        $payload['infoFactura']['pagos'] = $pagos;
+    }
+
+    // DatoInvalido y no el error genérico de laravel-data: el mensaje nombra
+    // el campo y dice qué falta, y el Form Request lo convierte en 422
+    expect(fn (): FacturaData => FacturaData::from($payload))
+        ->toThrow(DatoInvalido::class, 'al menos una forma de pago');
+})->with([
+    'ausente' => [null],
+    'bloque vacío' => [['pago' => []]],
+    'bloque nulo' => [['pago' => null]],
+]);
 
 /*
  * El orden de los tags es parte del contrato: el XSD del SRI los valida en

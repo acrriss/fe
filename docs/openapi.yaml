@@ -1079,7 +1079,7 @@ components:
     InfoFactura:
       type: object
       additionalProperties: false
-      required: [fechaEmision, obligadoContabilidad, tipoIdentificacionComprador, razonSocialComprador, identificacionComprador, totalSinImpuestos, totalDescuento, totalConImpuestos, importeTotal, moneda]
+      required: [fechaEmision, obligadoContabilidad, tipoIdentificacionComprador, razonSocialComprador, identificacionComprador, totalSinImpuestos, totalDescuento, totalConImpuestos, importeTotal, moneda, pagos]
       properties:
         fechaEmision: { type: string, description: 'dd/mm/aaaa.' }
         dirEstablecimiento: { type: string }
@@ -1103,9 +1103,10 @@ components:
         pagos:
           type: object
           description: >
-            Formas de pago. La ficha las marca *Obligatorio* en factura;
-            este servicio aún las acepta ausentes para no dejar sin emitir
-            a quien todavía no las envía, pero conviene mandarlas siempre.
+            Formas de pago. **Obligatorio**, como en la ficha: una factura
+            sin al menos un `<pago>` se rechaza con 422. Los códigos válidos
+            de `formaPago` los publica `GET /catalogos/formas-pago`.
+          required: [pago]
           properties:
             pago:
               oneOf:

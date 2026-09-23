@@ -86,7 +86,7 @@ function payload_factura(?string $codigoAuxiliar = null, ?string $placa = null, 
             'importeTotal' => '115.00',
             'moneda' => 'DOLAR',
             ...($placa !== null ? ['placa' => $placa] : []),
-            ...($pagos !== null ? ['pagos' => ['pago' => $pagos]] : []),
+            'pagos' => ['pago' => $pagos ?? [['formaPago' => '01', 'total' => '115.00']]],
         ],
         'detalles' => ['detalle' => [
             Payload::sinNulos([

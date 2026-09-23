@@ -2197,7 +2197,7 @@ crédito; con placa; con las cuatro designaciones.
 
 ### Notas registradas (no se implementan aquí)
 
-**✅ `<pagos>` en `fe`** (hecho 2026-09-23; queda el lado del POS).
+**✅ `<pagos>`, completo en `fe` y en el POS** (2026-09-23).
 
 `InfoFacturaData` ya declara `pagos`, reutilizando `PagoData` y la misma
 normalización de wrapper (`Payload::lista(data_get($properties, 'pagos.pago'))`)
@@ -2221,10 +2221,49 @@ en orden; un pago único enviado como objeto y no como lista; `plazo` y
 orden `moneda → placa → pagos` al cerrar `infoFactura`; roundtrip parse →
 render; y una clave desconocida dentro de `<pago>` que da 422.
 
-*Pendiente en `../pos`:* mapear los `payment_lines` de la venta a los códigos
-de la Tabla 24 en `FacturaMapper`, con un valor por defecto configurable por
-método de pago del POS. Hasta entonces el ticket sigue imprimiendo la forma
-de pago que el documento del SRI no lleva.
+**Cerrado el 2026-09-23 en tres pasos, y el orden de despliegue importa:**
+
+1. `fe` acepta `pagos` (opcional) — `63825e7`.
+2. El POS los envía — `../pos` `8595aab`.
+3. `fe` los exige — el `pagos` de `InfoFacturaData` pasa a requerido, y una
+   lista vacía también se rechaza con un `DatoInvalido` que nombra el campo.
+
+**El paso 3 no puede desplegarse antes que el 2**: si `fe` lo exige y el POS
+todavía no lo manda, toda emisión falla con 422 y el negocio se queda sin
+facturar.
+
+Decisiones del lado del POS (elegidas 2026-09-23):
+
+- **Mapeo por negocio**, en `fe_ajustes.formas_pago`, con un selector por
+  método en los ajustes. No va en código porque los siete métodos
+  personalizables los nombra cada negocio, y porque «Tarjeta» es ambiguo de
+  origen: la Tabla 24 distingue débito (16) de crédito (19) y el POS tiene un
+  único método. El selector muestra el nombre propio de cada método
+  (`Util::payment_types`), no «Pago personalizado 3».
+- **Una línea por el importe total**, no una por cobro: el bloque tiene que
+  cuadrar con la factura y en el POS un cobro puede registrarse después de
+  emitida. El código sale del primer cobro; sin cobros, del mapeo de
+  `credito`, una fila más del mismo formulario.
+- Un método **sin código asignado corta la emisión** con `VentaNoFacturable`
+  y un mensaje que dice dónde asignarlo, en vez de inventar un código —el
+  mismo criterio que con la placa—.
+- `plazo`/`unidadTiempo` desde los términos de pago, solo cuando queda saldo.
+
+**Tabla 24 publicada y validada** (`489b0dc`): a diferencia de los códigos
+auxiliares, la lista es cerrada, así que el catálogo es además la fuente de
+la validación y el rechazo llega como 422 al emitir y no como veredicto del
+SRI al autorizar. Vive en `PagoData`, así que cubre también nota de débito y
+liquidación. `unidadTiempo` **no tiene catálogo**: la ficha lo declara texto
+de hasta 10 caracteres y solo lo ejemplifica con `dias`.
+
+*Verificado de punta a punta:* el payload real que produce `FacturaMapper`,
+pasado por el DTO endurecido de `fe`, produce
+`{"pago":[{"formaPago":"01","total":"20.00","plazo":"30","unidadTiempo":"dias"}]}`.
+
+*Dos trampas que costaron una vuelta cada una:* PHP convierte a entero toda
+clave numérica de array (`'15'`…`'21'` se publicaban como números), y **MySQL
+reordena las claves de una columna `JSON`**, así que el orden de un mapa
+guardado ahí no es el que escribió el código.
 
 **Diagnóstico original:** La ficha marca
 `<pagos><pago><formaPago>` como *Obligatorio* en factura (junto a `<total>`,

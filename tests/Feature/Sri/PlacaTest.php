@@ -22,11 +22,11 @@ function factura_con_placa(string $placa): FacturaData
     return $factura;
 }
 
-it('emite la placa como último tag de infoFactura, tras moneda', function () {
+it('emite la placa entre moneda y pagos, como pide el Anexo 25 §2', function () {
     $dom = simplexml_load_string(ConstruirXml::render(factura_con_placa('PCM4567')));
     $tags = array_map(fn (SimpleXMLElement $hijo): string => $hijo->getName(), iterator_to_array($dom->infoFactura->children(), false));
 
-    expect(array_slice($tags, -2))->toBe(['moneda', 'placa'])
+    expect(array_slice($tags, -3))->toBe(['moneda', 'placa', 'pagos'])
         ->and((string) $dom->infoFactura->placa)->toBe('PCM4567');
 });
 
