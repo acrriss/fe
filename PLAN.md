@@ -2409,6 +2409,48 @@ siempre.
 
 Suite del POS completa en verde: **1681 tests**.
 
+#### Correcciones al imprimir el ticket de verdad (2026-09-23)
+
+- **El RUC salía dos veces.** UltimatePOS imprime su propio `tax_number_1`
+  en la cabecera, que en Ecuador es el mismo RUC del bloque del SRI. Se
+  omite **solo cuando repite el RUC**, comparando por dígitos (el POS
+  puede tenerlo con puntos o guiones); si el negocio usa esa línea para
+  otra cosa, se respeta.
+- **El número del comprobante ante el SRI encabeza los datos** de la
+  transacción, donde antes solo estaba el interno del POS. El interno se
+  conserva debajo para conciliar, como hacen los RIDE de los emisores
+  grandes (ORDEN, FAC…). Se quitó del bloque del título para no repetirlo.
+
+*Al escribir el test:* contar apariciones del RUC en el ticket da 2 aunque
+el arreglo funcione, porque **la clave de acceso embebe el RUC** (posiciones
+11-23) y se imprime partida en líneas de 40. Hay que descontar sus trozos
+antes de contar.
+
+**Etiquetas en inglés (`INVOICE`, `Total Paid`…):** no son código. Salen de
+`invoice_layouts` y se editan en `/invoice-layouts/{id}/edit`. Lo que sí es
+código son los valores por defecto que siembra
+`BusinessUtil::newBusinessDefaultResources()` (`BusinessUtil.php:77`), en
+inglés: un negocio nuevo vuelve a nacer con ellos.
+
+#### Fuera de §16: el desfase horario de Carbon 3 (2026-09-23)
+
+Apareció mirando el ticket —una venta de las 12:00 se imprimía a las
+17:00— pero no era del ticket. Carbon 3 cambió `createFromTimestamp()`
+para devolver UTC por defecto; en Carbon 2 usaba la zona de la aplicación,
+así que el patrón `createFromTimestamp(strtotime($date))` corría toda
+fecha mostrada el offset del huso. De noche cambiaba también el **día**
+(una venta de las 20:00 del 23 se mostraba como 24/09), con lo que eso
+implica para los reportes por fecha.
+
+Afectaba a `Util::format_date()` y a las tres directivas Blade
+(`@format_date`, `@format_time`, `@format_datetime`): todo el sistema, no
+una pantalla. Commit aparte en `../pos` (`0fc7d28`), con tres tests de
+regresión en `UtilDateTest` —hora local, venta nocturna y timestamp Unix—
+verificados contra el código anterior.
+
+**Es código upstream de UltimatePOS**, así que se pierde si una
+actualización sobrescribe `Util.php` o `AppServiceProvider.php`.
+
 ### Estado de §16
 
 Fases 1 a 4 cerradas, más la nota de la ruta ESC/POS. Queda la Fase 5
