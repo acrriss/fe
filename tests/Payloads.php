@@ -66,7 +66,7 @@ function info_tributaria(string $secuencial): array
  * @param  string|null  $placa  placa del vehículo (Anexo 25 §2)
  * @return array<string, mixed>
  */
-function payload_factura(?string $codigoAuxiliar = null, ?string $placa = null): array
+function payload_factura(?string $codigoAuxiliar = null, ?string $placa = null, ?array $pagos = null): array
 {
     return [
         'infoTributaria' => info_tributaria('000000001'),
@@ -86,6 +86,7 @@ function payload_factura(?string $codigoAuxiliar = null, ?string $placa = null):
             'importeTotal' => '115.00',
             'moneda' => 'DOLAR',
             ...($placa !== null ? ['placa' => $placa] : []),
+            ...($pagos !== null ? ['pagos' => ['pago' => $pagos]] : []),
         ],
         'detalles' => ['detalle' => [
             Payload::sinNulos([

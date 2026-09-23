@@ -5,6 +5,7 @@ namespace App\Sri\Data\Factura;
 use App\Sri\Data\BloqueInfoData;
 use App\Sri\Data\Casts\ValueObjectCast;
 use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
+use App\Sri\Data\PagoData;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoIdentificacion;
 use App\Sri\Support\Payload;
@@ -24,6 +25,7 @@ final class InfoFacturaData extends BloqueInfoData
 
     /**
      * @param  array<int, TotalImpuestoData>  $totalConImpuestos
+     * @param  array<int, PagoData>  $pagos
      */
     public function __construct(
         #[WithCast(DateTimeInterfaceCast::class, format: 'd/m/Y')]
@@ -48,6 +50,14 @@ final class InfoFacturaData extends BloqueInfoData
          */
         #[WithCast(ValueObjectCast::class, Placa::class)]
         public ?Placa $placa = null,
+        /**
+         * Formas de pago (Tabla 24). La ficha las marca *Obligatorio* en
+         * factura, pero aquí son opcionales a propósito: exigirlas de golpe
+         * dejaría sin emitir a todo integrador que hoy no las manda. El
+         * bloque <pagos> solo se escribe cuando vienen.
+         */
+        #[DataCollectionOf(PagoData::class)]
+        public array $pagos = [],
     ) {}
 
     /**
@@ -65,6 +75,8 @@ final class InfoFacturaData extends BloqueInfoData
         $properties['totalConImpuestos'] = Payload::lista(
             data_get($properties, 'totalConImpuestos.totalImpuesto'),
         );
+
+        $properties['pagos'] = Payload::lista(data_get($properties, 'pagos.pago'));
 
         return self::soloClavesConocidas($properties);
     }
@@ -95,6 +107,9 @@ final class InfoFacturaData extends BloqueInfoData
             'moneda' => $this->moneda,
             // la ficha la ubica entre <moneda> y <pagos> (Anexo 25 §2)
             'placa' => $this->placa?->value,
+            'pagos' => $this->pagos === [] ? null : [
+                'pago' => array_map(fn (PagoData $p): array => $p->xmlArray(), $this->pagos),
+            ],
         ]);
     }
 }

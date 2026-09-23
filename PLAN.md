@@ -2197,7 +2197,36 @@ crédito; con placa; con las cuatro designaciones.
 
 ### Notas registradas (no se implementan aquí)
 
-**`<pagos>` falta en `fe`, y la ficha lo exige.** La ficha marca
+**✅ `<pagos>` en `fe`** (hecho 2026-09-23; queda el lado del POS).
+
+`InfoFacturaData` ya declara `pagos`, reutilizando `PagoData` y la misma
+normalización de wrapper (`Payload::lista(data_get($properties, 'pagos.pago'))`)
+que usan nota de débito y liquidación. Emitido tras `<moneda>` y `<placa>`,
+que es donde lo ubica la ficha, y documentado en `docs/openapi.yaml` con su
+esquema `Pago` (el guardia de claves desconocidas de §14 hacía que enviarlo
+antes diese 422).
+
+**Opcional a propósito**, aunque la ficha lo marque *Obligatorio*: exigirlo
+de golpe dejaría sin emitir a todo integrador que hoy no lo manda, el POS
+incluido. Volverlo obligatorio es un paso posterior, cuando el POS lo envíe.
+El bloque `<pagos>` solo se escribe cuando vienen pagos, así que el XML de
+quien no los mande no cambia.
+
+`ContratoOpenApiTest` cazó la deriva del contrato en cuanto se añadió el
+campo al DTO sin tocar el YAML — que es exactamente para lo que se escribió.
+
+Tests (`PagosFacturaTest`, 8): el bloque con formaPago y total; varios pagos
+en orden; un pago único enviado como objeto y no como lista; `plazo` y
+`unidadTiempo` solo cuando vienen; el bloque omitido cuando no hay pagos; el
+orden `moneda → placa → pagos` al cerrar `infoFactura`; roundtrip parse →
+render; y una clave desconocida dentro de `<pago>` que da 422.
+
+*Pendiente en `../pos`:* mapear los `payment_lines` de la venta a los códigos
+de la Tabla 24 en `FacturaMapper`, con un valor por defecto configurable por
+método de pago del POS. Hasta entonces el ticket sigue imprimiendo la forma
+de pago que el documento del SRI no lleva.
+
+**Diagnóstico original:** La ficha marca
 `<pagos><pago><formaPago>` como *Obligatorio* en factura (junto a `<total>`,
 y `<plazo>`/`<unidadTiempo>` cuando corresponda; `formaPago` conforme a la
 Tabla 24). `fe` **tiene** `PagoData` y lo usa en `InfoNotaDebitoData` y

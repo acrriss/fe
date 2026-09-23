@@ -1054,7 +1054,27 @@ components:
         importeTotal: { type: string }
         moneda: { type: string, example: DOLAR }
         placa: { type: string, description: 'Anexo 25 §2; obligatoria en las facturas de operadoras de transporte comercial.' }
+        pagos:
+          type: object
+          description: >
+            Formas de pago. La ficha las marca *Obligatorio* en factura;
+            este servicio aún las acepta ausentes para no dejar sin emitir
+            a quien todavía no las envía, pero conviene mandarlas siempre.
+          properties:
+            pago:
+              oneOf:
+                - { $ref: '#/components/schemas/Pago' }
+                - { type: array, items: { $ref: '#/components/schemas/Pago' } }
         contribuyenteEspecial: { type: string, readOnly: true, description: 'Lo fija la configuración del contribuyente; enviarlo da 422.' }
+    Pago:
+      type: object
+      additionalProperties: false
+      required: [formaPago, total]
+      properties:
+        formaPago: { type: string, description: 'Código de la Tabla 24 de la ficha (01 = sin utilización del sistema financiero, 20 = otros con utilización del sistema financiero…).', example: '01' }
+        total: { type: string, example: '115.00' }
+        plazo: { type: string, description: 'Obligatorio cuando corresponda (pago a crédito).' }
+        unidadTiempo: { type: string, description: 'Obligatorio cuando corresponda.', example: dias }
     InfoNotaCredito:
       type: object
       additionalProperties: false
