@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Comprobante;
 use App\Sri\Actions\ConstruirXml;
 use App\Sri\Data\Factura\FacturaData;
 use App\Sri\Exceptions\DatoInvalido;
@@ -72,4 +73,43 @@ it('sobrevive al roundtrip XML → DTO → XML', function () {
  */
 it('no cambia la placa de la guía de remisión', function () {
     expect(xml_de_prueba('guiaRemision'))->toContain('<placa>MCL0827</placa>');
+});
+
+/*
+ * La ficha exige la placa en el XML y calla sobre el RIDE (Anexo 25 §2.1;
+ * a diferencia de los Anexos 21, 22, 24 y 26, este no trae ejemplo de
+ * formato RIDE). Imprimirla es decisión nuestra, amparada en el §9.19
+ * —«se podrán imprimir datos adicionales en el RIDE conforme lo requiera
+ * el contribuyente»—, para que el ticket del POS y el PDF coincidan.
+ */
+it('muestra la placa en el RIDE de una factura de transporte', function () {
+    $factura = factura_con_placa('ABC1234');
+    $registro = Comprobante::factory()->autorizado()->make([
+        'clave_acceso' => (string) $factura->infoTributaria->claveAcceso,
+    ]);
+
+    $html = view('ride.factura', [
+        'registro' => $registro,
+        'comprobante' => $factura,
+        'logo' => null,
+        'codigoBarras' => null,
+    ])->render();
+
+    expect($html)->toContain('Placa:')->toContain('ABC1234');
+});
+
+it('no dibuja la placa en el RIDE de una factura que no la lleva', function () {
+    $factura = comprobante_de_prueba('factura');
+    $registro = Comprobante::factory()->autorizado()->make([
+        'clave_acceso' => (string) $factura->infoTributaria->claveAcceso,
+    ]);
+
+    $html = view('ride.factura', [
+        'registro' => $registro,
+        'comprobante' => $factura,
+        'logo' => null,
+        'codigoBarras' => null,
+    ])->render();
+
+    expect($html)->not->toContain('Placa:');
 });

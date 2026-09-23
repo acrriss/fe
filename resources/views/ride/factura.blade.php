@@ -29,6 +29,16 @@
                     <span class="etiqueta">Fecha de emisión:</span>
                     {{ $comprobante->infoFactura->fechaEmision->format('d/m/Y') }}
                 </td>
+                {{-- Anexo 25 §2: la ficha exige la placa en el XML y no dice
+                     nada del RIDE, pero el §9.19 permite imprimir datos
+                     adicionales «conforme lo requiera el contribuyente» y al
+                     cliente del transporte le identifica el servicio. --}}
+                @if ($comprobante->infoFactura->placa)
+                    <td>
+                        <span class="etiqueta">Placa:</span>
+                        {{ $comprobante->infoFactura->placa }}
+                    </td>
+                @endif
             </tr>
         </table>
     </div>

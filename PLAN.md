@@ -1831,13 +1831,19 @@ factura electrónica» y ninguna menciona la representación impresa.
 resolución —el PDF del SRI es un escaneo sin texto extraíble— así que esto
 se apoya en la ficha más fuentes secundarias coincidentes.
 
-**Decisión: el ticket del POS la imprime; el RIDE PDF de `fe` no.** Ambas
-cosas son ahora deliberadas, no descuidos. En el ticket cuesta una línea,
-solo en facturas de operadoras, y le sirve al pasajero para identificar el
-servicio. Si algún día estorba en las 40 columnas, se puede quitar sin
-ningún riesgo de cumplimiento. Queda abierta la asimetría: si se quiere
-coherencia entre el ticket y el PDF, habría que añadirla a
-`resources/views/ride/base.blade.php`.
+**Decisión (2026-09-23): se imprime en los dos documentos.** En el ticket
+del POS y en el RIDE PDF de `fe` (`ride/factura.blade.php`, cuarta celda
+del bloque del comprador, solo si la factura la lleva). El ticket y el PDF
+del mismo comprobante no pueden decir cosas distintas, que es justo el
+principio sobre el que se construyó §16.
+
+Cuesta una línea, solo en facturas de operadoras, y le identifica el
+servicio al pasajero. Si algún día estorba en las 40 columnas del ticket,
+se puede quitar de ambos sin ningún riesgo de cumplimiento — pero de
+ambos, no de uno.
+
+Tests en `PlacaTest`: aparece en el RIDE cuando la factura la lleva, y no
+se dibuja la celda cuando no.
 
 **Dos confirmaciones que trajo la misma revisión** (notas del Anexo 2),
 las dos validan decisiones ya tomadas en §16:
