@@ -1795,7 +1795,59 @@ viaja en el payload.
   (`fe_vehiculos`: placa + alias) que un campo libre: evita erratas que
   luego obligan a anular la factura.
 - Mostrar la placa en el ticket y en el detalle de la venta, para que el
-  cajero verifique antes de emitir.
+  cajero verifique antes de emitir. **Es una elección, no un requisito**:
+  ver «La placa y el RIDE» más abajo.
+
+#### La placa y el RIDE — la ficha NO la exige impresa (revisado 2026-09-23)
+
+Pregunta que surgió al implementar el ticket de §16: ¿hay que imprimir la
+placa en la representación impresa? **No.**
+
+- **Anexo 25 §2.1 habla solo del XML**: «Para ello se deberá incluir el tag
+  placa en la estructura del XML, entre los tags moneda y formas de pago».
+  Ni una palabra sobre el RIDE.
+- **Argumento interno de la propia ficha, que es el decisivo.** Los anexos
+  que quieren el dato impreso traen su propio ejemplo de formato RIDE:
+
+  | Anexo | Requisito | ¿Ejemplo de formato RIDE? |
+  |---|---|---|
+  | 21 | Agente de retención | ✅ Ejemplo 2 |
+  | 22 | RIMPE | ✅ Ejemplos 3 y 5 |
+  | 23 | Código auxiliar (construcción) | ❌ |
+  | 24 | Gran contribuyente | ✅ Ejemplo 2 |
+  | **25** | **Código auxiliar + placa** | ❌ |
+  | 26 | RUC del proveedor | ✅ Ejemplo 2 |
+
+  El SRI dibujó dónde va cada dato en el RIDE exactamente para los cuatro
+  que quiere impresos, y no lo hizo para los dos que son datos de la
+  transacción. No es un olvido: es el patrón del documento.
+- **§9.19 lo permite igualmente**: «Se podrán imprimir datos adicionales en
+  el RIDE conforme lo requiera el contribuyente».
+
+Las coberturas de la resolución NAC-DGERCGC26-00000024 (origen del
+requisito, nota al pie 17 de la ficha) dicen todas «el campo *placa* de la
+factura electrónica» y ninguna menciona la representación impresa.
+*Límite de la revisión:* no se pudo leer el articulado literal de la
+resolución —el PDF del SRI es un escaneo sin texto extraíble— así que esto
+se apoya en la ficha más fuentes secundarias coincidentes.
+
+**Decisión: el ticket del POS la imprime; el RIDE PDF de `fe` no.** Ambas
+cosas son ahora deliberadas, no descuidos. En el ticket cuesta una línea,
+solo en facturas de operadoras, y le sirve al pasajero para identificar el
+servicio. Si algún día estorba en las 40 columnas, se puede quitar sin
+ningún riesgo de cumplimiento. Queda abierta la asimetría: si se quiere
+coherencia entre el ticket y el PDF, habría que añadirla a
+`resources/views/ride/base.blade.php`.
+
+**Dos confirmaciones que trajo la misma revisión** (notas del Anexo 2),
+las dos validan decisiones ya tomadas en §16:
+
+- «El número de la clave de acceso corresponde al número de autorización»
+  → imprimir la clave como número de autorización en el esquema offline.
+- «Los RIDE que se descarguen del portal web del SRI contendrán hora y
+  fecha de autorización, dicha información **no es obligatoria** registrarla
+  en el RIDE generado por los emisores» → la fecha de autorización es
+  opcional en nuestro ticket, que es como la tratamos.
 
 ### ✅ Registro §14 — Guardia contra el descarte silencioso (2026-09-22)
 
@@ -2094,6 +2146,10 @@ válido al cobrar; la fecha real de autorización (que llega por webhook) es
 un extra para las reimpresiones, no un bloqueante.
 
 **6. Sin código de barras.** La TM-U220B es de impacto y no lo reproduce.
+
+**7. La placa se imprime por elección, no por obligación.** La ficha la
+exige en el XML y no dice nada del RIDE; ver «La placa y el RIDE» en el
+registro del Anexo 25 (§14).
 
 ### Fases
 
