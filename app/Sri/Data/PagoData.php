@@ -2,7 +2,9 @@
 
 namespace App\Sri\Data;
 
+use App\Sri\Catalogos\FormasPago;
 use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
+use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\Support\Payload;
 use Spatie\LaravelData\Data;
 
@@ -20,6 +22,22 @@ final class PagoData extends Data
      */
     public static function prepareForPipeline(array $properties): array
     {
+        /*
+         * La Tabla 24 es una lista cerrada, así que el servicio la valida:
+         * un código retirado (02-14) o inventado lo rechaza el SRI al
+         * autorizar, y ahí el error llega tarde y sin explicación. Aquí es
+         * un 422 que nombra el campo y el valor.
+         */
+        $formaPago = data_get($properties, 'formaPago');
+
+        if (is_scalar($formaPago) && ! FormasPago::existe((string) $formaPago)) {
+            throw DatoInvalido::porFormato(
+                'formaPago',
+                'un código de la Tabla 24 de la ficha ('.implode(', ', FormasPago::todos()).')',
+                (string) $formaPago,
+            );
+        }
+
         return self::soloClavesConocidas($properties);
     }
 

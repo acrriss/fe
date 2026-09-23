@@ -2,6 +2,7 @@
 
 use App\Sri\Actions\ConstruirXml;
 use App\Sri\Data\Factura\FacturaData;
+use App\Sri\Data\NotaDebito\NotaDebitoData;
 use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\Support\ComprobanteXmlParser;
 
@@ -122,4 +123,38 @@ it('rechaza una clave desconocida dentro de un pago', function () {
     ]);
 
     expect($llamada)->toThrow(DatoInvalido::class);
+});
+
+/*
+ * Tabla 24: lista cerrada. Los códigos 02-14 existieron y fueron retirados,
+ * así que enviarlos es un error que el SRI solo reportaría al autorizar.
+ */
+it('rechaza una forma de pago que no está en la Tabla 24', function (string $codigo) {
+    $llamada = fn (): FacturaData => factura_con_pagos([
+        ['formaPago' => $codigo, 'total' => '115.00'],
+    ]);
+
+    expect($llamada)->toThrow(DatoInvalido::class);
+})->with([
+    'retirada' => ['02'],
+    'inexistente' => ['99'],
+    'sin cero a la izquierda' => ['1'],
+    'vacía' => [''],
+]);
+
+it('acepta «:dataset», que sí está en la Tabla 24', function (string $codigo) {
+    expect(xml_con_pagos([['formaPago' => $codigo, 'total' => '115.00']]))
+        ->toContain("<formaPago>{$codigo}</formaPago>");
+})->with(['01', '15', '16', '17', '18', '19', '20', '21']);
+
+/*
+ * La misma tabla rige en nota de débito y liquidación de compra, que usan
+ * el mismo PagoData.
+ */
+it('valida la forma de pago también en la nota de débito', function () {
+    $payload = payload_comprobante('notaDebito');
+    $payload['infoNotaDebito']['pagos'] = ['pago' => ['formaPago' => '02', 'total' => '10.00']];
+
+    expect(fn () => NotaDebitoData::from($payload))
+        ->toThrow(DatoInvalido::class);
 });

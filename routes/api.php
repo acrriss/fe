@@ -34,6 +34,9 @@ Route::prefix('v1')->group(function () {
     Route::get('catalogos/codigos-auxiliares', [CatalogosController::class, 'codigosAuxiliares'])
         ->name('api.v1.catalogos.codigos-auxiliares');
 
+    Route::get('catalogos/formas-pago', [CatalogosController::class, 'formasPago'])
+        ->name('api.v1.catalogos.formas-pago');
+
     // Plano de emisión: acepta tokens de usuario directo y de partner
     // (este último actúa on-behalf con la cabecera X-Contribuyente, §11).
     Route::middleware(['auth:sanctum', ResolverContribuyente::class])->group(function () {

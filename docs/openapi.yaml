@@ -189,6 +189,52 @@ paths:
                               descripcion: { type: string }
         '304':
           description: El catálogo no cambió desde el ETag enviado.
+  /catalogos/formas-pago:
+    get:
+      summary: Formas de pago del bloque pagos (Tabla 24)
+      security: []
+      description: |
+        Tabla 24 de la ficha técnica: los códigos admitidos en
+        `infoFactura.pagos.pago.formaPago` y en el mismo campo de la nota de
+        débito y la liquidación de compra.
+
+        **A diferencia de los códigos auxiliares, esta lista es cerrada**:
+        el servicio rechaza con `422` un `formaPago` que no esté aquí, de
+        modo que un código retirado (02 a 14, que existieron y ya no) o
+        inventado se detecta al emitir y no al recibir el rechazo del SRI.
+        Por eso la respuesta trae `validado: true`.
+
+        `unidadTiempo`, el otro campo libre del bloque, **no tiene catálogo**:
+        la ficha lo declara texto de hasta 10 caracteres y solo lo ejemplifica
+        con `dias`.
+
+        Público y cacheable, con `ETag`, igual que los demás catálogos.
+      responses:
+        '200':
+          description: Catálogo vigente.
+          headers:
+            ETag:
+              schema: { type: string }
+              description: Para revalidar con If-None-Match.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ficha: { type: string, example: '2.34' }
+                  version: { type: string, format: date }
+                  tabla: { type: integer, example: 24 }
+                  validado: { type: boolean, description: 'true: el servicio rechaza códigos fuera de esta lista.' }
+                  codigos:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        codigo: { type: string, example: '01' }
+                        nombre: { type: string, example: Sin utilización del sistema financiero }
+                        desde: { type: string, format: date, description: 'Fecha desde la que el SRI admite el código.' }
+        '304':
+          description: El catálogo no cambió desde el ETag enviado.
   /contribuyente/certificado:
     put:
       summary: Cargar o reemplazar el certificado de firma del contribuyente
@@ -1071,7 +1117,13 @@ components:
       additionalProperties: false
       required: [formaPago, total]
       properties:
-        formaPago: { type: string, description: 'Código de la Tabla 24 de la ficha (01 = sin utilización del sistema financiero, 20 = otros con utilización del sistema financiero…).', example: '01' }
+        formaPago:
+          type: string
+          enum: ['01', '15', '16', '17', '18', '19', '20', '21']
+          example: '01'
+          description: >
+            Código de la Tabla 24. Lista cerrada y validada: ver
+            `GET /catalogos/formas-pago`.
         total: { type: string, example: '115.00' }
         plazo: { type: string, description: 'Obligatorio cuando corresponda (pago a crédito).' }
         unidadTiempo: { type: string, description: 'Obligatorio cuando corresponda.', example: dias }

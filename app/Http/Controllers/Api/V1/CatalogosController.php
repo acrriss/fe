@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Sri\Catalogos\CodigosAuxiliares;
+use App\Sri\Catalogos\FormasPago;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -29,6 +30,11 @@ class CatalogosController extends Controller
                     'nombre' => 'Códigos del segundo código del ítem por actividad regulada',
                     'url' => route('api.v1.catalogos.codigos-auxiliares'),
                 ],
+                [
+                    'clave' => 'formas-pago',
+                    'nombre' => 'Formas de pago del bloque <pagos> (Tabla 24)',
+                    'url' => route('api.v1.catalogos.formas-pago'),
+                ],
             ],
         ]);
     }
@@ -42,6 +48,21 @@ class CatalogosController extends Controller
             'ficha' => CodigosAuxiliares::FICHA,
             'version' => CodigosAuxiliares::VERSION,
             'grupos' => CodigosAuxiliares::grupos(),
+        ]);
+    }
+
+    /**
+     * Tabla 24 de la ficha. A diferencia de los códigos auxiliares, esta
+     * lista es cerrada: el servicio rechaza un `formaPago` que no esté aquí.
+     */
+    public function formasPago(Request $request): JsonResponse
+    {
+        return $this->cacheable($request, [
+            'ficha' => FormasPago::FICHA,
+            'version' => FormasPago::VERSION,
+            'tabla' => 24,
+            'validado' => true,
+            'codigos' => FormasPago::codigos(),
         ]);
     }
 
