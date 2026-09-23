@@ -2153,15 +2153,40 @@ devuelva 422). En el POS, mapear los `payment_lines` de la venta a los
 códigos de la Tabla 24 en `FacturaMapper`, con un valor por defecto
 configurable por método de pago del POS.
 
-**La ruta ESC/POS no pasa por el blade.** Con
-`receipt_printer_type = 'printer'` (`SellPosController.php:841`) el POS no
-renderiza plantilla: devuelve `$receipt_details` en JSON y lo formatea el
-navegador contra la configuración de la impresora. El partial del SRI nunca
-se ejecuta, así que ese ticket saldría sin clave de acceso.
-*Cómo implementarlo:* `DatosSriDelTicket` ya deja los datos en
-`$receipt_details->sri`, que viaja en ese JSON; falta que el formateador
-del navegador los pinte. Mientras tanto, el negocio que use `tmu220b` debe
-imprimir por navegador, no por `printer`.
+**✅ La ruta ESC/POS no pasa por el blade** (resuelto 2026-09-23).
+
+El diagnóstico de la nota era incompleto: no es que «lo formatee el
+navegador». Con `receipt_printer_type = 'printer'` el POS manda el recibo
+en JSON por WebSocket a `ws://127.0.0.1:6441` (`public/js/printer.js:2`,
+`pos.js:2683`), **un servidor de impresión externo** que lo maqueta con los
+campos que él conoce. El bloque del SRI no está entre ellos y no se puede
+añadir desde este código.
+
+Así que la nota original —«que el formateador los pinte»— no era viable.
+La solución es no usar esa ruta cuando el ticket tiene que ser un
+comprobante: `DatosSriDelTicket::exigePlantilla()` y un `&&` en
+`SellPosController`. Entre respetar la impresora configurada y entregar un
+comprobante válido, manda lo segundo.
+
+La condición es deliberadamente estrecha —hay datos del SRI **y** el diseño
+es uno de `DISENOS_CON_RIDE` (hoy solo `tmu220b`)—: forzar la plantilla a
+un diseño que no lleva el bloque no le daría nada y solo le quitaría su
+impresora.
+
+Tests (`TicketRideTest`, 3 más): el RIDE se renderiza aunque el local
+imprima por ESC/POS; sin datos del SRI el local sigue por ESC/POS; un
+diseño sin el bloque también. Verificado que el primero falla al quitar el
+guard. Ojo al escribirlos: `receiptContent` **inicializa todas las claves**
+del recibo (`SellPosController.php:793-798`), así que afirmar sobre la
+presencia de `printer_config` o `data` no distingue nada; lo que distingue
+es el valor de `print_type`.
+
+**Queda abierto el caso de la nota de crédito.** `SellReturnController`
+tiene la misma bifurcación, pero su recibo es `sell_return.receipt`, una
+plantilla distinta que no incluye los parciales del SRI: forzarla no
+imprimiría el bloque. Si las devoluciones deben entregar un RIDE impreso,
+es trabajo aparte: llevar el bloque a esa plantilla (o darle un diseño
+propio) y recién entonces aplicarle el mismo guard.
 
 ### ✅ Fase 1 — La clave de acceso en la respuesta inmediata (2026-09-22)
 
@@ -2324,9 +2349,10 @@ Suite del POS completa en verde: **1681 tests**.
 
 ### Estado de §16
 
-Fases 1 a 4 cerradas. Queda la Fase 5 (tests), que se fue haciendo dentro
-de cada fase: lo pendiente es revisarla como conjunto y probar en una
-impresora real. Descartados en la revisión:
+Fases 1 a 4 cerradas, más la nota de la ruta ESC/POS. Queda la Fase 5
+(tests), que se fue haciendo dentro de cada fase: lo pendiente es probar en
+una impresora real, y decidir si la nota de crédito también debe imprimir
+su RIDE. Descartados en la revisión:
 el código de barras de la clave (la TM-U220B no lo reproduce; se revisa si
 se adopta un diseño térmico) y la marca «ORIGINAL ADQUIRIENTE» que imprime
 Fybeca (la ficha no la exige y el POS no tiene el concepto de copia).
