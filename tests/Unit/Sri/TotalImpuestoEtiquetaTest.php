@@ -20,9 +20,11 @@ it('etiqueta las tarifas de IVA con su porcentaje legible: :dataset', function (
     'IVA 14%' => ['3', 'IVA 14%'],
     'IVA 15%' => ['4', 'IVA 15%'],
     'IVA 5%' => ['5', 'IVA 5%'],
-    'no objeto' => ['6', 'No objeto de IVA'],
+    // los nombres son los literales de la Tabla 17, no una paráfrasis: el
+    // código 8 es «IVA diferenciado», no «IVA 8%» como decía antes
+    'no objeto' => ['6', 'No objeto de impuesto'],
     'exento' => ['7', 'Exento de IVA'],
-    'IVA 8%' => ['8', 'IVA 8%'],
+    'diferenciado' => ['8', 'IVA diferenciado'],
     'IVA 13%' => ['10', 'IVA 13%'],
 ]);
 

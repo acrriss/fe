@@ -3,6 +3,7 @@
 namespace App\Sri\Data;
 
 use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
+use App\Sri\Data\Concerns\ValidaTarifaDeIva;
 use Spatie\LaravelData\Data;
 
 /**
@@ -14,6 +15,7 @@ use Spatie\LaravelData\Data;
 final class ImpuestoData extends Data
 {
     use RechazaClavesDesconocidas;
+    use ValidaTarifaDeIva;
 
     /**
      * @param  array<string, mixed>  $properties
@@ -21,6 +23,8 @@ final class ImpuestoData extends Data
      */
     public static function prepareForPipeline(array $properties): array
     {
+        self::validarTarifaDeIva($properties);
+
         return self::soloClavesConocidas($properties);
     }
 

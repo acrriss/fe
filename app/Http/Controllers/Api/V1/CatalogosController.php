@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Sri\Catalogos\CodigosAuxiliares;
 use App\Sri\Catalogos\FormasPago;
+use App\Sri\Catalogos\TarifasIva;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -35,6 +36,11 @@ class CatalogosController extends Controller
                     'nombre' => 'Formas de pago del bloque <pagos> (Tabla 24)',
                     'url' => route('api.v1.catalogos.formas-pago'),
                 ],
+                [
+                    'clave' => 'tarifas-iva',
+                    'nombre' => 'Tarifas de IVA del campo <codigoPorcentaje> (Tabla 17)',
+                    'url' => route('api.v1.catalogos.tarifas-iva'),
+                ],
             ],
         ]);
     }
@@ -63,6 +69,23 @@ class CatalogosController extends Controller
             'tabla' => 24,
             'validado' => true,
             'codigos' => FormasPago::codigos(),
+        ]);
+    }
+
+    /**
+     * Tabla 17 de la ficha. Lista cerrada y validada, como las formas de
+     * pago: el servicio rechaza un `codigoPorcentaje` que no esté aquí
+     * cuando el impuesto es IVA.
+     */
+    public function tarifasIva(Request $request): JsonResponse
+    {
+        return $this->cacheable($request, [
+            'ficha' => TarifasIva::FICHA,
+            'version' => TarifasIva::VERSION,
+            'tabla' => 17,
+            'validado' => true,
+            'codigoImpuesto' => TarifasIva::CODIGO_IVA,
+            'codigos' => TarifasIva::codigos(),
         ]);
     }
 

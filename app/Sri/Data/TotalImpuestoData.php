@@ -2,7 +2,9 @@
 
 namespace App\Sri\Data;
 
+use App\Sri\Catalogos\TarifasIva;
 use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
+use App\Sri\Data\Concerns\ValidaTarifaDeIva;
 use App\Sri\Support\Payload;
 use Spatie\LaravelData\Data;
 
@@ -13,6 +15,7 @@ use Spatie\LaravelData\Data;
 final class TotalImpuestoData extends Data
 {
     use RechazaClavesDesconocidas;
+    use ValidaTarifaDeIva;
 
     /**
      * @param  array<string, mixed>  $properties
@@ -20,6 +23,8 @@ final class TotalImpuestoData extends Data
      */
     public static function prepareForPipeline(array $properties): array
     {
+        self::validarTarifaDeIva($properties);
+
         return self::soloClavesConocidas($properties);
     }
 
@@ -33,27 +38,18 @@ final class TotalImpuestoData extends Data
 
     /**
      * Etiqueta legible para el RIDE: el cliente final no entiende
-     * "Impuesto 2 (4)". Mapea los códigos de la ficha del SRI (tabla de
-     * impuestos y tarifas de IVA); combinaciones desconocidas caen al
-     * formato crudo para no ocultar información.
+     * "Impuesto 2 (4)". El nombre del IVA sale del catálogo de la Tabla 17,
+     * que es la misma fuente que valida el código y que alimenta el
+     * selector del integrador; combinaciones desconocidas caen al formato
+     * crudo para no ocultar información.
      */
     public function etiqueta(): string
     {
-        if ($this->codigo === '2') {
-            $tarifas = [
-                '0' => 'IVA 0%',
-                '2' => 'IVA 12%',
-                '3' => 'IVA 14%',
-                '4' => 'IVA 15%',
-                '5' => 'IVA 5%',
-                '6' => 'No objeto de IVA',
-                '7' => 'Exento de IVA',
-                '8' => 'IVA 8%',
-                '10' => 'IVA 13%',
-            ];
+        if ($this->codigo === TarifasIva::CODIGO_IVA) {
+            $nombreTarifa = TarifasIva::nombre($this->codigoPorcentaje);
 
-            if (isset($tarifas[$this->codigoPorcentaje])) {
-                return $tarifas[$this->codigoPorcentaje];
+            if ($nombreTarifa !== null) {
+                return $nombreTarifa;
             }
         }
 
