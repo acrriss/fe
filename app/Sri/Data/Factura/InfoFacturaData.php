@@ -58,6 +58,12 @@ final class InfoFacturaData extends BloqueInfoData
          */
         #[WithCast(ValueObjectCast::class, Placa::class)]
         public ?Placa $placa = null,
+        /**
+         * Dirección del comprador, «obligatorio cuando corresponda» (Anexo
+         * 3): la factura comercial negociable la exige. El Anexo 2 la
+         * imprime en el bloque del comprador del RIDE.
+         */
+        public ?string $direccionComprador = null,
     ) {}
 
     /**
@@ -102,6 +108,8 @@ final class InfoFacturaData extends BloqueInfoData
             'tipoIdentificacionComprador' => $this->tipoIdentificacionComprador->value,
             'razonSocialComprador' => $this->razonSocialComprador,
             'identificacionComprador' => $this->identificacionComprador,
+            // la ficha la ubica entre <identificacionComprador> y <totalSinImpuestos> (Anexo 3)
+            'direccionComprador' => $this->direccionComprador,
             'totalSinImpuestos' => $this->totalSinImpuestos,
             'totalDescuento' => $this->totalDescuento,
             'totalConImpuestos' => [

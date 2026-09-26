@@ -40,6 +40,17 @@
                     </td>
                 @endif
             </tr>
+            {{-- Anexo 2: la dirección ocupa su propia línea bajo los datos
+                 del comprador; el correo y el teléfono no son campos del XML
+                 y salen en «Información adicional» (campoAdicional). --}}
+            @if ($comprobante->infoFactura->direccionComprador)
+                <tr>
+                    <td colspan="4">
+                        <span class="etiqueta">Dirección:</span>
+                        {{ $comprobante->infoFactura->direccionComprador }}
+                    </td>
+                </tr>
+            @endif
         </table>
     </div>
 

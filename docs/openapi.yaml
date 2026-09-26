@@ -1105,6 +1105,12 @@ components:
                 - { type: array, items: { $ref: '#/components/schemas/Detalle' } }
         infoAdicional:
           type: object
+          description: >
+            Campos libres que el RIDE imprime en «Información adicional».
+            Aquí van los datos de contacto del comprador que no son campos
+            del XML: `Email` y `Teléfono` (nombres del ejemplo de la ficha)
+            y, en la nota de crédito —que no tiene `direccionComprador`—,
+            también `Dirección`, como en su RIDE del Anexo 2.
           properties:
             campoAdicional:
               oneOf:
@@ -1139,6 +1145,7 @@ components:
         tipoIdentificacionComprador: { type: string, enum: ['04', '05', '06', '07', '08'] }
         razonSocialComprador: { type: string }
         identificacionComprador: { type: string }
+        direccionComprador: { type: string, maxLength: 300, description: 'Obligatorio cuando corresponda (Anexo 3); la factura comercial negociable la exige. Se imprime en el RIDE. El correo y el teléfono del comprador no son campos de la factura: van en `infoAdicional` (p. ej. `Email`, `Teléfono`).' }
         totalSinImpuestos: { type: string }
         totalDescuento: { type: string }
         totalConImpuestos:

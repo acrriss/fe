@@ -64,9 +64,10 @@ function info_tributaria(string $secuencial): array
 /**
  * @param  string|null  $codigoAuxiliar  segundo código del único detalle (Anexos 23 y 25)
  * @param  string|null  $placa  placa del vehículo (Anexo 25 §2)
+ * @param  string|null  $direccionComprador  «obligatorio cuando corresponda» (Anexo 3)
  * @return array<string, mixed>
  */
-function payload_factura(?string $codigoAuxiliar = null, ?string $placa = null, ?array $pagos = null): array
+function payload_factura(?string $codigoAuxiliar = null, ?string $placa = null, ?array $pagos = null, ?string $direccionComprador = null): array
 {
     return [
         'infoTributaria' => info_tributaria('000000001'),
@@ -77,6 +78,7 @@ function payload_factura(?string $codigoAuxiliar = null, ?string $placa = null, 
             'tipoIdentificacionComprador' => '07',
             'razonSocialComprador' => 'CONSUMIDOR FINAL',
             'identificacionComprador' => '9999999999999',
+            ...($direccionComprador !== null ? ['direccionComprador' => $direccionComprador] : []),
             'totalSinImpuestos' => '100.00',
             'totalDescuento' => '0.00',
             'totalConImpuestos' => ['totalImpuesto' => [
