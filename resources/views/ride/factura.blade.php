@@ -68,33 +68,12 @@
         </tbody>
     </table>
 
-    <table class="totales mt">
-        <tr>
-            <td class="etiqueta">Subtotal sin impuestos</td>
-            <td class="num">{{ $comprobante->infoFactura->totalSinImpuestos }}</td>
-        </tr>
-        @foreach ($comprobante->infoFactura->totalConImpuestos as $impuesto)
-            <tr>
-                <td class="etiqueta">
-                    {{ $impuesto->etiqueta() }}
-                    — base {{ $impuesto->baseImponible }}
-                </td>
-                <td class="num">{{ $impuesto->valor }}</td>
-            </tr>
-        @endforeach
-        <tr>
-            <td class="etiqueta">Descuento</td>
-            <td class="num">{{ $comprobante->infoFactura->totalDescuento }}</td>
-        </tr>
-        @if ($comprobante->infoFactura->propina !== null)
-            <tr>
-                <td class="etiqueta">Propina</td>
-                <td class="num">{{ $comprobante->infoFactura->propina }}</td>
-            </tr>
-        @endif
-        <tr class="total-final">
-            <td>VALOR TOTAL ({{ $comprobante->infoFactura->moneda }})</td>
-            <td class="num">{{ $comprobante->infoFactura->importeTotal }}</td>
-        </tr>
-    </table>
+    @include('ride.partials.totales', [
+        'totalConImpuestos' => $comprobante->infoFactura->totalConImpuestos,
+        'totalSinImpuestos' => $comprobante->infoFactura->totalSinImpuestos,
+        'totalDescuento' => $comprobante->infoFactura->totalDescuento,
+        'propina' => $comprobante->infoFactura->propina,
+        'etiquetaTotal' => "VALOR TOTAL ({$comprobante->infoFactura->moneda})",
+        'total' => $comprobante->infoFactura->importeTotal,
+    ])
 @endsection

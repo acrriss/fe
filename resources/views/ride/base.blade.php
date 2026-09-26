@@ -19,6 +19,7 @@
         .num { text-align: right; }
         .totales { width: 45%; margin-left: 55%; }
         .totales td { border: 1px solid #bbb; padding: 3px 4px; }
+        .totales .subtotal { font-weight: bold; }
         .totales .total-final { font-weight: bold; background: #eee; }
         .mt { margin-top: 8px; }
     </style>

@@ -108,6 +108,56 @@ function payload_factura(?string $codigoAuxiliar = null, ?string $placa = null, 
 }
 
 /**
+ * Factura con un producto al 15 % y otro al 0 %: la venta típica del POS,
+ * con los dos bloques de subtotales del RIDE poblados.
+ *
+ * @return array<string, mixed>
+ */
+function payload_factura_dos_tarifas(string $propina = '0.00'): array
+{
+    $importeTotal = bcadd('5.52', $propina, 2);
+    $payload = payload_factura(pagos: [['formaPago' => '01', 'total' => $importeTotal]]);
+
+    $payload['infoFactura'] = [
+        ...$payload['infoFactura'],
+        'totalSinImpuestos' => '5.26',
+        'totalConImpuestos' => ['totalImpuesto' => [
+            ['codigo' => '2', 'codigoPorcentaje' => '4', 'baseImponible' => '1.76', 'tarifa' => '15.00', 'valor' => '0.26'],
+            ['codigo' => '2', 'codigoPorcentaje' => '0', 'baseImponible' => '3.50', 'tarifa' => '0.00', 'valor' => '0.00'],
+        ]],
+        'propina' => $propina,
+        'importeTotal' => $importeTotal,
+    ];
+
+    $payload['detalles'] = ['detalle' => [
+        [
+            'codigoPrincipal' => '0014',
+            'descripcion' => 'Coca-cola 1.35L',
+            'cantidad' => '1.00',
+            'precioUnitario' => '1.76',
+            'descuento' => '0.00',
+            'precioTotalSinImpuesto' => '1.76',
+            'impuestos' => ['impuesto' => [
+                'codigo' => '2', 'codigoPorcentaje' => '4', 'tarifa' => '15.00', 'baseImponible' => '1.76', 'valor' => '0.26',
+            ]],
+        ],
+        [
+            'codigoPrincipal' => '0015',
+            'descripcion' => 'Bolón de chicharrón',
+            'cantidad' => '1.00',
+            'precioUnitario' => '3.50',
+            'descuento' => '0.00',
+            'precioTotalSinImpuesto' => '3.50',
+            'impuestos' => ['impuesto' => [
+                'codigo' => '2', 'codigoPorcentaje' => '0', 'tarifa' => '0.00', 'baseImponible' => '3.50', 'valor' => '0.00',
+            ]],
+        ],
+    ]];
+
+    return $payload;
+}
+
+/**
  * Nota de crédito con dos detalles (uno gravado al 15 % y otro al 0 %).
  *
  * @param  string|null  $codigoAdicional  segundo código del primer detalle (el «codigoAuxiliar» de la NC)

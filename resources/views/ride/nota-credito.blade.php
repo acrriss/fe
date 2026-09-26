@@ -73,23 +73,10 @@
         </tbody>
     </table>
 
-    <table class="totales mt">
-        <tr>
-            <td class="etiqueta">Subtotal sin impuestos</td>
-            <td class="num">{{ $comprobante->infoNotaCredito->totalSinImpuestos }}</td>
-        </tr>
-        @foreach ($comprobante->infoNotaCredito->totalConImpuestos as $impuesto)
-            <tr>
-                <td class="etiqueta">
-                    {{ $impuesto->etiqueta() }}
-                    — base {{ $impuesto->baseImponible }}
-                </td>
-                <td class="num">{{ $impuesto->valor }}</td>
-            </tr>
-        @endforeach
-        <tr class="total-final">
-            <td>VALOR MODIFICACIÓN ({{ $comprobante->infoNotaCredito->moneda }})</td>
-            <td class="num">{{ $comprobante->infoNotaCredito->valorModificacion }}</td>
-        </tr>
-    </table>
+    @include('ride.partials.totales', [
+        'totalConImpuestos' => $comprobante->infoNotaCredito->totalConImpuestos,
+        'totalSinImpuestos' => $comprobante->infoNotaCredito->totalSinImpuestos,
+        'etiquetaTotal' => "VALOR MODIFICACIÓN ({$comprobante->infoNotaCredito->moneda})",
+        'total' => $comprobante->infoNotaCredito->valorModificacion,
+    ])
 @endsection

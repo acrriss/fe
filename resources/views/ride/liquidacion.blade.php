@@ -46,20 +46,10 @@
         </tbody>
     </table>
 
-    <table class="totales mt">
-        <tr>
-            <td class="etiqueta">Subtotal sin impuestos</td>
-            <td class="num">{{ $comprobante->infoLiquidacionCompra->totalSinImpuestos }}</td>
-        </tr>
-        @foreach ($comprobante->infoLiquidacionCompra->totalConImpuestos as $impuesto)
-            <tr>
-                <td class="etiqueta">{{ $impuesto->etiqueta() }} — base {{ $impuesto->baseImponible }}</td>
-                <td class="num">{{ $impuesto->valor }}</td>
-            </tr>
-        @endforeach
-        <tr class="total-final">
-            <td>VALOR TOTAL ({{ $comprobante->infoLiquidacionCompra->moneda }})</td>
-            <td class="num">{{ $comprobante->infoLiquidacionCompra->importeTotal }}</td>
-        </tr>
-    </table>
+    @include('ride.partials.totales', [
+        'totalConImpuestos' => $comprobante->infoLiquidacionCompra->totalConImpuestos,
+        'totalSinImpuestos' => $comprobante->infoLiquidacionCompra->totalSinImpuestos,
+        'etiquetaTotal' => "VALOR TOTAL ({$comprobante->infoLiquidacionCompra->moneda})",
+        'total' => $comprobante->infoLiquidacionCompra->importeTotal,
+    ])
 @endsection
