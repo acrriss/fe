@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Panel;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolverContribuyente;
 use App\Http\Requests\ActualizarConfiguracionRequest;
+use App\Http\Requests\GuardarLogoRequest;
 use App\Models\Contribuyente;
 use App\Sri\Enums\RegimenRimpe;
 use App\Sri\Exceptions\CertificadoInvalido;
@@ -114,22 +115,22 @@ class ConfiguracionController extends Controller
         return Storage::response($contribuyente->logo_path);
     }
 
-    public function guardarLogo(Request $request): RedirectResponse
+    /**
+     * El recortador del panel envía el PNG ya encuadrado a 2:1; se
+     * normaliza igual que por la API.
+     */
+    public function guardarLogo(GuardarLogoRequest $request): RedirectResponse
     {
-        $request->validate([
-            'logo' => ['required', 'image', 'mimes:png,jpg,jpeg', 'max:1024'], // KB
-        ]);
-
-        $contribuyente = $this->contribuyente($request);
-
-        $path = $request->file('logo')?->storeAs(
-            'logos',
-            $contribuyente->uuid.'.'.$request->file('logo')->extension(),
-        );
-
-        $contribuyente->update(['logo_path' => $path]);
+        $this->contribuyente($request)->guardarLogo($request->logoNormalizado());
 
         return redirect()->route('panel.configuracion')->with('exito', 'Logo actualizado.');
+    }
+
+    public function quitarLogo(Request $request): RedirectResponse
+    {
+        $this->contribuyente($request)->quitarLogo();
+
+        return redirect()->route('panel.configuracion')->with('exito', 'Logo quitado.');
     }
 
     private function contribuyente(Request $request): Contribuyente

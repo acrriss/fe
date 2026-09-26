@@ -63,6 +63,8 @@ Route::middleware('auth')->group(function () {
             ->name('configuracion.logo');
         Route::get('configuracion/logo', [Panel\ConfiguracionController::class, 'mostrarLogo'])
             ->name('configuracion.logo.mostrar');
+        Route::delete('configuracion/logo', [Panel\ConfiguracionController::class, 'quitarLogo'])
+            ->name('configuracion.logo.quitar');
     });
 });
 

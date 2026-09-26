@@ -15,6 +15,13 @@ use Illuminate\Support\Facades\Storage;
  */
 class DompdfRideGenerator implements RideGenerator
 {
+    /**
+     * Cambiarla al modificar las plantillas de resources/views/ride: los
+     * RIDE cacheados con la versión anterior se regeneran en su próxima
+     * descarga. El XML autorizado no cambia; solo su representación.
+     */
+    public const string VERSION_PLANTILLA = '2026-09-26';
+
     public function __construct(private readonly GeneradorCodigoBarras $codigoBarras) {}
 
     public function generar(Comprobante $registro, ComprobanteData $comprobante): string
@@ -44,6 +51,11 @@ class DompdfRideGenerator implements RideGenerator
             ])->output();
     }
 
+    public function huella(Comprobante $registro): string
+    {
+        return substr(hash('sha256', self::VERSION_PLANTILLA.'|'.$registro->contribuyente?->logo_path), 0, 12);
+    }
+
     /**
      * El logo del contribuyente, embebido como data-uri (dompdf no debe
      * salir a buscar archivos).
@@ -56,8 +68,13 @@ class DompdfRideGenerator implements RideGenerator
             return null;
         }
 
-        $extension = pathinfo($logoPath, PATHINFO_EXTENSION) ?: 'png';
+        // los logos se normalizan a PNG; los .jpg anteriores a eso
+        // necesitan el MIME real, que es image/jpeg
+        $mime = match (strtolower(pathinfo($logoPath, PATHINFO_EXTENSION))) {
+            'jpg', 'jpeg' => 'image/jpeg',
+            default => 'image/png',
+        };
 
-        return "data:image/{$extension};base64,".base64_encode((string) Storage::get($logoPath));
+        return "data:{$mime};base64,".base64_encode((string) Storage::get($logoPath));
     }
 }

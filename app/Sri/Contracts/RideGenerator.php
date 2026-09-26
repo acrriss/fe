@@ -15,4 +15,11 @@ interface RideGenerator
      * @return string el PDF binario
      */
     public function generar(Comprobante $registro, ComprobanteData $comprobante): string;
+
+    /**
+     * Identifica el aspecto del RIDE que se generaría hoy para el registro
+     * (plantilla y logo del emisor). El RIDE cacheado con otra huella está
+     * desactualizado y se regenera.
+     */
+    public function huella(Comprobante $registro): string;
 }

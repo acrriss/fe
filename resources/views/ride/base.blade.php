@@ -29,8 +29,10 @@
         <tr>
             <td class="col">
                 <div class="marco">
+                    {{-- Hueco fijo de 120 × 60: los logos se normalizan a 2:1
+                         (NormalizadorLogo), así que lo llenan sin deformarse. --}}
                     @isset($logo)
-                        <img src="{{ $logo }}" style="max-height: 60px; margin-bottom: 6px;" alt="">
+                        <img src="{{ $logo }}" style="max-height: 60px; max-width: 120px; margin-bottom: 6px;" alt="">
                     @endisset
                     <div class="doc-titulo">{{ $comprobante->infoTributaria->razonSocial }}</div>
                     @if ($comprobante->infoTributaria->nombreComercial)

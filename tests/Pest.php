@@ -47,6 +47,27 @@ function p12_de_prueba(bool $legacy = false): string
 }
 
 /**
+ * Imagen binaria de prueba de un color sólido (opaco), para el logo.
+ *
+ * @param  'png'|'jpeg'|'webp'|'gif'  $tipo
+ */
+function imagen_de_prueba(int $ancho = 400, int $alto = 200, string $tipo = 'png'): string
+{
+    $imagen = imagecreatetruecolor($ancho, $alto);
+    imagefill($imagen, 0, 0, (int) imagecolorallocate($imagen, 200, 30, 30));
+
+    ob_start();
+    match ($tipo) {
+        'png' => imagepng($imagen),
+        'jpeg' => imagejpeg($imagen),
+        'webp' => imagewebp($imagen),
+        'gif' => imagegif($imagen),
+    };
+
+    return (string) ob_get_clean();
+}
+
+/**
  * El certificado de prueba como value object listo para firmar.
  */
 function certificado_de_prueba(string $clave = 'clave-prueba'): CertificadoFirma

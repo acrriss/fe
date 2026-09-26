@@ -13,7 +13,9 @@ use App\Http\Controllers\Api\V1\DescargarXmlController;
 use App\Http\Controllers\Api\V1\EmitirComprobanteController;
 use App\Http\Controllers\Api\V1\EmitirTokenController;
 use App\Http\Controllers\Api\V1\GuardarCertificadoController;
+use App\Http\Controllers\Api\V1\GuardarLogoController;
 use App\Http\Controllers\Api\V1\ListarComprobantesController;
+use App\Http\Controllers\Api\V1\QuitarLogoController;
 use App\Http\Controllers\Api\V1\ReintentarComprobanteController;
 use App\Http\Controllers\Api\V1\WebhooksController;
 use App\Http\Middleware\ManejarIdempotencia;
@@ -65,6 +67,12 @@ Route::prefix('v1')->group(function () {
 
         Route::put('contribuyente/certificado', GuardarCertificadoController::class)
             ->name('api.v1.contribuyente.certificado');
+
+        // Logo del RIDE (Tabla 11, fila 10)
+        Route::put('contribuyente/logo', GuardarLogoController::class)
+            ->name('api.v1.contribuyente.logo');
+        Route::delete('contribuyente/logo', QuitarLogoController::class)
+            ->name('api.v1.contribuyente.logo.quitar');
 
         // Webhooks del contribuyente actual (§11)
         Route::get('webhooks', [WebhooksController::class, 'index'])

@@ -8,6 +8,7 @@ use App\Sri\Enums\EstadoVinculacion;
 use App\Sri\Enums\RegimenRimpe;
 use App\Sri\Exceptions\CertificadoInvalido;
 use App\Sri\Exceptions\DatoInvalido;
+use App\Sri\Ride\LogoRide;
 use App\Sri\ValueObjects\CertificadoFirma;
 use App\Sri\ValueObjects\LeyendasEmisor;
 use Database\Factories\ContribuyenteFactory;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 use SensitiveParameter;
 
 /**
@@ -147,6 +149,36 @@ class Contribuyente extends Model
         ]);
 
         return $abierto;
+    }
+
+    /**
+     * Guarda el logo del RIDE, reemplazando el anterior.
+     *
+     * El nombre lleva una huella del contenido: cambia con cada logo, así
+     * que invalida por sí solo los RIDE cacheados y la caché del navegador.
+     */
+    public function guardarLogo(LogoRide $logo): void
+    {
+        $ruta = "logos/{$this->uuid}-".substr(hash('sha256', $logo->png), 0, 12).'.png';
+
+        Storage::put($ruta, $logo->png);
+
+        $anterior = $this->logo_path;
+        $this->update(['logo_path' => $ruta]);
+
+        if ($anterior !== null && $anterior !== $ruta) {
+            Storage::delete($anterior);
+        }
+    }
+
+    public function quitarLogo(): void
+    {
+        if ($this->logo_path === null) {
+            return;
+        }
+
+        Storage::delete($this->logo_path);
+        $this->update(['logo_path' => null]);
     }
 
     /**

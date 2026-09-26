@@ -313,6 +313,45 @@ paths:
           description: >
             Certificado inválido: la clave es incorrecta, el archivo no es un
             `.p12` válido, o el certificado está vencido.
+  /contribuyente/logo:
+    put:
+      summary: Cargar o reemplazar el logo del RIDE
+      description: >
+        Logo del emisor que el RIDE imprime en su recuadro superior
+        izquierdo (ficha, Tabla 11 fila 10: «Logo del emisor — Imagen —
+        Opcional»). La ficha no fija formato; el servicio lo **normaliza**:
+        un PNG de 600 × 300 px (2:1) con la imagen entera encajada y el
+        sobrante transparente, sin recortar nada. Envíalo ya encuadrado a
+        2:1 para controlar el resultado. Los RIDE ya descargados se
+        regeneran con el logo nuevo en su próxima descarga.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [logo]
+              properties:
+                logo:
+                  type: string
+                  description: >
+                    Imagen PNG, JPEG o WebP en base64 (se admite también
+                    como data-uri `data:image/png;base64,…`). Máximo 2 MB
+                    y 25 megapíxeles.
+      parameters:
+        - $ref: '#/components/parameters/XContribuyente'
+      responses:
+        '204': { description: Logo normalizado y guardado. }
+        '403': { description: El usuario no pertenece a ningún contribuyente. }
+        '422': { description: 'No es una imagen PNG, JPEG o WebP, está dañada, o supera 2 MB o 25 megapíxeles.' }
+    delete:
+      summary: Quitar el logo del RIDE
+      description: Idempotente; sin logo también responde 204.
+      parameters:
+        - $ref: '#/components/parameters/XContribuyente'
+      responses:
+        '204': { description: Logo quitado. }
+        '403': { description: El usuario no pertenece a ningún contribuyente. }
   /comprobantes:
     post:
       summary: Emitir un comprobante electrónico

@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Storage;
  *
  * El RIDE se genera bajo demanda desde el XML firmado almacenado (la
  * fuente de verdad legal) y se cachea en storage para descargas futuras.
+ * La ruta cacheada lleva la huella del generador (plantilla y logo): si
+ * cualquiera de los dos cambió, el RIDE se regenera y el viejo se borra.
  */
 class DescargarRideController extends Controller
 {
@@ -44,8 +46,10 @@ class DescargarRideController extends Controller
             'El XML del comprobante ya no está disponible.',
         );
 
-        $pdf = $this->rideCacheado($comprobante)
-            ?? $this->generarYCachear($comprobante, $generator, $parser);
+        $ridePath = "rides/{$comprobante->clave_acceso}-{$generator->huella($comprobante)}.pdf";
+
+        $pdf = $this->rideCacheado($comprobante, $ridePath)
+            ?? $this->generarYCachear($comprobante, $ridePath, $generator, $parser);
 
         return response($pdf, 200, [
             'Content-Type' => 'application/pdf',
@@ -53,26 +57,32 @@ class DescargarRideController extends Controller
         ]);
     }
 
-    private function rideCacheado(Comprobante $comprobante): ?string
+    private function rideCacheado(Comprobante $comprobante, string $ridePath): ?string
     {
-        if ($comprobante->ride_path === null || ! Storage::exists($comprobante->ride_path)) {
+        if ($comprobante->ride_path !== $ridePath || ! Storage::exists($ridePath)) {
             return null;
         }
 
-        return Storage::get($comprobante->ride_path);
+        return Storage::get($ridePath);
     }
 
     private function generarYCachear(
         Comprobante $comprobante,
+        string $ridePath,
         RideGenerator $generator,
         ComprobanteXmlParser $parser,
     ): string {
         $xml = (string) Storage::get((string) $comprobante->xml_path);
         $pdf = $generator->generar($comprobante, $parser->parse($xml));
 
-        $ridePath = "rides/{$comprobante->clave_acceso}.pdf";
         Storage::put($ridePath, $pdf);
+
+        $desactualizado = $comprobante->ride_path;
         $comprobante->update(['ride_path' => $ridePath]);
+
+        if ($desactualizado !== null && $desactualizado !== $ridePath) {
+            Storage::delete($desactualizado);
+        }
 
         return $pdf;
     }

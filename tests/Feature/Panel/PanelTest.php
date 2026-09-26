@@ -5,6 +5,7 @@ use App\Models\Contribuyente;
 use App\Models\Plan;
 use App\Models\User;
 use App\Sri\Enums\RegimenRimpe;
+use App\Sri\Ride\LogoRide;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -217,8 +218,9 @@ describe('configuración', function () {
     it('sube el logo del RIDE y lo sirve como vista previa', function () {
         $contribuyente = entrar_al_panel();
 
+        // el recortador del panel envía el PNG encuadrado como data-uri
         $this->post(route('panel.configuracion.logo'), [
-            'logo' => UploadedFile::fake()->image('logo.png', 200, 80),
+            'logo' => 'data:image/png;base64,'.base64_encode(imagen_de_prueba(600, 300)),
         ])->assertRedirect(route('panel.configuracion'));
 
         $contribuyente->refresh();
@@ -232,6 +234,26 @@ describe('configuración', function () {
         $this->get(route('panel.configuracion.logo.mostrar'))
             ->assertSuccessful()
             ->assertHeader('Content-Type', 'image/png');
+    });
+
+    it('rechaza desde el panel un logo que no es una imagen', function () {
+        entrar_al_panel();
+
+        $this->post(route('panel.configuracion.logo'), [
+            'logo' => base64_encode('no soy una imagen'),
+        ])->assertInvalid(['logo' => 'El logo debe ser una imagen PNG, JPEG o WebP.']);
+    });
+
+    it('quita el logo desde el panel', function () {
+        $contribuyente = entrar_al_panel();
+        $contribuyente->guardarLogo(LogoRide::desdeImagen(imagen_de_prueba()));
+        $ruta = (string) $contribuyente->logo_path;
+
+        $this->delete(route('panel.configuracion.logo.quitar'))
+            ->assertRedirect(route('panel.configuracion'));
+
+        expect($contribuyente->refresh()->logo_path)->toBeNull();
+        Storage::assertMissing($ruta);
     });
 
     it('la vista previa del logo responde 404 si no hay logo', function () {

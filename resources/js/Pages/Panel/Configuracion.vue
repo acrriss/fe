@@ -1,6 +1,7 @@
 <script setup>
 import { Head, useForm, router } from '@inertiajs/vue3';
 import PanelLayout from '../../Layouts/PanelLayout.vue';
+import RecortadorLogo from '../../Componentes/RecortadorLogo.vue';
 
 const props = defineProps({
     contribuyente: { type: Object, required: true },
@@ -36,7 +37,8 @@ const formCertificado = useForm({
     clave: '',
 });
 
-const logo = useForm({ logo: null });
+// el recortador entrega el PNG ya encuadrado a 2:1, como data-uri
+const formLogo = useForm({ logo: null });
 
 const guardarDatos = () => datos.put('/panel/configuracion');
 
@@ -45,7 +47,13 @@ const guardarCertificado = () =>
         onSuccess: () => formCertificado.reset(),
     });
 
-const guardarLogo = () => logo.post('/panel/configuracion/logo', { onSuccess: () => logo.reset() });
+const guardarLogo = () => formLogo.post('/panel/configuracion/logo', { onSuccess: () => formLogo.reset() });
+
+const quitarLogo = () => {
+    if (confirm('¿Quitar el logo? Los RIDE se generarán sin logo.')) {
+        router.delete('/panel/configuracion/logo');
+    }
+};
 </script>
 
 <template>
@@ -239,22 +247,29 @@ const guardarLogo = () => logo.post('/panel/configuracion/logo', { onSuccess: ()
                 <section class="rounded-xl border border-gray-200 bg-white p-6">
                     <h2 class="mb-1 text-sm font-semibold text-gray-900">Logo para el RIDE</h2>
                     <p class="mb-4 text-xs text-gray-500">
-                        {{ contribuyente.tiene_logo ? 'Logo actual:' : 'PNG o JPG, máx. 1 MB.' }}
+                        PNG, JPEG o WebP. Lo encuadras en un marco 2:1 y se guarda como PNG de 600 × 300.
                     </p>
-                    <div v-if="logo_url" class="mb-4 inline-block rounded-md border border-gray-200 bg-gray-50 p-3">
-                        <img :src="logo_url" alt="Logo del contribuyente" class="max-h-16 max-w-60 object-contain" />
+                    <div v-if="logo_url && !formLogo.logo" class="mb-4 flex items-center gap-3">
+                        <div class="inline-block rounded-md border border-gray-200 bg-gray-50 p-3">
+                            <img :src="logo_url" alt="Logo actual del contribuyente" class="h-15 w-30 object-contain" />
+                        </div>
+                        <button type="button" class="text-xs text-red-600 hover:underline" @click="quitarLogo">Quitar logo</button>
+                    </div>
+                    <div v-if="formLogo.logo" class="mb-4">
+                        <p class="mb-1 text-xs text-gray-500">Vista previa (sin guardar):</p>
+                        <div class="inline-block rounded-md border border-gray-200 bg-[repeating-conic-gradient(#f3f4f6_0_25%,#fff_0_50%)] bg-[length:16px_16px] p-3">
+                            <img :src="formLogo.logo" alt="Vista previa del logo" class="h-15 w-30" />
+                        </div>
                     </div>
 
                     <form class="flex items-end gap-3" @submit.prevent="guardarLogo">
                         <div class="flex-1">
-                            <input id="logo" type="file" accept="image/png,image/jpeg" required
-                                class="w-full text-sm text-gray-600 file:mr-3 file:rounded-md file:border-0 file:bg-indigo-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-indigo-700"
-                                @input="logo.logo = $event.target.files[0]" />
-                            <p v-if="logo.errors.logo" class="mt-1 text-xs text-red-600">{{ logo.errors.logo }}</p>
+                            <RecortadorLogo @recortado="(dataUrl) => (formLogo.logo = dataUrl)" />
+                            <p v-if="formLogo.errors.logo" class="mt-1 text-xs text-red-600">{{ formLogo.errors.logo }}</p>
                         </div>
-                        <button type="submit" :disabled="logo.processing"
+                        <button type="submit" :disabled="formLogo.processing || !formLogo.logo"
                             class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50">
-                            Subir
+                            Guardar logo
                         </button>
                     </form>
                 </section>
