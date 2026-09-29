@@ -46,10 +46,19 @@
         </tbody>
     </table>
 
-    @include('ride.partials.totales', [
-        'totalConImpuestos' => $comprobante->infoLiquidacionCompra->totalConImpuestos,
-        'totalSinImpuestos' => $comprobante->infoLiquidacionCompra->totalSinImpuestos,
-        'etiquetaTotal' => "VALOR TOTAL ({$comprobante->infoLiquidacionCompra->moneda})",
-        'total' => $comprobante->infoLiquidacionCompra->importeTotal,
-    ])
+    <table class="pie">
+        <tr>
+            <td class="pie-pagos">
+                @include('ride.partials.formas-pago', ['pagos' => $comprobante->infoLiquidacionCompra->pagos])
+            </td>
+            <td class="pie-totales">
+                @include('ride.partials.totales', [
+                    'totalConImpuestos' => $comprobante->infoLiquidacionCompra->totalConImpuestos,
+                    'totalSinImpuestos' => $comprobante->infoLiquidacionCompra->totalSinImpuestos,
+                    'etiquetaTotal' => "VALOR TOTAL ({$comprobante->infoLiquidacionCompra->moneda})",
+                    'total' => $comprobante->infoLiquidacionCompra->importeTotal,
+                ])
+            </td>
+        </tr>
+    </table>
 @endsection

@@ -58,7 +58,7 @@ final class InfoLiquidacionCompraData extends BloqueInfoData
         );
 
         $properties['totalConImpuestos'] = Payload::lista(data_get($properties, 'totalConImpuestos.totalImpuesto'));
-        $properties['pagos'] = Payload::lista(data_get($properties, 'pagos.pago'));
+        $properties['pagos'] = PagoData::listaObligatoria(data_get($properties, 'pagos'), 'liquidación de compra');
 
         return self::soloClavesConocidas($properties);
     }

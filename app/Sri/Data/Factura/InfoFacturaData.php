@@ -8,7 +8,6 @@ use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\PagoData;
 use App\Sri\Data\TotalImpuestoData;
 use App\Sri\Enums\TipoIdentificacion;
-use App\Sri\Exceptions\DatoInvalido;
 use App\Sri\Support\Payload;
 use App\Sri\Support\ValidadorIdentificacion;
 use App\Sri\ValueObjects\Placa;
@@ -82,15 +81,7 @@ final class InfoFacturaData extends BloqueInfoData
             data_get($properties, 'totalConImpuestos.totalImpuesto'),
         );
 
-        $properties['pagos'] = Payload::lista(data_get($properties, 'pagos.pago'));
-
-        if ($properties['pagos'] === []) {
-            throw DatoInvalido::porFormato(
-                'pagos',
-                'al menos una forma de pago (<pagos><pago>), que la ficha exige en toda factura',
-                'vacío',
-            );
-        }
+        $properties['pagos'] = PagoData::listaObligatoria(data_get($properties, 'pagos'), 'factura');
 
         return self::soloClavesConocidas($properties);
     }

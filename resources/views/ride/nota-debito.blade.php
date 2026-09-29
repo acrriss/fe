@@ -49,20 +49,29 @@
         </tbody>
     </table>
 
-    <table class="totales mt">
+    <table class="pie">
         <tr>
-            <td class="etiqueta">Subtotal sin impuestos</td>
-            <td class="num">{{ $comprobante->infoNotaDebito->totalSinImpuestos }}</td>
-        </tr>
-        @foreach ($comprobante->infoNotaDebito->impuestos as $impuesto)
-            <tr>
-                <td class="etiqueta">{{ $impuesto->etiqueta() }} — base {{ $impuesto->baseImponible }}</td>
-                <td class="num">{{ $impuesto->valor }}</td>
-            </tr>
-        @endforeach
-        <tr class="total-final">
-            <td>VALOR TOTAL</td>
-            <td class="num">{{ $comprobante->infoNotaDebito->valorTotal }}</td>
+            <td class="pie-pagos">
+                @include('ride.partials.formas-pago', ['pagos' => $comprobante->infoNotaDebito->pagos])
+            </td>
+            <td class="pie-totales">
+                <table class="totales mt">
+                    <tr>
+                        <td class="etiqueta">Subtotal sin impuestos</td>
+                        <td class="num">{{ $comprobante->infoNotaDebito->totalSinImpuestos }}</td>
+                    </tr>
+                    @foreach ($comprobante->infoNotaDebito->impuestos as $impuesto)
+                        <tr>
+                            <td class="etiqueta">{{ $impuesto->etiqueta() }} — base {{ $impuesto->baseImponible }}</td>
+                            <td class="num">{{ $impuesto->valor }}</td>
+                        </tr>
+                    @endforeach
+                    <tr class="total-final">
+                        <td>VALOR TOTAL</td>
+                        <td class="num">{{ $comprobante->infoNotaDebito->valorTotal }}</td>
+                    </tr>
+                </table>
+            </td>
         </tr>
     </table>
 @endsection

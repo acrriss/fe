@@ -2,6 +2,7 @@
 
 namespace App\Sri\Data;
 
+use App\Sri\Data\Concerns\EtiquetaDeImpuesto;
 use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\Concerns\ValidaTarifaDeIva;
 use Spatie\LaravelData\Data;
@@ -14,6 +15,7 @@ use Spatie\LaravelData\Data;
  */
 final class ImpuestoData extends Data
 {
+    use EtiquetaDeImpuesto;
     use RechazaClavesDesconocidas;
     use ValidaTarifaDeIva;
 

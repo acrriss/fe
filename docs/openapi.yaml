@@ -1112,6 +1112,12 @@ components:
         `GET /catalogos/codigos-auxiliares`: consúmalas desde ahí en vez de
         transcribirlas.
 
+        **Formas de pago (ficha técnica 2.34, Anexo 1 y Tabla 24).** El
+        bloque `pagos` es **obligatorio** en `infoFactura`, `infoNotaDebito`
+        e `infoLiquidacionCompra`, con la misma forma que el esquema
+        `Pago`: sin al menos un `pago` la emisión responde 422. El RIDE de
+        los tres imprime el cuadro «Forma de pago / Valor» del Anexo 2.
+
         **Placa del vehículo (ficha técnica 2.34, Anexo 25 §2).**
         `infoFactura.placa` es obligatoria en las facturas que las
         operadoras de transporte comercial —excepto taxis— emiten a sus

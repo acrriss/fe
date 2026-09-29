@@ -22,6 +22,11 @@
         .totales .subtotal { font-weight: bold; }
         .totales .total-final { font-weight: bold; background: #eee; }
         .mt { margin-top: 8px; }
+        /* Anexo 2: formas de pago a la izquierda, totales a la derecha.
+           Tabla y no flex porque dompdf no soporta flexbox. */
+        .pie td.pie-pagos { width: 55%; padding-right: 8px; vertical-align: top; }
+        .pie td.pie-totales { width: 45%; vertical-align: top; }
+        .pie .totales { width: 100%; margin-left: 0; }
     </style>
 </head>
 <body>

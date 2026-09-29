@@ -9,12 +9,34 @@ use App\Sri\Support\Payload;
 use Spatie\LaravelData\Data;
 
 /**
- * Forma de pago (<pagos><pago>), común a nota de débito y liquidación de
- * compra. `formaPago` sigue la tabla 24 de la ficha del SRI.
+ * Forma de pago (<pagos><pago>), común a factura, nota de débito y
+ * liquidación de compra. `formaPago` sigue la tabla 24 de la ficha del SRI.
  */
 final class PagoData extends Data
 {
     use RechazaClavesDesconocidas;
+
+    /**
+     * Normaliza el bloque <pagos> del payload y exige al menos un <pago>: la
+     * ficha lo marca *Obligatorio* en factura, nota de débito y liquidación
+     * de compra (Anexo 1), y el Anexo 2 lo imprime en sus tres RIDE.
+     *
+     * @return array<int, mixed>
+     */
+    public static function listaObligatoria(mixed $pagos, string $comprobante): array
+    {
+        $lista = Payload::lista(data_get($pagos, 'pago'));
+
+        if ($lista === []) {
+            throw DatoInvalido::porFormato(
+                'pagos',
+                "al menos una forma de pago (<pagos><pago>), que la ficha exige en toda {$comprobante}",
+                'vacío',
+            );
+        }
+
+        return $lista;
+    }
 
     /**
      * @param  array<string, mixed>  $properties

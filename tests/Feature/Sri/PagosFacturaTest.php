@@ -11,9 +11,6 @@ use App\Sri\Support\ComprobanteXmlParser;
  * con formaPago (Tabla 24) y total; plazo y unidadTiempo cuando corresponda.
  * Va después de <moneda> —y de <placa>, que el Anexo 25 §2 ubica «entre los
  * tags moneda y formas de pago»— y antes de <valorRetIva>.
- *
- * Aquí es opcional a propósito: la ficha lo exige, pero volverlo obligatorio
- * de golpe dejaría sin emitir a todo integrador que hoy no lo manda.
  */
 
 /**
@@ -178,3 +175,26 @@ it('valida la forma de pago también en la nota de débito', function () {
     expect(fn () => NotaDebitoData::from($payload))
         ->toThrow(DatoInvalido::class);
 });
+
+/*
+ * Anexo 1: <pagos> también es *Obligatorio* en <infoNotaDebito> y en
+ * <infoLiquidacionCompra>, y el Anexo 2 lo imprime en sus RIDE.
+ */
+it('exige formas de pago también en nota de débito y liquidación', function (string $tipo, string $bloque, string $nombre, mixed $pagos) {
+    $payload = payload_comprobante($tipo);
+
+    if ($pagos === null) {
+        unset($payload[$bloque]['pagos']);
+    } else {
+        $payload[$bloque]['pagos'] = $pagos;
+    }
+
+    expect(fn () => data_class_de($tipo)::from($payload))
+        ->toThrow(DatoInvalido::class, "exige en toda {$nombre}");
+})->with([
+    'nota de débito' => ['notaDebito', 'infoNotaDebito', 'nota de débito'],
+    'liquidación de compra' => ['liquidacionCompra', 'infoLiquidacionCompra', 'liquidación de compra'],
+])->with([
+    'ausente' => [null],
+    'bloque vacío' => [['pago' => []]],
+]);

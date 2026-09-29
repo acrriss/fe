@@ -79,12 +79,21 @@
         </tbody>
     </table>
 
-    @include('ride.partials.totales', [
-        'totalConImpuestos' => $comprobante->infoFactura->totalConImpuestos,
-        'totalSinImpuestos' => $comprobante->infoFactura->totalSinImpuestos,
-        'totalDescuento' => $comprobante->infoFactura->totalDescuento,
-        'propina' => $comprobante->infoFactura->propina,
-        'etiquetaTotal' => "VALOR TOTAL ({$comprobante->infoFactura->moneda})",
-        'total' => $comprobante->infoFactura->importeTotal,
-    ])
+    <table class="pie">
+        <tr>
+            <td class="pie-pagos">
+                @include('ride.partials.formas-pago', ['pagos' => $comprobante->infoFactura->pagos])
+            </td>
+            <td class="pie-totales">
+                @include('ride.partials.totales', [
+                    'totalConImpuestos' => $comprobante->infoFactura->totalConImpuestos,
+                    'totalSinImpuestos' => $comprobante->infoFactura->totalSinImpuestos,
+                    'totalDescuento' => $comprobante->infoFactura->totalDescuento,
+                    'propina' => $comprobante->infoFactura->propina,
+                    'etiquetaTotal' => "VALOR TOTAL ({$comprobante->infoFactura->moneda})",
+                    'total' => $comprobante->infoFactura->importeTotal,
+                ])
+            </td>
+        </tr>
+    </table>
 @endsection

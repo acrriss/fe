@@ -60,7 +60,7 @@ final class InfoNotaDebitoData extends BloqueInfoData
         );
 
         $properties['impuestos'] = Payload::lista(data_get($properties, 'impuestos.impuesto'));
-        $properties['pagos'] = Payload::lista(data_get($properties, 'pagos.pago'));
+        $properties['pagos'] = PagoData::listaObligatoria(data_get($properties, 'pagos'), 'nota de débito');
 
         return self::soloClavesConocidas($properties);
     }

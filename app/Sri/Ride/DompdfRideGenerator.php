@@ -20,7 +20,7 @@ class DompdfRideGenerator implements RideGenerator
      * RIDE cacheados con la versión anterior se regeneran en su próxima
      * descarga. El XML autorizado no cambia; solo su representación.
      */
-    public const string VERSION_PLANTILLA = '2026-09-26';
+    public const string VERSION_PLANTILLA = '2026-09-29';
 
     public function __construct(private readonly GeneradorCodigoBarras $codigoBarras) {}
 
