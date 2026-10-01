@@ -1209,7 +1209,10 @@ components:
           description: >
             Formas de pago. **Obligatorio**, como en la ficha: una factura
             sin al menos un `<pago>` se rechaza con 422. Los códigos válidos
-            de `formaPago` los publica `GET /catalogos/formas-pago`.
+            de `formaPago` los publica `GET /catalogos/formas-pago`. Admite
+            varios `<pago>` (pago mixto), uno por forma de pago; el RIDE los
+            imprime todos. El servicio **no valida** que su suma coincida con
+            `importeTotal`: la ficha no lo exige.
           required: [pago]
           properties:
             pago:
