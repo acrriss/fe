@@ -1211,8 +1211,11 @@ components:
             sin al menos un `<pago>` se rechaza con 422. Los códigos válidos
             de `formaPago` los publica `GET /catalogos/formas-pago`. Admite
             varios `<pago>` (pago mixto), uno por forma de pago; el RIDE los
-            imprime todos. El servicio **no valida** que su suma coincida con
-            `importeTotal`: la ficha no lo exige.
+            imprime todos. **Su suma tiene que ser exactamente `importeTotal`**
+            (en la nota de débito, `valorTotal`; igual en la liquidación de
+            compra): si no, 422. La ficha no lo exige y el SRI no lo valida,
+            pero el servicio sí, porque un comprobante que dice cobrar más o
+            menos de lo que vale es un error del integrador.
           required: [pago]
           properties:
             pago:

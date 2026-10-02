@@ -7,6 +7,7 @@ use App\Sri\Data\CampoAdicionalData;
 use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\InfoTributariaData;
+use App\Sri\Data\PagoData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Support\Payload;
 use Carbon\CarbonImmutable;
@@ -60,6 +61,14 @@ final class NotaDebitoData extends ComprobanteData
     public function importeTotal(): string
     {
         return $this->infoNotaDebito->valorTotal;
+    }
+
+    /**
+     * @return array<int, PagoData>
+     */
+    public function formasDePago(): array
+    {
+        return $this->infoNotaDebito->pagos;
     }
 
     /**

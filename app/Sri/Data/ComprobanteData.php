@@ -41,6 +41,62 @@ abstract class ComprobanteData extends Data
     }
 
     /**
+     * Formas de pago (<pagos>), en los tipos que las llevan: factura, nota
+     * de débito y liquidación de compra.
+     *
+     * @return array<int, PagoData>
+     */
+    public function formasDePago(): array
+    {
+        return [];
+    }
+
+    /**
+     * Las formas de pago tienen que sumar exactamente el importe del
+     * documento. La ficha no lo exige y el SRI de pruebas autoriza
+     * comprobantes que no cuadran, pero un documento que dice cobrar más o
+     * menos de lo que vale es un error del integrador: el servicio lo
+     * rechaza al emitir.
+     *
+     * Se comprueba sobre el payload y no al construir el DTO, para no romper
+     * la relectura de un XML ya autorizado que no cuadrara (el RIDE).
+     *
+     * @throws DatoInvalido si no suman el importe
+     */
+    public function exigirQueLosPagosSumenElTotal(): void
+    {
+        $pagos = $this->formasDePago();
+        $total = $this->importeTotal();
+
+        if ($pagos === [] || $total === null) {
+            return;
+        }
+
+        $suma = '0';
+
+        foreach ($pagos as $pago) {
+            if (! is_numeric($pago->total)) {
+                throw DatoInvalido::porFormato('pagos.pago.total', 'un importe numérico', $pago->total);
+            }
+
+            $suma = bcadd($suma, $pago->total, 2);
+        }
+
+        if (! is_numeric($total)) {
+            throw DatoInvalido::porFormato('importeTotal', 'un importe numérico', $total);
+        }
+
+        if (bccomp($suma, $total, 2) !== 0) {
+            throw new DatoInvalido(sprintf(
+                'La suma de las formas de pago (%s) no coincide con el importe total del comprobante (%s). '
+                .'El servicio lo exige aunque la ficha técnica no lo pida.',
+                $suma,
+                bcadd($total, '0', 2),
+            ));
+        }
+    }
+
+    /**
      * Representación como array listo para ArrayToXml, en el orden que exige
      * la ficha técnica del SRI. Requiere que la claveAcceso ya esté asignada.
      *

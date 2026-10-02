@@ -144,6 +144,7 @@ class EmitirComprobanteRequest extends FormRequest
 
             AgregarLeyendasEmisor::rechazarSiVieneEnElPayload($comprobante);
             AgregarRucProveedor::rechazarSiVieneEnElPayload($comprobante);
+            $comprobante->exigirQueLosPagosSumenElTotal();
 
             return $comprobante;
         } catch (DatoInvalido|CannotCreateData|CannotCastEnum|CannotCastDate|InvalidFormatException $excepcion) {

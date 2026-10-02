@@ -8,6 +8,7 @@ use App\Sri\Data\ComprobanteData;
 use App\Sri\Data\Concerns\RechazaClavesDesconocidas;
 use App\Sri\Data\DetalleData;
 use App\Sri\Data\InfoTributariaData;
+use App\Sri\Data\PagoData;
 use App\Sri\Enums\TipoComprobante;
 use App\Sri\Support\Payload;
 use Carbon\CarbonImmutable;
@@ -61,6 +62,14 @@ final class LiquidacionCompraData extends ComprobanteData
     public function importeTotal(): string
     {
         return $this->infoLiquidacionCompra->importeTotal;
+    }
+
+    /**
+     * @return array<int, PagoData>
+     */
+    public function formasDePago(): array
+    {
+        return $this->infoLiquidacionCompra->pagos;
     }
 
     /**
